@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ fixer.prenom }} {{ fixer.nom }} - RootsKeepers</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* HEADER AVEC PHOTO */
+        .header-profile {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .header-photo {
+            flex-shrink: 0;
+        }
+
+        .header-photo img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid white;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .header-photo .initials {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 5px solid white;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-info h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header-subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+
+        /* NAVIGATION */
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #4a5568;
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-back:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* SECTIONS */
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .section-header h2 {
+            font-size: 1.3rem;
+            color: #1a202c;
+            font-weight: 600;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+
+        .info-value a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+
+        /* LANGUES BADGES */
+        .langues-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .langue-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* REPÉRAGES ASSOCIÉS */
+        .reperages-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .reperage-item {
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            transition: all 0.2s ease;
+        }
+
+        .reperage-item:hover {
+            background: #edf2f7;
+            transform: translateX(4px);
+        }
+
+        .reperage-item strong {
+            color: #1a202c;
+            font-size: 1rem;
+        }
+
+        .reperage-item small {
+            color: #718096;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .reperage-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .reperage-badge.brouillon { background: #e2e8f0; color: #4a5568; }
+        .reperage-badge.soumis { background: #fef3c7; color: #92400e; }
+        .reperage-badge.validé { background: #d1fae5; color: #065f46; }
+
+        /* QR CODE */
+        .qr-code-box {
+            text-align: center;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .qr-code-box img {
+            max-width: 200px;
+            border: 4px solid white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .link-box {
+            background: #f7fafc;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #4a5568;
+            word-break: break-all;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        /* ACTIONS */
+        .actions-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #4a5568;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        /* BIO */
+        .bio-text {
+            line-height: 1.8;
+            color: #4a5568;
+            white-space: pre-wrap;
+        }
+
+        /* STATUT BADGE */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .status-badge.actif {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.inactif {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            .header-profile {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .sections-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-row {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/admin/fixers" class="nav-back">
+            <i data-lucide="arrow-left"></i> Retour aux correspondants
+        </a>
+
+        <!-- HEADER PROFIL -->
+        <div class="header-profile">
+            <div class="header-photo">
+                {% if fixer.photo_profil_url %}
+                <img src="{{ fixer.photo_profil_url }}" alt="{{ fixer.prenom }} {{ fixer.nom }}">
+                {% else %}
+                <div class="initials">
+                    {{ fixer.prenom[0] if fixer.prenom else '?' }}{{ fixer.nom[0] if fixer.nom else '' }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="header-info">
+                <h1>{{ fixer.prenom }} {{ fixer.nom }}</h1>
+                {% if fixer.fonction %}
+                <div class="header-subtitle">{{ fixer.fonction }}{% if fixer.societe %} - {{ fixer.societe }}{% endif %}</div>
+                {% endif %}
+                <div class="header-meta">
+                    <span class="header-badge">
+                        <i data-lucide="map-pin" style="width:18px;height:18px;"></i>
+                        {{ fixer.ville or fixer.region or 'Non renseigné' }}, {{ fixer.pays or '-' }}
+                    </span>
+                    {% if fixer.langues_parlees %}
+                    <span class="header-badge">
+                        <i data-lucide="languages" style="width:18px;height:18px;"></i>
+                        {{ fixer.langues_parlees.split(',') | length }} langue(s)
+                    </span>
+                    {% endif %}
+                    <span class="status-badge {{ 'actif' if fixer.actif else 'inactif' }}">
+                        {{ 'Actif' if fixer.actif else 'Inactif' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTIONS -->
+        <div class="sections-grid">
+            <!-- INFORMATIONS GÉNÉRALES -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i data-lucide="user" style="width:24px;height:24px;color:#667eea;"></i>
+                    <h2>Informations générales</h2>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Nom complet</div>
+                    <div class="info-value"><strong>{{ fixer.prenom }} {{ fixer.nom }}</strong></div>
+                </div>
+
+                {% if fixer.societe %}
+                <div class="info-row">
+                    <div class="info-label">Société</div>
+                    <div class="info-value">{{ fixer.societe }}</div>
+                </div>
+                {% endif %}
+
+                {% if fixer.fonction %}
+                <div class="info-row">
+                    <div class="info-label">Fonction</div>
+                    <div class="info-value">{{ fixer.fonction }}</div>
+                </div>
+                {% endif %}
+
+                {% if fixer.numero_siret %}
+                <div class="info-row">
+                    <div class="info-label">N° SIRET</div>
+                    <div class="info-value">{{ fixer.numero_siret }}</div>
+                </div>
+                {% endif %}
+
+                {% if fixer.bio %}
+                <div class="info-row">
+                    <div class="info-label">Biographie</div>
+                    <div class="info-value"><p class="bio-text">{{ fixer.bio }}</p></div>
+                </div>
+                {% endif %}
+
+                {% if fixer.specialites %}
+                <div class="info-row">
+                    <div class="info-label">Spécialités</div>
+                    <div class="info-value"><p class="bio-text">{{ fixer.specialites }}</p></div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- CONTACT -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i data-lucide="mail" style="width:24px;height:24px;color:#667eea;"></i>
+                    <h2>Contact</h2>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Email</div>
+                    <div class="info-value"><a href="mailto:{{ fixer.email }}">{{ fixer.email }}</a></div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value"><a href="tel:{{ fixer.telephone }}">{{ fixer.telephone }}</a></div>
+                </div>
+
+                {% if fixer.telephone_2 %}
+                <div class="info-row">
+                    <div class="info-label">Tél. secondaire</div>
+                    <div class="info-value"><a href="tel:{{ fixer.telephone_2 }}">{{ fixer.telephone_2 }}</a></div>
+                </div>
+                {% endif %}
+
+                {% if fixer.site_web %}
+                <div class="info-row">
+                    <div class="info-label">Site web</div>
+                    <div class="info-value"><a href="{{ fixer.site_web }}" target="_blank">{{ fixer.site_web }} ↗</a></div>
+                </div>
+                {% endif %}
+
+                {% if fixer.adresse_1 %}
+                <div class="info-row">
+                    <div class="info-label">Adresse</div>
+                    <div class="info-value">
+                        {{ fixer.adresse_1 }}<br>
+                        {% if fixer.adresse_2 %}{{ fixer.adresse_2 }}<br>{% endif %}
+                        {{ fixer.code_postal }} {{ fixer.ville }}<br>
+                        {{ fixer.pays }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- LANGUES -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i data-lucide="languages" style="width:24px;height:24px;color:#667eea;"></i>
+                    <h2>Langues & Préférences</h2>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Langues parlées</div>
+                    <div class="info-value">
+                        {% if fixer.langues_parlees %}
+                        <div class="langues-badges">
+                            {% for langue in fixer.langues_parlees.split(',') %}
+                            <span class="langue-badge">
+                                {% if 'Français' in langue %}🇫🇷{% endif %}
+                                {% if 'Anglais' in langue %}🇬🇧{% endif %}
+                                {% if 'Italien' in langue %}🇮🇹{% endif %}
+                                {% if 'Espagnol' in langue %}🇪🇸{% endif %}
+                                {% if 'Allemand' in langue %}🇩🇪{% endif %}
+                                {% if 'Portugais' in langue %}🇵🇹{% endif %}
+                                {% if 'Chinois' in langue %}🇨🇳{% endif %}
+                                {% if 'Japonais' in langue %}🇯🇵{% endif %}
+                                {{ langue.strip() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <span class="langue-badge">
+                            {% if fixer.langue_preferee == 'FR' %}🇫🇷 Français{% endif %}
+                            {% if fixer.langue_preferee == 'GB' %}🇬🇧 Anglais{% endif %}
+                            {% if fixer.langue_preferee == 'ITAL' %}🇮🇹 Italien{% endif %}
+                            {% if fixer.langue_preferee == 'ESP' %}🇪🇸 Espagnol{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Langue interface</div>
+                    <div class="info-value">
+                        {% if fixer.langue_preferee == 'FR' %}🇫🇷 Français{% endif %}
+                        {% if fixer.langue_preferee == 'GB' %}🇬🇧 Anglais{% endif %}
+                        {% if fixer.langue_preferee == 'ITAL' %}🇮🇹 Italien{% endif %}
+                        {% if fixer.langue_preferee == 'ESP' %}🇪🇸 Espagnol{% endif %}
+                    </div>
+                </div>
+
+                <div class="info-row">
+                    <div class="info-label">Région</div>
+                    <div class="info-value">{{ fixer.region or '-' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPÉRAGES ASSOCIÉS -->
+        {% if reperages %}
+        <div class="section-card" style="margin-bottom: 30px;">
+            <div class="section-header">
+                <i data-lucide="map" style="width:24px;height:24px;color:#667eea;"></i>
+                <h2>Repérages associés ({{ reperages|length }})</h2>
+            </div>
+
+            <div class="reperages-list">
+                {% for rep in reperages %}
+                <a href="/admin/reperage/{{ rep.id }}" class="reperage-item" style="text-decoration: none; display: block;">
+                    <strong>{{ rep.region }}</strong> - {{ rep.pays }}
+                    <small>Créé le {{ rep.created_at.strftime('%d/%m/%Y') if rep.created_at else '-' }}</small>
+                    <span class="reperage-badge {{ rep.statut }}">{{ rep.statut }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- NOTES INTERNES -->
+        {% if fixer.notes_internes %}
+        <div class="section-card" style="margin-bottom: 30px; border-left: 4px solid #f59e0b;">
+            <div class="section-header">
+                <i data-lucide="lock" style="width:24px;height:24px;color:#f59e0b;"></i>
+                <h2>Notes internes (privées)</h2>
+            </div>
+            <p class="bio-text" style="color:#92400e;background:#fef3c7;padding:15px;border-radius:8px;">{{ fixer.notes_internes }}</p>
+        </div>
+        {% endif %}
+
+        <!-- ACTIONS -->
+        <div class="actions-bar">
+            <a href="/admin/fixer/{{ fixer.id }}/edit" class="btn btn-primary">
+                <i data-lucide="edit"></i> Modifier
+            </a>
+            <a href="{{ fixer.lien_personnel }}" class="btn btn-secondary" target="_blank">
+                <i data-lucide="external-link"></i> Voir le formulaire
+            </a>
+            <button onclick="if(confirm('Désactiver ce correspondant ?')) { /* TODO */ }" class="btn btn-secondary">
+                <i data-lucide="user-x"></i> {{ 'Désactiver' if fixer.actif else 'Activer' }}
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function copyLink() {
+            const lien = document.getElementById('lienPersonnel').textContent;
+            navigator.clipboard.writeText(lien).then(() => {
+                alert('✅ Lien copié dans le presse-papiers !');
+            });
+        }
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>

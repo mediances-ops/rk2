@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ reperage.region or 'Repérage' }} - Les Gardiens de la Tradition</title>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+            padding: 20px;
+            color: #2C3E50;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ===== EN-TÊTE ===== */
+        .page-header {
+            background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 16px rgba(44, 62, 80, 0.2);
+            color: white;
+        }
+
+        .page-header h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+            text-shadow: 2px 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.6);
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .header-meta .meta-item,
+        .header-meta .status-badge {
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .meta-item strong {
+            color: white;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-brouillon {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-soumis {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-validé {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* ===== NAVIGATION ===== */
+        .nav-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #D35400 0%, #E67E22 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(230, 126, 34, 0.4);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-warning {
+            background: #E67E22;
+            color: white;
+            box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: #D35400;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(230, 126, 34, 0.4);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-secondary {
+            background: #2C3E50;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(44, 62, 80, 0.4);
+        }
+        
+        /* Badge notification chat sur bouton */
+        #btn-toggle-chat {
+            position: relative;
+        }
+        
+        .chat-notif-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+            animation: pulse 2s infinite;
+        }
+        
+        /* ===== PANNEAU CHAT ADMIN ===== */
+        .admin-chat-panel {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+            transition: right 0.3s ease;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-chat-panel.active {
+            right: 0;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF3B1F 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3);
+        }
+
+        .chat-header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chat-close-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 5px;
+            transition: all 0.2s ease;
+        }
+
+        .chat-close-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+
+        .chat-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            gap: 15px;
+        }
+
+        .chat-message {
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .chat-message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .chat-message-author {
+            font-weight: 600;
+        }
+
+        .chat-message-author.production {
+            color: #FF6B35;
+        }
+
+        .chat-message-author.fixer {
+            color: #2C3E50;
+        }
+
+        .chat-message-time {
+            color: #999;
+        }
+
+        .chat-message-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 80%;
+        }
+
+        .chat-message.production .chat-message-bubble {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF3B1F 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.fixer .chat-message-bubble {
+            background: white;
+            color: #2C3E50;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            transition: border-color 0.2s ease;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #FF6B35;
+        }
+
+        .chat-send-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #FF6B35 0%, #FF3B1F 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .chat-send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== MODALS ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 28px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 0;
+        }
+
+        .modal-body iframe {
+            width: 100%;
+            height: 75vh;
+            border: none;
+        }
+
+        .modal-body img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .modal-loading {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .modal-loading::after {
+            content: '';
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ===== SECTIONS ===== */
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 35px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #f1f5f9;
+        }
+
+        .section-icon {
+            font-size: 1.8rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== GRILLE D'INFORMATIONS ===== */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .info-box {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .info-box:hover {
+            border-color: #cbd5e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .info-value {
+            font-size: 1.05rem;
+            color: #1a202c;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        /* ===== BLOCS DE TEXTE ===== */
+        .text-block {
+            margin-bottom: 25px;
+        }
+
+        .text-block-title {
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #64748b;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .text-block-title::before {
+            content: '';
+            width: 4px;
+            height: 18px;
+            background: #3b82f6;
+            border-radius: 2px;
+        }
+
+        .text-block-content {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #2d3748;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .text-block-content a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .text-block-content a:hover {
+            border-bottom-color: #3b82f6;
+        }
+
+        /* ===== CARTES (Gardiens, Lieux) ===== */
+        .card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .card-section {
+            margin-bottom: 20px;
+        }
+
+        .card-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .card-section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #3b82f6;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #dbeafe;
+        }
+
+        /* ===== GALERIE PHOTOS ===== */
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            aspect-ratio: 4/3;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .gallery-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            color: white;
+            padding: 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* ===== DOCUMENTS & VIDÉOS ===== */
+        .document-list {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .document-item:hover {
+            border-color: #cbd5e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .document-icon {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+
+        .document-info {
+            flex: 1;
+        }
+
+        .document-name {
+            font-weight: 600;
+            font-size: 1.05rem;
+            color: #1a202c;
+            margin-bottom: 5px;
+        }
+
+        .document-meta {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .document-size {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-top: 3px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .section {
+                padding: 25px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .nav-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+        /* MODALS INFORMATIONS */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            max-width: 1000px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .modal-info-row {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .modal-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .modal-label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .modal-value {
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+
+        .modal-image {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .modal-image img {
+            max-width: 100%;
+            border-radius: 12px;
+            border: 3px solid #e2e8f0;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .modal-btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #cbd5e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- EN-TÊTE -->
+        <div class="page-header" {% if reperage.image_region %}style="background-image: url('{{ reperage.image_region }}'); background-size: cover; background-position: center;"{% endif %}>
+            <h1>{{ reperage.region or 'Région non renseignée' }}</h1>
+            <div class="header-meta">
+                <div class="meta-item">
+                    <span>🌍</span>
+                    <strong>Pays:</strong> {{ reperage.pays or 'Non renseigné' }}
+                </div>
+                <div class="meta-item">
+                    <span>👤</span>
+                    <strong>Fixer:</strong> {{ reperage.fixer_nom or 'Non renseigné' }}{% if reperage.fixer_prenom %} {{ reperage.fixer_prenom }}{% endif %}
+                </div>
+                <div class="meta-item">
+                    <span>📋</span>
+                    <strong>Repérage #{{ reperage.id }}</strong>
+                </div>
+                <span class="status-badge status-{{ reperage.statut }}">
+                    {{ reperage.statut }}
+                </span>
+            </div>
+        </div>
+
+        <!-- NAVIGATION / ACTIONS -->
+        <div class="nav-actions">
+            <a href="/admin" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Retour au tableau de bord</a>
+            
+            <!-- NOUVEAU : Bouton Informations Région -->
+            <button onclick="openInfoRegionModal()" class="btn btn-info" style="background: #3b82f6;">
+                <i data-lucide="map-pin"></i> Informations Région
+            </button>
+            
+            <!-- NOUVEAU : Bouton Correspondant -->
+            <button onclick="openCorrespondantModal()" class="btn btn-info" style="background: #8b5cf6;">
+                <i data-lucide="user"></i> Correspondant
+            </button>
+            
+            <button onclick="toggleAdminChat()" class="btn btn-warning" id="btn-toggle-chat">
+                <i data-lucide="message-circle"></i> Chat avec {{ reperage.fixer_nom or 'Correspondant' }}
+                <span class="chat-notif-badge" id="chat-notif-badge" style="display: none;">0</span>
+            </button>
+            <a href="/admin/reperage/{{ reperage.id }}/pdf" class="btn btn-primary"><i data-lucide="file-text"></i> Télécharger PDF</a>
+            <a href="/admin/reperage/{{ reperage.id }}/photos" class="btn btn-primary"><i data-lucide="package"></i> Photos (ZIP)</a>
+            
+            {% if reperage.statut == 'soumis' %}
+            <!-- NOUVEAU : Bouton Valider avec confirmation -->
+            <button onclick="validerReperage()" class="btn btn-success">
+                <i data-lucide="check-circle"></i> Valider la fiche
+            </button>
+            {% endif %}
+            
+            {% if reperage.statut in ['soumis', 'validé'] %}
+            <form action="/admin/reperage/{{ reperage.id }}/rouvrir" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-warning"><i data-lucide="unlock"></i> Rouvrir</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <!-- INFORMATIONS GÉNÉRALES -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">📊</span>
+                <h2 class="section-title">Informations Générales</h2>
+            </div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Statut</div>
+                    <div class="info-value">
+                        <span class="status-badge status-{{ reperage.statut }}">{{ reperage.statut }}</span>
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Langue</div>
+                    <div class="info-value">{{ reperage.langue_interface }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Créé le</div>
+                    <div class="info-value">
+                        {{ reperage.created_at.strftime('%d/%m/%Y à %H:%M') if reperage.created_at else '-' }}
+                    </div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Modifié le</div>
+                    <div class="info-value">
+                        {{ reperage.updated_at.strftime('%d/%m/%Y à %H:%M') if reperage.updated_at else '-' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FIXER -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">👤</span>
+                <h2 class="section-title">Fixer</h2>
+            </div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Nom</div>
+                    <div class="info-value">{{ reperage.fixer_nom or 'Non renseigné' }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ reperage.fixer_email or 'Non renseigné' }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">{{ reperage.fixer_telephone or 'Non renseigné' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TERRITOIRE -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">📍</span>
+                <h2 class="section-title">Territoire</h2>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Pays</div>
+                    <div class="info-value">{{ reperage.pays or 'Non renseigné' }}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Région / Province</div>
+                    <div class="info-value">{{ reperage.region or 'Non renseigné' }}</div>
+                </div>
+                {% if territoire.ville %}
+                <div class="info-box">
+                    <div class="info-label">Ville(s) principale(s)</div>
+                    <div class="info-value">{{ territoire.ville }}</div>
+                </div>
+                {% endif %}
+                {% if territoire.population %}
+                <div class="info-box">
+                    <div class="info-label">Population</div>
+                    <div class="info-value">{{ territoire.population }}</div>
+                </div>
+                {% endif %}
+                {% if territoire.langues %}
+                <div class="info-box">
+                    <div class="info-label">Langue(s) parlée(s)</div>
+                    <div class="info-value">{{ territoire.langues }}</div>
+                </div>
+                {% endif %}
+                {% if territoire.climat %}
+                <div class="info-box">
+                    <div class="info-label">Climat / Saison</div>
+                    <div class="info-value">{{ territoire.climat }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if territoire.histoire %}
+            <div class="text-block">
+                <div class="text-block-title">Histoire / Contexte culturel</div>
+                <div class="text-block-content">{{ territoire.histoire|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if territoire.traditions %}
+            <div class="text-block">
+                <div class="text-block-title">Traditions culinaires / artisanales</div>
+                <div class="text-block-content">{{ territoire.traditions|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if territoire.fetes %}
+            <div class="text-block">
+                <div class="text-block-title">Fêtes locales / Calendrier culturel</div>
+                <div class="text-block-content">{{ territoire.fetes|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if territoire.acces %}
+            <div class="text-block">
+                <div class="text-block-title">Accès depuis capitale / aéroport</div>
+                <div class="text-block-content">{{ territoire.acces|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if territoire.hebergement %}
+            <div class="text-block">
+                <div class="text-block-title">Hébergement équipe</div>
+                <div class="text-block-content">{{ territoire.hebergement|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if territoire.contacts %}
+            <div class="text-block">
+                <div class="text-block-title">Contacts locaux utiles</div>
+                <div class="text-block-content">{{ territoire.contacts|linkify|safe }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ÉPISODE -->
+        {% if episode %}
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">🎬</span>
+                <h2 class="section-title">Épisode</h2>
+            </div>
+
+            <div class="info-grid">
+                {% if episode.angle %}
+                <div class="info-box">
+                    <div class="info-label">Angle narratif</div>
+                    <div class="info-value">{{ episode.angle }}</div>
+                </div>
+                {% endif %}
+                {% if episode.fete %}
+                <div class="info-box">
+                    <div class="info-label">Fête ou événement central</div>
+                    <div class="info-value">{{ episode.fete }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if episode.arc %}
+            <div class="text-block">
+                <div class="text-block-title">Arc dramatique envisagé</div>
+                <div class="text-block-content">{{ episode.arc|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.moments %}
+            <div class="text-block">
+                <div class="text-block-title">Moments-clés identifiés</div>
+                <div class="text-block-content">{{ episode.moments|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.contraintes %}
+            <div class="text-block">
+                <div class="text-block-title">Contraintes temporelles</div>
+                <div class="text-block-content">{{ episode.contraintes|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.sensibles %}
+            <div class="text-block">
+                <div class="text-block-title">Éléments culturellement sensibles</div>
+                <div class="text-block-content">{{ episode.sensibles|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.autorisations %}
+            <div class="text-block">
+                <div class="text-block-title">Autorisations préalables nécessaires</div>
+                <div class="text-block-content">{{ episode.autorisations|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.budget %}
+            <div class="text-block">
+                <div class="text-block-title">Budget local estimé</div>
+                <div class="text-block-content">{{ episode.budget|linkify|safe }}</div>
+            </div>
+            {% endif %}
+
+            {% if episode.notes %}
+            <div class="text-block">
+                <div class="text-block-title">Notes production</div>
+                <div class="text-block-content">{{ episode.notes|linkify|safe }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- GARDIENS -->
+        {% if gardiens %}
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">👥</span>
+                <h2 class="section-title">Gardiens ({{ gardiens|length }})</h2>
+            </div>
+
+            {% for gardien in gardiens %}
+            <div class="card">
+                <div class="card-header">
+                    <span style="font-size: 1.5rem;">🎭</span>
+                    <h3 class="card-title">Gardien {{ gardien.ordre }}</h3>
+                </div>
+
+                <!-- Identité -->
+                <div class="card-section">
+                    <div class="card-section-title">Identité</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Nom complet</div>
+                            <div class="info-value">{{ gardien.prenom or '' }} {{ gardien.nom or 'Non renseigné' }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Âge</div>
+                            <div class="info-value">{{ gardien.age or '-' }} ans</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Genre</div>
+                            <div class="info-value">{{ gardien.genre or '-' }}</div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-label">Fonction / Titre</div>
+                            <div class="info-value">{{ gardien.fonction or '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Savoir transmis -->
+                {% if gardien.savoir_transmis %}
+                <div class="card-section">
+                    <div class="card-section-title">Savoir transmis</div>
+                    <div class="text-block-content">{{ gardien.savoir_transmis|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Coordonnées -->
+                <div class="card-section">
+                    <div class="card-section-title">Coordonnées</div>
+                    <div class="info-grid">
+                        {% if gardien.adresse %}
+                        <div class="info-box">
+                            <div class="info-label">Adresse</div>
+                            <div class="info-value">{{ gardien.adresse }}</div>
+                        </div>
+                        {% endif %}
+                        {% if gardien.telephone %}
+                        <div class="info-box">
+                            <div class="info-label">Téléphone</div>
+                            <div class="info-value">{{ gardien.telephone }}</div>
+                        </div>
+                        {% endif %}
+                        {% if gardien.email %}
+                        <div class="info-box">
+                            <div class="info-label">Email</div>
+                            <div class="info-value">{{ gardien.email }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if gardien.contact_intermediaire %}
+                    <div class="text-block" style="margin-top: 15px;">
+                        <div class="text-block-title">Contact intermédiaire</div>
+                        <div class="text-block-content">{{ gardien.contact_intermediaire|linkify|safe }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Histoire personnelle -->
+                {% if gardien.histoire_personnelle %}
+                <div class="card-section">
+                    <div class="card-section-title">Histoire personnelle / Parcours de transmission</div>
+                    <div class="text-block-content">{{ gardien.histoire_personnelle|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Évaluation cinégénie -->
+                {% if gardien.evaluation_cinegenie %}
+                <div class="card-section">
+                    <div class="card-section-title">Évaluation cinégénie / Capacité de transmission</div>
+                    <div class="text-block-content">{{ gardien.evaluation_cinegenie|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Langues -->
+                {% if gardien.langues_parlees %}
+                <div class="card-section">
+                    <div class="card-section-title">Langues parlées</div>
+                    <div class="text-block-content">{{ gardien.langues_parlees|linkify|safe }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- LIEUX -->
+        {% if lieux %}
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">📍</span>
+                <h2 class="section-title">Lieux de tournage ({{ lieux|length }})</h2>
+            </div>
+
+            {% for lieu in lieux|sort(attribute='numero_lieu') %}
+            <div class="card">
+                <div class="card-header">
+                    <span style="font-size: 1.5rem;">🏛️</span>
+                    <h3 class="card-title">Lieu {{ lieu.numero_lieu }}: {{ lieu.nom or 'Sans nom' }}</h3>
+                </div>
+
+                <!-- Informations générales -->
+                <div class="card-section">
+                    <div class="card-section-title">Informations générales</div>
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-label">Type d'environnement</div>
+                            <div class="info-value">{{ lieu.type_environnement or '-' }}</div>
+                        </div>
+                        {% if lieu.latitude and lieu.longitude %}
+                        <div class="info-box">
+                            <div class="info-label">Coordonnées GPS</div>
+                            <div class="info-value">{{ lieu.latitude }}, {{ lieu.longitude }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Description visuelle -->
+                {% if lieu.description_visuelle %}
+                <div class="card-section">
+                    <div class="card-section-title">Description visuelle générale</div>
+                    <div class="text-block-content">{{ lieu.description_visuelle|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Éléments symboliques -->
+                {% if lieu.elements_symboliques %}
+                <div class="card-section">
+                    <div class="card-section-title">Éléments symboliques ou culturels notables</div>
+                    <div class="text-block-content">{{ lieu.elements_symboliques|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Points de vue -->
+                {% if lieu.points_vue_remarquables %}
+                <div class="card-section">
+                    <div class="card-section-title">Points de vue remarquables identifiés</div>
+                    <div class="text-block-content">{{ lieu.points_vue_remarquables|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Analyse artistique -->
+                {% if lieu.cinegenie %}
+                <div class="card-section">
+                    <div class="card-section-title">Cinégénie / Potentiel visuel</div>
+                    <div class="text-block-content">{{ lieu.cinegenie|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.axes_camera %}
+                <div class="card-section">
+                    <div class="card-section-title">Axes caméra et cadrage conseillés</div>
+                    <div class="text-block-content">{{ lieu.axes_camera|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.moments_favorables %}
+                <div class="card-section">
+                    <div class="card-section-title">Moments favorables (lumière)</div>
+                    <div class="text-block-content">{{ lieu.moments_favorables|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.ambiance_sonore %}
+                <div class="card-section">
+                    <div class="card-section-title">Ambiance sonore</div>
+                    <div class="text-block-content">{{ lieu.ambiance_sonore|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.adequation_narration %}
+                <div class="card-section">
+                    <div class="card-section-title">Adéquation avec la narration</div>
+                    <div class="text-block-content">{{ lieu.adequation_narration|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Logistique -->
+                <div class="card-section">
+                    <div class="card-section-title">Logistique & Faisabilité</div>
+                    <div class="info-grid">
+                        {% if lieu.accessibilite %}
+                        <div class="info-box">
+                            <div class="info-label">Accessibilité</div>
+                            <div class="info-value">{{ lieu.accessibilite }}</div>
+                        </div>
+                        {% endif %}
+                        {% if lieu.securite %}
+                        <div class="info-box">
+                            <div class="info-label">Sécurité</div>
+                            <div class="info-value">{{ lieu.securite }}</div>
+                        </div>
+                        {% endif %}
+                        {% if lieu.electricite %}
+                        <div class="info-box">
+                            <div class="info-label">Électricité disponible</div>
+                            <div class="info-value">{{ lieu.electricite }}</div>
+                        </div>
+                        {% endif %}
+                        {% if lieu.espace_equipe %}
+                        <div class="info-box">
+                            <div class="info-label">Espace équipe</div>
+                            <div class="info-value">{{ lieu.espace_equipe }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contraintes -->
+                {% if lieu.protection_meteo %}
+                <div class="card-section">
+                    <div class="card-section-title">Protection météo</div>
+                    <div class="text-block-content">{{ lieu.protection_meteo|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.contraintes_meteo %}
+                <div class="card-section">
+                    <div class="card-section-title">Contraintes météo / saisonnières</div>
+                    <div class="text-block-content">{{ lieu.contraintes_meteo|linkify|safe }}</div>
+                </div>
+                {% endif %}
+
+                {% if lieu.autorisations_necessaires %}
+                <div class="card-section">
+                    <div class="card-section-title">Autorisations nécessaires</div>
+                    <div class="text-block-content">{{ lieu.autorisations_necessaires|linkify|safe }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- MÉDIAS -->
+        {% if medias %}
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">📷</span>
+                <h2 class="section-title">Médias ({{ medias|length }})</h2>
+            </div>
+            <p style="color: #64748b; margin-bottom: 25px; font-size: 1.05rem;">
+                Photos: {{ medias|selectattr('type', 'equalto', 'photo')|list|length }} | 
+                Documents: {{ medias|selectattr('type', 'equalto', 'document')|list|length }}
+            </p>
+
+            <!-- Photos -->
+            {% set photos = medias|selectattr('type', 'equalto', 'photo')|list %}
+            {% if photos %}
+            <div class="gallery">
+                {% for media in photos %}
+                <div class="gallery-item">
+                    <img src="/uploads/{{ media.reperage_id }}/{{ media.nom_fichier }}" 
+                         alt="{{ media.nom_original }}"
+                         onerror="this.src='/static/uploads/thumbnails/thumb_{{ media.nom_fichier }}'">
+                    <div class="gallery-caption">{{ media.legende or media.nom_original }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Documents & Vidéos -->
+            {% set documents = medias|selectattr('type', 'equalto', 'document')|list %}
+            {% if documents %}
+            <div style="margin-top: 40px;">
+                <h3 style="font-size: 1.3rem; font-weight: 700; color: #1a202c; margin-bottom: 20px;">
+                    📄 Documents & Vidéos
+                </h3>
+                <div class="document-list">
+                    {% for media in documents %}
+                    <div class="document-item">
+                        {% if media.nom_fichier.lower().endswith(('.mp4', '.mov', '.avi')) %}
+                        <span class="document-icon">🎥</span>
+                        {% elif media.nom_fichier.lower().endswith('.pdf') %}
+                        <span class="document-icon">📄</span>
+                        {% else %}
+                        <span class="document-icon">📎</span>
+                        {% endif %}
+                        <div class="document-info">
+                            <div class="document-name">{{ media.nom_original }}</div>
+                            {% if media.legende %}
+                            <div class="document-meta">{{ media.legende }}</div>
+                            {% endif %}
+                            <div class="document-size">
+                                {{ (media.taille_octets / 1024 / 1024)|round(1) }} MB
+                            </div>
+                        </div>
+                        <a href="/uploads/{{ media.reperage_id }}/{{ media.nom_fichier }}" 
+                           target="_blank" 
+                           class="btn btn-primary">
+                            📥 Télécharger
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- MODAL POUR LIENS -->
+    <div id="contentModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modalTitle">📄 Contenu</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="modal-loading">Chargement...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANNEAU CHAT ADMIN (même système que dashboard) -->
+    <div class="admin-chat-panel" id="admin-chat-panel">
+        <div class="chat-header" style="padding: 20px; background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);">
+            <div class="chat-header-profile" style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                {% if fixer and fixer.photo_profil_url %}
+                <img src="{{ fixer.photo_profil_url }}" alt="{{ fixer.prenom }} {{ fixer.nom }}" style="width: 64px; height: 64px; border-radius: 50%; border: 3px solid white; object-fit: cover;">
+                {% elif fixer %}
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.2); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; border: 3px solid white;">
+                    {{ fixer.prenom[0] if fixer.prenom else '?' }}{{ fixer.nom[0] if fixer.nom else '' }}
+                </div>
+                {% else %}
+                <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.2); color: white; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="user" style="width: 32px; height: 32px;"></i>
+                </div>
+                {% endif %}
+                
+                <div class="chat-header-info" style="flex: 1;">
+                    <div id="chat-title" class="chat-header-title" style="font-size: 1.2rem; font-weight: 700; color: white; margin-bottom: 6px;">
+                        {{ reperage.fixer_nom or 'Correspondant' }}{% if fixer and fixer.prenom %} {{ fixer.prenom }}{% endif %}
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.9rem; color: rgba(255,255,255,0.9);">
+                        {% if fixer %}
+                            {% if fixer.ville or fixer.pays %}
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                                <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                                {{ fixer.ville or '' }}{% if fixer.ville and fixer.pays %}, {% endif %}{{ fixer.pays or '' }}
+                            </span>
+                            {% endif %}
+                            {% if fixer.langues_parlees %}
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                                <i data-lucide="languages" style="width: 14px; height: 14px;"></i>
+                                {% for langue in fixer.langues_parlees.split(',')[:3] %}
+                                    {% if 'Français' in langue %}🇫🇷{% endif %}
+                                    {% if 'Anglais' in langue %}🇬🇧{% endif %}
+                                    {% if 'Italien' in langue %}🇮🇹{% endif %}
+                                    {% if 'Espagnol' in langue %}🇪🇸{% endif %}
+                                    {% if 'Allemand' in langue %}🇩🇪{% endif %}
+                                {% endfor %}
+                            </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="chat-close-btn" onclick="closeAdminChat()" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            </button>
+        </div>
+        
+        <div class="chat-messages" id="admin-chat-messages">
+            <div class="chat-empty">
+                <i data-lucide="message-circle" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                <p>Aucun message pour le moment</p>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <textarea 
+                class="chat-input" 
+                id="admin-chat-input" 
+                placeholder="Écrivez votre message..."
+                rows="2"
+            ></textarea>
+            <button class="chat-send-btn" onclick="sendAdminMessage()">
+                <i data-lucide="send"></i>
+                Envoyer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // GESTION DES MODALS POUR LES LIENS
+        function openModal(url, title, type) {
+            const modal = document.getElementById('contentModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+            
+            // Déterminer l'icône selon le type
+            let icon = '📄';
+            if (type === 'video') icon = '🎥';
+            if (type === 'image') icon = '🖼️';
+            if (type === 'pdf') icon = '📄';
+            
+            // Mettre à jour le titre
+            modalTitle.innerHTML = `${icon} ${title}`;
+            
+            // Afficher le loading
+            modalBody.innerHTML = '<div class="modal-loading">Chargement...</div>';
+            
+            // Ouvrir le modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Charger le contenu selon le type
+            setTimeout(() => {
+                if (type === 'image') {
+                    modalBody.innerHTML = `<img src="${url}" alt="${title}" />`;
+                } else if (type === 'video') {
+                    modalBody.innerHTML = `<video controls autoplay style="width:100%;max-height:75vh;background:#000;">
+                        <source src="${url}" type="video/mp4">
+                        Votre navigateur ne supporte pas la vidéo.
+                    </video>`;
+                } else {
+                    // Pour PDF et autres documents
+                    modalBody.innerHTML = `<iframe src="${url}"></iframe>`;
+                }
+            }, 300);
+        }
+        
+        function closeModal(event) {
+            if (event && event.target !== event.currentTarget && !event.target.classList.contains('modal-close')) {
+                return;
+            }
+            const modal = document.getElementById('contentModal');
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            // Nettoyer le contenu après la fermeture
+            setTimeout(() => {
+                document.getElementById('modalBody').innerHTML = '<div class="modal-loading">Chargement...</div>';
+            }, 300);
+        }
+        
+        // Fermer avec la touche Échap
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // Intercepter tous les liens de médias pour ouvrir en modal
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. LIENS DE TÉLÉCHARGEMENT DE MÉDIAS
+            document.querySelectorAll('a[href*="/media/"]').forEach(link => {
+                const href = link.getAttribute('href');
+                const filename = link.textContent.trim();
+                
+                // Déterminer le type de fichier
+                let type = 'pdf';
+                if (href.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    type = 'image';
+                } else if (href.match(/\.(mp4|mov|avi)$/i)) {
+                    type = 'video';
+                }
+                
+                // Si c'est un bouton de téléchargement, ne pas intercepter
+                if (link.textContent.includes('📥 Télécharger')) {
+                    return;
+                }
+                
+                // Ajouter un bouton "Voir" à côté du téléchargement
+                const viewBtn = document.createElement('button');
+                viewBtn.className = 'btn btn-primary';
+                viewBtn.style.cssText = 'margin-left: 10px; padding: 8px 16px; font-size: 0.85rem;';
+                viewBtn.innerHTML = '👁️ Voir';
+                viewBtn.onclick = (e) => {
+                    e.preventDefault();
+                    openModal(href, filename, type);
+                };
+                
+                link.parentElement.appendChild(viewBtn);
+            });
+            
+            // 2. LIENS HYPERTEXTES DANS LES TEXTES (linkify)
+            document.querySelectorAll('.text-block-content a, .card-section a').forEach(link => {
+                const href = link.getAttribute('href');
+                
+                // Ignorer les liens de médias (déjà traités)
+                if (href && href.includes('/media/')) {
+                    return;
+                }
+                
+                // Ignorer les liens internes
+                if (href && (href.startsWith('#') || href.startsWith('/'))) {
+                    return;
+                }
+                
+                // Déterminer le type de contenu
+                let type = 'pdf';
+                if (href.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    type = 'image';
+                } else if (href.match(/\.(mp4|mov|avi)$/i)) {
+                    type = 'video';
+                } else if (href.match(/youtube\.com|youtu\.be|vimeo\.com/i)) {
+                    // Pour YouTube/Vimeo, on ouvre dans un nouvel onglet
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                    return;
+                }
+                
+                // Transformer le lien pour ouvrir en modal
+                link.style.cursor = 'pointer';
+                link.onclick = (e) => {
+                    e.preventDefault();
+                    const title = link.textContent || 'Document';
+                    openModal(href, title, type);
+                };
+                
+                // Ajouter une icône pour indiquer que ça s'ouvre en modal
+                const icon = document.createElement('span');
+                icon.innerHTML = ' 🔍';
+                icon.style.cssText = 'font-size: 0.85em; opacity: 0.6;';
+                link.appendChild(icon);
+            });
+        });
+        
+        // ============= CHAT ADMIN (même système que dashboard) =============
+        const reperageId = {{ reperage.id }};
+        const fixerNom = "{{ reperage.fixer_nom or 'Correspondant' }}";
+        let currentChatReperageId = null;
+        let chatPollInterval = null;
+        let lastMessagesJson = '';
+
+        // Ouvrir le chat
+        function openAdminChat(repId, fixName) {
+            currentChatReperageId = repId || reperageId;
+            lastMessagesJson = '';
+            
+            document.getElementById('chat-title').textContent = `Messages avec ${fixName || fixerNom}`;
+            document.getElementById('admin-chat-panel').classList.add('active');
+            
+            loadAdminMessages();
+            startAdminChatPolling();
+            
+            lucide.createIcons();
+        }
+
+        // Fermer le chat
+        function closeAdminChat() {
+            document.getElementById('admin-chat-panel').classList.remove('active');
+            stopAdminChatPolling();
+            currentChatReperageId = null;
+            lastMessagesJson = '';
+        }
+
+        // Charger les messages
+        async function loadAdminMessages() {
+            if (!currentChatReperageId) return;
+
+            try {
+                const response = await fetch(`/api/reperages/${currentChatReperageId}/messages`);
+                if (!response.ok) throw new Error('Erreur chargement messages');
+
+                const messages = await response.json();
+                
+                // Vérifier si les messages ont changé
+                const newMessagesJson = JSON.stringify(messages);
+                if (newMessagesJson === lastMessagesJson) {
+                    return;
+                }
+                
+                lastMessagesJson = newMessagesJson;
+                displayAdminMessages(messages);
+                markFixerMessagesAsRead(messages);
+                scrollChatToBottom();
+                
+                // Cacher badge si ouvert
+                const badge = document.getElementById('chat-notif-badge');
+                if (badge) badge.style.display = 'none';
+
+            } catch (error) {
+                console.error('Erreur chargement messages:', error);
+            }
+        }
+
+        // Afficher les messages
+        function displayAdminMessages(messages) {
+            const container = document.getElementById('admin-chat-messages');
+
+            if (messages.length === 0) {
+                container.innerHTML = `
+                    <div class="chat-empty">
+                        <i data-lucide="message-circle" style="width: 48px; height: 48px; opacity: 0.3;"></i>
+                        <p>Aucun message pour le moment</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => {
+                const date = new Date(msg.created_at);
+                const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="chat-message ${msg.auteur_type}">
+                        <div class="chat-message-header">
+                            <span class="chat-message-author ${msg.auteur_type}">${escapeHtml(msg.auteur_nom)}</span>
+                            <span class="chat-message-time">${timeStr}</span>
+                        </div>
+                        <div class="chat-message-bubble">
+                            ${escapeHtml(msg.contenu).replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Envoyer un message
+        async function sendAdminMessage() {
+            const input = document.getElementById('admin-chat-input');
+            const content = input.value.trim();
+
+            if (!content || !currentChatReperageId) return;
+
+            try {
+                const response = await fetch(`/api/reperages/${currentChatReperageId}/messages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        auteur_type: 'production',
+                        auteur_nom: 'Production',
+                        contenu: content
+                    })
+                });
+
+                if (!response.ok) throw new Error('Erreur envoi message');
+
+                input.value = '';
+                await loadAdminMessages();
+
+            } catch (error) {
+                console.error('Erreur envoi message:', error);
+                alert('Erreur lors de l\'envoi du message');
+            }
+        }
+
+        // Marquer les messages du fixer comme lus
+        async function markFixerMessagesAsRead(messages) {
+            const unreadFixerMessages = messages.filter(msg => 
+                msg.auteur_type === 'fixer' && !msg.lu
+            );
+
+            for (const msg of unreadFixerMessages) {
+                try {
+                    await fetch(`/api/messages/${msg.id}/read`, { method: 'PUT' });
+                } catch (error) {
+                    console.error('Erreur marquage lu:', error);
+                }
+            }
+        }
+
+        // Polling messages
+        function startAdminChatPolling() {
+            chatPollInterval = setInterval(loadAdminMessages, 5000);
+        }
+
+        function stopAdminChatPolling() {
+            if (chatPollInterval) {
+                clearInterval(chatPollInterval);
+                chatPollInterval = null;
+            }
+        }
+
+        function scrollChatToBottom() {
+            const container = document.getElementById('admin-chat-messages');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Fonction pour le bouton "Chat avec..."
+        function toggleAdminChat() {
+            openAdminChat(reperageId, fixerNom);
+        }
+        
+        // Charger badge notification
+        async function loadChatBadge() {
+            try {
+                const response = await fetch(`/api/reperages/${reperageId}/messages/unread-count?for=admin`);
+                const data = await response.json();
+                
+                const badge = document.getElementById('chat-notif-badge');
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Erreur chargement badge:', error);
+            }
+        }
+        
+        // Charger badge au démarrage
+        loadChatBadge();
+        
+        // Recharger badge toutes les 10 secondes
+        setInterval(loadChatBadge, 10000);
+        
+        // Enter pour envoyer
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('admin-chat-input');
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendAdminMessage();
+                    }
+                });
+            }
+        });
+        
+        // ========== MODALS ==========
+        function openInfoRegionModal() {
+            document.getElementById('modalInfoRegion').classList.add('active');
+            lucide.createIcons();
+        }
+
+        function closeInfoRegionModal() {
+            document.getElementById('modalInfoRegion').classList.remove('active');
+        }
+
+        async function sauvegarderInfoRegion(event) {
+            event.preventDefault();
+            
+            const region = document.getElementById('info_region').value;
+            const pays = document.getElementById('info_pays').value;
+            const notes_admin = document.getElementById('info_notes_admin').value;
+            
+            try {
+                const response = await fetch(`/api/reperages/{{ reperage.id }}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        region: region,
+                        pays: pays,
+                        notes_admin: notes_admin
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Informations sauvegardées !');
+                    location.reload();
+                } else {
+                    alert('❌ Erreur lors de la sauvegarde');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Erreur lors de la sauvegarde');
+            }
+        }
+
+        function openCorrespondantModal() {
+            document.getElementById('modalCorrespondant').classList.add('active');
+            lucide.createIcons();
+        }
+
+        function closeCorrespondantModal() {
+            document.getElementById('modalCorrespondant').classList.remove('active');
+        }
+
+        function openModifierRegionModal() {
+            closeInfoRegionModal();
+            // TODO: Ouvrir modal modification (à implémenter si nécessaire)
+            alert('Fonctionnalité à venir : modification des infos région');
+        }
+
+        // Fermer modals avec Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeInfoRegionModal();
+                closeCorrespondantModal();
+            }
+        });
+
+        // Fermer modals en cliquant sur l'overlay
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // ========== VALIDATION REPERAGE ==========
+        function validerReperage() {
+            if (confirm('⚠️ Valider ce repérage ?\n\nCette action confirmera que le repérage est complet et validé.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/admin/reperage/{{ reperage.id }}/valider';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+    <!-- MODAL INFORMATIONS RÉGION -->
+    <div class="modal-overlay" id="modalInfoRegion">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i data-lucide="map-pin"></i> Informations Région</h2>
+                <button class="modal-close" onclick="closeInfoRegionModal()">×</button>
+            </div>
+            <form id="formInfoRegion" onsubmit="sauvegarderInfoRegion(event)">
+                <div class="modal-body">
+                    <div class="modal-info-row">
+                        <div class="modal-label">Région *</div>
+                        <input type="text" id="info_region" value="{{ reperage.region or '' }}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    <div class="modal-info-row">
+                        <div class="modal-label">Pays *</div>
+                        <input type="text" id="info_pays" value="{{ reperage.pays or '' }}" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    <div class="modal-info-row">
+                        <div class="modal-label">Notes administratives</div>
+                        <textarea id="info_notes_admin" rows="6" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical;">{{ reperage.notes_admin or '' }}</textarea>
+                        <small style="color: #718096; font-size: 0.85rem; margin-top: 6px; display: block;">Ces notes sont visibles uniquement par l'équipe de production</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="modal-btn modal-btn-secondary" onclick="closeInfoRegionModal()">Annuler</button>
+                    <button type="submit" class="modal-btn modal-btn-primary">
+                        <i data-lucide="save"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CORRESPONDANT -->
+    <div class="modal-overlay" id="modalCorrespondant">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i data-lucide="user"></i> Correspondant</h2>
+                <button class="modal-close" onclick="closeCorrespondantModal()">×</button>
+            </div>
+            <div class="modal-body">
+                {% if fixer %}
+                <!-- Photo -->
+                <div style="text-align: center; margin-bottom: 25px;">
+                    {% if fixer.photo_profil_url %}
+                    <img src="{{ fixer.photo_profil_url }}" alt="{{ fixer.prenom }} {{ fixer.nom }}" style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid #667eea; object-fit: cover;">
+                    {% else %}
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: inline-flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700;">
+                        {{ fixer.prenom[0] if fixer.prenom else '?' }}{{ fixer.nom[0] if fixer.nom else '' }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="modal-info-row">
+                    <div class="modal-label">Nom complet</div>
+                    <div class="modal-value"><strong>{{ fixer.prenom }} {{ fixer.nom }}</strong></div>
+                </div>
+                {% if fixer.societe %}
+                <div class="modal-info-row">
+                    <div class="modal-label">Société</div>
+                    <div class="modal-value">{{ fixer.societe }}</div>
+                </div>
+                {% endif %}
+                {% if fixer.fonction %}
+                <div class="modal-info-row">
+                    <div class="modal-label">Fonction</div>
+                    <div class="modal-value">{{ fixer.fonction }}</div>
+                </div>
+                {% endif %}
+                <div class="modal-info-row">
+                    <div class="modal-label">Email</div>
+                    <div class="modal-value"><a href="mailto:{{ fixer.email }}" style="color: #3b82f6;">{{ fixer.email }}</a></div>
+                </div>
+                <div class="modal-info-row">
+                    <div class="modal-label">Téléphone</div>
+                    <div class="modal-value"><a href="tel:{{ fixer.telephone }}" style="color: #3b82f6;">{{ fixer.telephone }}</a></div>
+                </div>
+                {% if fixer.ville or fixer.pays %}
+                <div class="modal-info-row">
+                    <div class="modal-label">Localisation</div>
+                    <div class="modal-value">{{ fixer.ville or '' }}{% if fixer.ville and fixer.pays %}, {% endif %}{{ fixer.pays or '' }}</div>
+                </div>
+                {% endif %}
+                {% if fixer.langues_parlees %}
+                <div class="modal-info-row">
+                    <div class="modal-label">Langues</div>
+                    <div class="modal-value">
+                        {% for langue in fixer.langues_parlees.split(',') %}
+                        <span style="display: inline-block; padding: 4px 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; font-size: 0.8rem; margin: 2px;">
+                            {% if 'Français' in langue %}🇫🇷{% endif %}
+                            {% if 'Anglais' in langue %}🇬🇧{% endif %}
+                            {% if 'Italien' in langue %}🇮🇹{% endif %}
+                            {% if 'Espagnol' in langue %}🇪🇸{% endif %}
+                            {% if 'Allemand' in langue %}🇩🇪{% endif %}
+                            {% if 'Portugais' in langue %}🇵🇹{% endif %}
+                            {{ langue.strip() }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% else %}
+                <p style="text-align: center; color: #718096; padding: 20px;">Aucun correspondant affecté</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" onclick="closeCorrespondantModal()">Fermer</button>
+                {% if fixer %}
+                <a href="/admin/fixer/{{ fixer.id }}" class="modal-btn modal-btn-primary" style="text-decoration: none;">
+                    <i data-lucide="external-link"></i> Fiche complète
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
