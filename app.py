@@ -10,6 +10,54 @@ from PIL import Image
 import io
 import re
 
+
+
+import requests # Ajoute cet import en haut du fichier
+
+# --- FONCTION BRIDGE ---
+def send_to_docugen(reperage_dict):
+    url = os.environ.get('DOCUGEN_API_URL')
+    token = os.environ.get('BRIDGE_SECRET_TOKEN')
+    if not url:
+        return False
+    
+    headers = {
+        "X-Bridge-Token": token,
+        "Content-Type": "application/json"
+    }
+    try:
+        response = requests.post(url, json=reperage_dict, headers=headers, timeout=10)
+        return response.status_code == 200
+    except Exception as e:
+        print(f"Erreur Bridge: {e}")
+        return False
+
+# --- MODIFICATION DE LA ROUTE SUBMIT (vers la ligne 170) ---
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def submit_reperage(id):
+    session = get_session(engine)
+    try:
+        reperage = session.get(Reperage, id)
+        if not reperage:
+            return jsonify({'error': 'Non trouvé'}), 404
+        
+        reperage.statut = 'soumis'
+        session.commit()
+        
+        # 🚀 ACTION DU BRIDGE : On envoie les données à Docu-Gen
+        data_to_send = reperage.to_dict()
+        success = send_to_docugen(data_to_send)
+        
+        return jsonify({
+            'status': 'success',
+            'bridge_sent': success,
+            'message': 'Repérage soumis et transmis à Docu-Gen' if success else 'Soumis mais erreur de transmission'
+        })
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
 app = Flask(__name__)
 CORS(app)
 
@@ -1512,4 +1560,5 @@ if __name__ == '__main__':
     print(f"\n📍 URL: http://localhost:{port}")
     print("\n✅ Serveur démarré avec succès!\n")
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
