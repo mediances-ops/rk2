@@ -17,7 +17,7 @@ import requests # Ajoute cet import en haut du fichier
 # --- FONCTION BRIDGE ---
 def send_to_docugen(reperage_dict):
     url = os.environ.get('DOCUGEN_API_URL')
-    token = os.environ.get('BRIDGE_SECRET_TOKEN')
+    token = os.environ.get('BRIDGE_SECRET_TOKEN', '')
     if not url:
         return False
     
@@ -1560,5 +1560,6 @@ if __name__ == '__main__':
     print(f"\n📍 URL: http://localhost:{port}")
     print("\n✅ Serveur démarré avec succès!\n")
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
