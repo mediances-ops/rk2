@@ -988,6 +988,24 @@
             {% endif %}
         </div>
 
+        <!-- ========================================== -->
+        <!-- BOUTON PASSERELLE DOC-OS (INSERTION ICI) -->
+        <!-- ========================================== -->
+        <div style="margin-bottom: 30px; padding: 25px; background: #000; border: 2px solid #e50914; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); color: white;">
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+                <span style="font-size: 2.5rem;">🚀</span>
+                <div>
+                    <h3 style="color: #e50914; margin: 0; letter-spacing: 2px; text-transform: uppercase; font-size: 1.3rem; font-weight: 800;">Passerelle DOC-OS Intelligence Artificielle</h3>
+                    <p style="color: #ccc; font-size: 1rem; margin-top: 5px; font-weight: 500;">Envoyer les données de ce repérage vers Docu-Gen 333+1 pour la scénarisation.</p>
+                </div>
+            </div>
+            <button onclick="sendToIA({{ reperage.id }})" id="btnBridgeIA" style="width: 100%; padding: 20px; background: #e50914; color: white; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 1.2rem; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);">
+                Générer le scénario dans Docu-Gen
+            </button>
+        </div>
+        <!-- ========================================== -->
+
+
         <!-- INFORMATIONS GÉNÉRALES -->
         <div class="section">
             <div class="section-header">
@@ -1535,7 +1553,7 @@
         </div>
     </div>
 
-    <!-- PANNEAU CHAT ADMIN (même système que dashboard) -->
+    <!-- PANNEAU CHAT ADMIN -->
     <div class="admin-chat-panel" id="admin-chat-panel">
         <div class="chat-header" style="padding: 20px; background: linear-gradient(135deg, #E67E22 0%, #D35400 100%);">
             <div class="chat-header-profile" style="display: flex; align-items: center; gap: 15px; flex: 1;">
@@ -1561,18 +1579,6 @@
                             <span style="display: flex; align-items: center; gap: 4px;">
                                 <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
                                 {{ fixer.ville or '' }}{% if fixer.ville and fixer.pays %}, {% endif %}{{ fixer.pays or '' }}
-                            </span>
-                            {% endif %}
-                            {% if fixer.langues_parlees %}
-                            <span style="display: flex; align-items: center; gap: 4px;">
-                                <i data-lucide="languages" style="width: 14px; height: 14px;"></i>
-                                {% for langue in fixer.langues_parlees.split(',')[:3] %}
-                                    {% if 'Français' in langue %}🇫🇷{% endif %}
-                                    {% if 'Anglais' in langue %}🇬🇧{% endif %}
-                                    {% if 'Italien' in langue %}🇮🇹{% endif %}
-                                    {% if 'Espagnol' in langue %}🇪🇸{% endif %}
-                                    {% if 'Allemand' in langue %}🇩🇪{% endif %}
-                                {% endfor %}
                             </span>
                             {% endif %}
                         {% endif %}
@@ -1605,432 +1611,7 @@
         </div>
     </div>
 
-    <script>
-        // GESTION DES MODALS POUR LES LIENS
-        function openModal(url, title, type) {
-            const modal = document.getElementById('contentModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-            
-            // Déterminer l'icône selon le type
-            let icon = '📄';
-            if (type === 'video') icon = '🎥';
-            if (type === 'image') icon = '🖼️';
-            if (type === 'pdf') icon = '📄';
-            
-            // Mettre à jour le titre
-            modalTitle.innerHTML = `${icon} ${title}`;
-            
-            // Afficher le loading
-            modalBody.innerHTML = '<div class="modal-loading">Chargement...</div>';
-            
-            // Ouvrir le modal
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
-            // Charger le contenu selon le type
-            setTimeout(() => {
-                if (type === 'image') {
-                    modalBody.innerHTML = `<img src="${url}" alt="${title}" />`;
-                } else if (type === 'video') {
-                    modalBody.innerHTML = `<video controls autoplay style="width:100%;max-height:75vh;background:#000;">
-                        <source src="${url}" type="video/mp4">
-                        Votre navigateur ne supporte pas la vidéo.
-                    </video>`;
-                } else {
-                    // Pour PDF et autres documents
-                    modalBody.innerHTML = `<iframe src="${url}"></iframe>`;
-                }
-            }, 300);
-        }
-        
-        function closeModal(event) {
-            if (event && event.target !== event.currentTarget && !event.target.classList.contains('modal-close')) {
-                return;
-            }
-            const modal = document.getElementById('contentModal');
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
-            
-            // Nettoyer le contenu après la fermeture
-            setTimeout(() => {
-                document.getElementById('modalBody').innerHTML = '<div class="modal-loading">Chargement...</div>';
-            }, 300);
-        }
-        
-        // Fermer avec la touche Échap
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeModal();
-            }
-        });
-        
-        // Intercepter tous les liens de médias pour ouvrir en modal
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. LIENS DE TÉLÉCHARGEMENT DE MÉDIAS
-            document.querySelectorAll('a[href*="/media/"]').forEach(link => {
-                const href = link.getAttribute('href');
-                const filename = link.textContent.trim();
-                
-                // Déterminer le type de fichier
-                let type = 'pdf';
-                if (href.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                    type = 'image';
-                } else if (href.match(/\.(mp4|mov|avi)$/i)) {
-                    type = 'video';
-                }
-                
-                // Si c'est un bouton de téléchargement, ne pas intercepter
-                if (link.textContent.includes('📥 Télécharger')) {
-                    return;
-                }
-                
-                // Ajouter un bouton "Voir" à côté du téléchargement
-                const viewBtn = document.createElement('button');
-                viewBtn.className = 'btn btn-primary';
-                viewBtn.style.cssText = 'margin-left: 10px; padding: 8px 16px; font-size: 0.85rem;';
-                viewBtn.innerHTML = '👁️ Voir';
-                viewBtn.onclick = (e) => {
-                    e.preventDefault();
-                    openModal(href, filename, type);
-                };
-                
-                link.parentElement.appendChild(viewBtn);
-            });
-            
-            // 2. LIENS HYPERTEXTES DANS LES TEXTES (linkify)
-            document.querySelectorAll('.text-block-content a, .card-section a').forEach(link => {
-                const href = link.getAttribute('href');
-                
-                // Ignorer les liens de médias (déjà traités)
-                if (href && href.includes('/media/')) {
-                    return;
-                }
-                
-                // Ignorer les liens internes
-                if (href && (href.startsWith('#') || href.startsWith('/'))) {
-                    return;
-                }
-                
-                // Déterminer le type de contenu
-                let type = 'pdf';
-                if (href.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                    type = 'image';
-                } else if (href.match(/\.(mp4|mov|avi)$/i)) {
-                    type = 'video';
-                } else if (href.match(/youtube\.com|youtu\.be|vimeo\.com/i)) {
-                    // Pour YouTube/Vimeo, on ouvre dans un nouvel onglet
-                    link.setAttribute('target', '_blank');
-                    link.setAttribute('rel', 'noopener noreferrer');
-                    return;
-                }
-                
-                // Transformer le lien pour ouvrir en modal
-                link.style.cursor = 'pointer';
-                link.onclick = (e) => {
-                    e.preventDefault();
-                    const title = link.textContent || 'Document';
-                    openModal(href, title, type);
-                };
-                
-                // Ajouter une icône pour indiquer que ça s'ouvre en modal
-                const icon = document.createElement('span');
-                icon.innerHTML = ' 🔍';
-                icon.style.cssText = 'font-size: 0.85em; opacity: 0.6;';
-                link.appendChild(icon);
-            });
-        });
-        
-        // ============= CHAT ADMIN (même système que dashboard) =============
-        const reperageId = {{ reperage.id }};
-        const fixerNom = "{{ reperage.fixer_nom or 'Correspondant' }}";
-        let currentChatReperageId = null;
-        let chatPollInterval = null;
-        let lastMessagesJson = '';
-
-        // Ouvrir le chat
-        function openAdminChat(repId, fixName) {
-            currentChatReperageId = repId || reperageId;
-            lastMessagesJson = '';
-            
-            document.getElementById('chat-title').textContent = `Messages avec ${fixName || fixerNom}`;
-            document.getElementById('admin-chat-panel').classList.add('active');
-            
-            loadAdminMessages();
-            startAdminChatPolling();
-            
-            lucide.createIcons();
-        }
-
-        // Fermer le chat
-        function closeAdminChat() {
-            document.getElementById('admin-chat-panel').classList.remove('active');
-            stopAdminChatPolling();
-            currentChatReperageId = null;
-            lastMessagesJson = '';
-        }
-
-        // Charger les messages
-        async function loadAdminMessages() {
-            if (!currentChatReperageId) return;
-
-            try {
-                const response = await fetch(`/api/reperages/${currentChatReperageId}/messages`);
-                if (!response.ok) throw new Error('Erreur chargement messages');
-
-                const messages = await response.json();
-                
-                // Vérifier si les messages ont changé
-                const newMessagesJson = JSON.stringify(messages);
-                if (newMessagesJson === lastMessagesJson) {
-                    return;
-                }
-                
-                lastMessagesJson = newMessagesJson;
-                displayAdminMessages(messages);
-                markFixerMessagesAsRead(messages);
-                scrollChatToBottom();
-                
-                // Cacher badge si ouvert
-                const badge = document.getElementById('chat-notif-badge');
-                if (badge) badge.style.display = 'none';
-
-            } catch (error) {
-                console.error('Erreur chargement messages:', error);
-            }
-        }
-
-        // Afficher les messages
-        function displayAdminMessages(messages) {
-            const container = document.getElementById('admin-chat-messages');
-
-            if (messages.length === 0) {
-                container.innerHTML = `
-                    <div class="chat-empty">
-                        <i data-lucide="message-circle" style="width: 48px; height: 48px; opacity: 0.3;"></i>
-                        <p>Aucun message pour le moment</p>
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
-            }
-
-            container.innerHTML = messages.map(msg => {
-                const date = new Date(msg.created_at);
-                const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-                return `
-                    <div class="chat-message ${msg.auteur_type}">
-                        <div class="chat-message-header">
-                            <span class="chat-message-author ${msg.auteur_type}">${escapeHtml(msg.auteur_nom)}</span>
-                            <span class="chat-message-time">${timeStr}</span>
-                        </div>
-                        <div class="chat-message-bubble">
-                            ${escapeHtml(msg.contenu).replace(/\n/g, '<br>')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // Envoyer un message
-        async function sendAdminMessage() {
-            const input = document.getElementById('admin-chat-input');
-            const content = input.value.trim();
-
-            if (!content || !currentChatReperageId) return;
-
-            try {
-                const response = await fetch(`/api/reperages/${currentChatReperageId}/messages`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        auteur_type: 'production',
-                        auteur_nom: 'Production',
-                        contenu: content
-                    })
-                });
-
-                if (!response.ok) throw new Error('Erreur envoi message');
-
-                input.value = '';
-                await loadAdminMessages();
-
-            } catch (error) {
-                console.error('Erreur envoi message:', error);
-                alert('Erreur lors de l\'envoi du message');
-            }
-        }
-
-        // Marquer les messages du fixer comme lus
-        async function markFixerMessagesAsRead(messages) {
-            const unreadFixerMessages = messages.filter(msg => 
-                msg.auteur_type === 'fixer' && !msg.lu
-            );
-
-            for (const msg of unreadFixerMessages) {
-                try {
-                    await fetch(`/api/messages/${msg.id}/read`, { method: 'PUT' });
-                } catch (error) {
-                    console.error('Erreur marquage lu:', error);
-                }
-            }
-        }
-
-        // Polling messages
-        function startAdminChatPolling() {
-            chatPollInterval = setInterval(loadAdminMessages, 5000);
-        }
-
-        function stopAdminChatPolling() {
-            if (chatPollInterval) {
-                clearInterval(chatPollInterval);
-                chatPollInterval = null;
-            }
-        }
-
-        function scrollChatToBottom() {
-            const container = document.getElementById('admin-chat-messages');
-            if (container) {
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Fonction pour le bouton "Chat avec..."
-        function toggleAdminChat() {
-            openAdminChat(reperageId, fixerNom);
-        }
-        
-        // Charger badge notification
-        async function loadChatBadge() {
-            try {
-                const response = await fetch(`/api/reperages/${reperageId}/messages/unread-count?for=admin`);
-                const data = await response.json();
-                
-                const badge = document.getElementById('chat-notif-badge');
-                if (data.count > 0) {
-                    badge.textContent = data.count;
-                    badge.style.display = 'inline-block';
-                } else {
-                    badge.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Erreur chargement badge:', error);
-            }
-        }
-        
-        // Charger badge au démarrage
-        loadChatBadge();
-        
-        // Recharger badge toutes les 10 secondes
-        setInterval(loadChatBadge, 10000);
-        
-        // Enter pour envoyer
-        document.addEventListener('DOMContentLoaded', function() {
-            const input = document.getElementById('admin-chat-input');
-            if (input) {
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        sendAdminMessage();
-                    }
-                });
-            }
-        });
-        
-        // ========== MODALS ==========
-        function openInfoRegionModal() {
-            document.getElementById('modalInfoRegion').classList.add('active');
-            lucide.createIcons();
-        }
-
-        function closeInfoRegionModal() {
-            document.getElementById('modalInfoRegion').classList.remove('active');
-        }
-
-        async function sauvegarderInfoRegion(event) {
-            event.preventDefault();
-            
-            const region = document.getElementById('info_region').value;
-            const pays = document.getElementById('info_pays').value;
-            const notes_admin = document.getElementById('info_notes_admin').value;
-            
-            try {
-                const response = await fetch(`/api/reperages/{{ reperage.id }}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        region: region,
-                        pays: pays,
-                        notes_admin: notes_admin
-                    })
-                });
-                
-                if (response.ok) {
-                    alert('✅ Informations sauvegardées !');
-                    location.reload();
-                } else {
-                    alert('❌ Erreur lors de la sauvegarde');
-                }
-            } catch (error) {
-                console.error('Erreur:', error);
-                alert('❌ Erreur lors de la sauvegarde');
-            }
-        }
-
-        function openCorrespondantModal() {
-            document.getElementById('modalCorrespondant').classList.add('active');
-            lucide.createIcons();
-        }
-
-        function closeCorrespondantModal() {
-            document.getElementById('modalCorrespondant').classList.remove('active');
-        }
-
-        function openModifierRegionModal() {
-            closeInfoRegionModal();
-            // TODO: Ouvrir modal modification (à implémenter si nécessaire)
-            alert('Fonctionnalité à venir : modification des infos région');
-        }
-
-        // Fermer modals avec Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeInfoRegionModal();
-                closeCorrespondantModal();
-            }
-        });
-
-        // Fermer modals en cliquant sur l'overlay
-        document.querySelectorAll('.modal-overlay').forEach(modal => {
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.classList.remove('active');
-                }
-            });
-        });
-
-        // ========== VALIDATION REPERAGE ==========
-        function validerReperage() {
-            if (confirm('⚠️ Valider ce repérage ?\n\nCette action confirmera que le repérage est complet et validé.')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/admin/reperage/{{ reperage.id }}/valider';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Initialize Lucide Icons
-        lucide.createIcons();
-    </script>
-    <!-- MODAL INFORMATIONS RÉGION -->
+    <!-- MODALS INFORMATIONS RÉGION & CORRESPONDANT -->
     <div class="modal-overlay" id="modalInfoRegion">
         <div class="modal-box">
             <div class="modal-header">
@@ -2050,7 +1631,6 @@
                     <div class="modal-info-row">
                         <div class="modal-label">Notes administratives</div>
                         <textarea id="info_notes_admin" rows="6" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; font-family: inherit; resize: vertical;">{{ reperage.notes_admin or '' }}</textarea>
-                        <small style="color: #718096; font-size: 0.85rem; margin-top: 6px; display: block;">Ces notes sont visibles uniquement par l'équipe de production</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -2063,7 +1643,6 @@
         </div>
     </div>
 
-    <!-- MODAL CORRESPONDANT -->
     <div class="modal-overlay" id="modalCorrespondant">
         <div class="modal-box">
             <div class="modal-header">
@@ -2072,7 +1651,6 @@
             </div>
             <div class="modal-body">
                 {% if fixer %}
-                <!-- Photo -->
                 <div style="text-align: center; margin-bottom: 25px;">
                     {% if fixer.photo_profil_url %}
                     <img src="{{ fixer.photo_profil_url }}" alt="{{ fixer.prenom }} {{ fixer.nom }}" style="width: 100px; height: 100px; border-radius: 50%; border: 4px solid #667eea; object-fit: cover;">
@@ -2082,69 +1660,131 @@
                     </div>
                     {% endif %}
                 </div>
-
                 <div class="modal-info-row">
                     <div class="modal-label">Nom complet</div>
                     <div class="modal-value"><strong>{{ fixer.prenom }} {{ fixer.nom }}</strong></div>
                 </div>
-                {% if fixer.societe %}
-                <div class="modal-info-row">
-                    <div class="modal-label">Société</div>
-                    <div class="modal-value">{{ fixer.societe }}</div>
-                </div>
-                {% endif %}
-                {% if fixer.fonction %}
-                <div class="modal-info-row">
-                    <div class="modal-label">Fonction</div>
-                    <div class="modal-value">{{ fixer.fonction }}</div>
-                </div>
-                {% endif %}
                 <div class="modal-info-row">
                     <div class="modal-label">Email</div>
                     <div class="modal-value"><a href="mailto:{{ fixer.email }}" style="color: #3b82f6;">{{ fixer.email }}</a></div>
                 </div>
-                <div class="modal-info-row">
-                    <div class="modal-label">Téléphone</div>
-                    <div class="modal-value"><a href="tel:{{ fixer.telephone }}" style="color: #3b82f6;">{{ fixer.telephone }}</a></div>
-                </div>
-                {% if fixer.ville or fixer.pays %}
-                <div class="modal-info-row">
-                    <div class="modal-label">Localisation</div>
-                    <div class="modal-value">{{ fixer.ville or '' }}{% if fixer.ville and fixer.pays %}, {% endif %}{{ fixer.pays or '' }}</div>
-                </div>
-                {% endif %}
-                {% if fixer.langues_parlees %}
-                <div class="modal-info-row">
-                    <div class="modal-label">Langues</div>
-                    <div class="modal-value">
-                        {% for langue in fixer.langues_parlees.split(',') %}
-                        <span style="display: inline-block; padding: 4px 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; font-size: 0.8rem; margin: 2px;">
-                            {% if 'Français' in langue %}🇫🇷{% endif %}
-                            {% if 'Anglais' in langue %}🇬🇧{% endif %}
-                            {% if 'Italien' in langue %}🇮🇹{% endif %}
-                            {% if 'Espagnol' in langue %}🇪🇸{% endif %}
-                            {% if 'Allemand' in langue %}🇩🇪{% endif %}
-                            {% if 'Portugais' in langue %}🇵🇹{% endif %}
-                            {{ langue.strip() }}
-                        </span>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
                 {% else %}
                 <p style="text-align: center; color: #718096; padding: 20px;">Aucun correspondant affecté</p>
                 {% endif %}
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-secondary" onclick="closeCorrespondantModal()">Fermer</button>
-                {% if fixer %}
-                <a href="/admin/fixer/{{ fixer.id }}" class="modal-btn modal-btn-primary" style="text-decoration: none;">
-                    <i data-lucide="external-link"></i> Fiche complète
-                </a>
-                {% endif %}
             </div>
         </div>
     </div>
 
+    <script>
+        // ==========================================
+        // LOGIQUE PASSERELLE DOC-OS
+        // ==========================================
+        async function sendToIA(id) {
+            const btn = document.getElementById('btnBridgeIA');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ CONNEXION AU CERVEAU IA EN COURS...";
+            btn.style.opacity = "0.7";
+            btn.disabled = true;
+
+            try {
+                // On utilise la route existante /api/reperages/${id}/submit que nous avons modifiée dans app.py
+                const response = await fetch(`/api/reperages/${id}/submit`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.bridge_sent) {
+                    alert("✅ RÉUSSI ! Le dossier complet a été transmis à Docu-Gen 333+1.\n\nVous pouvez maintenant ouvrir Docu-Gen pour générer le scénario.");
+                    btn.innerText = "🚀 DOSSIER TRANSMIS AVEC SUCCÈS";
+                    btn.style.background = "#28a745";
+                    btn.style.opacity = "1";
+                } else {
+                    alert("⚠️ Erreur de transmission : " + (data.message || "Le serveur Docu-Gen n'a pas répondu."));
+                    btn.innerText = "RÉESSAYER L'ENVOI";
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+            } catch (error) {
+                console.error("Erreur Bridge:", error);
+                alert("❌ Erreur réseau : Impossible de joindre le serveur Docu-Gen. Vérifiez vos variables d'environnement.");
+                btn.innerText = "ERREUR DE CONNEXION";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        }
+        // ==========================================
+
+        const reperageId = {{ reperage.id }};
+        const fixerNom = "{{ reperage.fixer_nom or 'Correspondant' }}";
+        let currentChatReperageId = null;
+        let chatPollInterval = null;
+        let lastMessagesJson = '';
+
+        function toggleAdminChat() {
+            currentChatReperageId = reperageId;
+            document.getElementById('admin-chat-panel').classList.add('active');
+            loadAdminMessages();
+            chatPollInterval = setInterval(loadAdminMessages, 5000);
+        }
+
+        function closeAdminChat() {
+            document.getElementById('admin-chat-panel').classList.remove('active');
+            clearInterval(chatPollInterval);
+        }
+
+        async function loadAdminMessages() {
+            if (!currentChatReperageId) return;
+            try {
+                const response = await fetch(`/api/reperages/${currentChatReperageId}/messages`);
+                const messages = await response.json();
+                const newJson = JSON.stringify(messages);
+                if (newJson !== lastMessagesJson) {
+                    lastMessagesJson = newJson;
+                    displayAdminMessages(messages);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function displayAdminMessages(messages) {
+            const container = document.getElementById('admin-chat-messages');
+            container.innerHTML = messages.map(msg => `
+                <div class="chat-message ${msg.auteur_type}">
+                    <div class="chat-message-bubble">${msg.contenu}</div>
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminMessage() {
+            const input = document.getElementById('admin-chat-input');
+            const content = input.value.trim();
+            if (!content) return;
+            await fetch(`/api/reperages/${reperageId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: content })
+            });
+            input.value = '';
+            loadAdminMessages();
+        }
+
+        function openInfoRegionModal() { document.getElementById('modalInfoRegion').classList.add('active'); }
+        function closeInfoRegionModal() { document.getElementById('modalInfoRegion').classList.remove('active'); }
+        function openCorrespondantModal() { document.getElementById('modalCorrespondant').classList.add('active'); }
+        function closeCorrespondantModal() { document.getElementById('modalCorrespondant').classList.remove('active'); }
+
+        function validerReperage() {
+            if (confirm('Valider ce repérage ?')) {
+                const f = document.createElement('form'); f.method = 'POST'; f.action = '/admin/reperage/{{ reperage.id }}/valider';
+                document.body.appendChild(f); f.submit();
+            }
+        }
+
+        lucide.createIcons();
+    </script>
 </body>
 </html>
