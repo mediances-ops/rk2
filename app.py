@@ -16,9 +16,12 @@ import requests # Ajoute cet import en haut du fichier
 
 # --- FONCTION BRIDGE ---
 def send_to_docugen(reperage_dict):
+    # ON LIT LES VARIABLES UNIQUEMENT ICI (AU MOMENT DE L'ENVOI)
     url = os.environ.get('DOCUGEN_API_URL')
-    token = os.environ.get('BRIDGE_SECRET_TOKEN', '')
+    token = os.environ.get('BRIDGE_SECRET_TOKEN') 
+    
     if not url:
+        print("Erreur: URL Docu-Gen non configurée")
         return False
     
     headers = {
@@ -1560,6 +1563,7 @@ if __name__ == '__main__':
     print(f"\n📍 URL: http://localhost:{port}")
     print("\n✅ Serveur démarré avec succès!\n")
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
