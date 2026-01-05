@@ -36,12 +36,39 @@ def index_root():
 def admin_dashboard():
     session = get_session(engine)
     try:
-        # On récupère les repérages ET la liste des fixers pour le bouton "Modifier"
-        reperages = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
-        fixers = session.query(Fixer).all()
-        reps_list = [{'reperage': r, 'fixer': session.get(Fixer, r.fixer_id) if r.fixer_id else None} for r in reperages]
-        return render_template('admin_dashboard.html', reperages=reps_list, fixers=fixers, stats={})
-    finally: session.close()
+        # 1. Récupération des données
+        reperages_raw = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
+        # On convertit aussi les fixers en dictionnaires pour le menu déroulant du modal
+        fixers_raw = session.query(Fixer).all()
+        fixers_list = [f.to_dict() for f in fixers_raw]
+
+        # 2. Préparation de la liste des repérages (Conversion en DICT obligatoire)
+        reps_serialized = []
+        for r in reperages_raw:
+            # On cherche le fixer correspondant
+            f_obj = next((f for f in fixers_raw if f.id == r.fixer_id), None)
+            reps_serialized.append({
+                'reperage': r.to_dict(), # Utilisation du mode dict
+                'fixer': f_obj.to_dict() if f_obj else None
+            })
+
+        # 3. Calcul des statistiques réelles
+        stats = {
+            'total': len(reps_serialized),
+            'brouillons': sum(1 for x in reps_serialized if x['reperage']['statut'] == 'brouillon'),
+            'soumis': sum(1 for x in reps_serialized if x['reperage']['statut'] == 'soumis'),
+            'valides': sum(1 for x in reps_serialized if x['reperage']['statut'] == 'validé')
+        }
+
+        return render_template('admin_dashboard.html', 
+                             reperages=reps_serialized, 
+                             fixers=fixers_list, 
+                             stats=stats)
+    except Exception as e:
+        print(f"❌ ERREUR CRITIQUE DASHBOARD : {str(e)}")
+        return f"Erreur serveur : {str(e)}", 500
+    finally:
+        session.close()
 
 # ROUTE DU LIEN DISTANT (Celle qui ne s'ouvrait pas)
 @app.route('/fixer/<path:fixer_slug>')
