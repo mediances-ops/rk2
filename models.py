@@ -93,26 +93,26 @@ class Gardien(Base):
     # Relation
     reperage = relationship("Reperage", back_populates="gardiens")
     
-    def to_dict(self):
+  def to_dict(self):
         return {
             'id': self.id,
-            'ordre': self.ordre,
-            'nom': self.nom,
-            'prenom': self.prenom,
-            'age': self.age,
-            'genre': self.genre,
-            'fonction': self.fonction,
-            'savoir_transmis': self.savoir_transmis,
-            'adresse': self.adresse,
-            'telephone': self.telephone,
-            'email': self.email,
-            'contact_intermediaire': self.contact_intermediaire,
-            'histoire_personnelle': self.histoire_personnelle,
-            'evaluation_cinegenie': self.evaluation_cinegenie,
-            'langues_parlees': self.langues_parlees,
-            'photo_url': self.photo_url
+            'token': self.token,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'langue_interface': self.langue_interface,
+            'statut': self.statut,
+            'fixer_nom': self.fixer_nom,
+            'fixer_email': self.fixer_email,
+            'fixer_telephone': self.fixer_telephone,
+            'pays': self.pays,
+            'region': self.region,
+            'image_region': self.image_region,  # ✅ AJOUTE CETTE LIGNE ICI
+            'territoire_data': json.loads(self.territoire_data) if self.territoire_data else {},
+            'episode_data': json.loads(self.episode_data) if self.episode_data else {},
+            'gardiens': [g.to_dict() for g in self.gardiens],
+            'lieux': [l.to_dict() for l in self.lieux],
+            'medias': [m.to_dict() for m in self.medias]
         }
-
 class Lieu(Base):
     __tablename__ = 'lieux'
     
