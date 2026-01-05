@@ -4,194 +4,202 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Admin - RootsKeepers</title>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #2C3E50; --accent: #E67E22; --danger: #e74c3c; --success: #27ae60; --bg: #f3f4f6; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; color: #2C3E50; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); border-radius: 16px; padding: 40px; text-align: center; color: white; margin-bottom: 30px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
-        .header img { height: 80px; margin-bottom: 10px; }
+        .header {
+            background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);
+            border-radius: 16px; padding: 40px; margin-bottom: 30px;
+            box-shadow: 0 8px 16px rgba(44, 62, 80, 0.2); display: flex; align-items: center; gap: 30px;
+        }
+        .header img { height: 80px; width: auto; }
+        .header h1 { color: white; font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.5px; }
+        .header .subtitle { color: #E67E22; font-size: 1.5rem; font-weight: 500; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 16px; padding: 30px; text-align: center; border-top: 4px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-        .stat-card .number { font-size: 3rem; font-weight: 700; color: #D35400; }
+        .stat-card { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); text-align: center; border-top: 4px solid #E67E22; }
+        .filters { background: white; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .filter-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #E67E22 0%, #D35400 100%); color: white; }
+        .btn-secondary { background: #2C3E50; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-info { background: #3498db; color: white; }
+        .btn-danger { background: #e74c3c; color: white; }
+        .btn-ia { background: #000; color: #e50914; border: 1px solid #e50914; } /* Design Passerelle */
         .table-container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { padding: 15px; text-align: left; background: #f8f9fc; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; font-size: 0.85rem; }
+        th { padding: 15px; text-align: left; color: #1a202c; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; font-size: 0.85rem; }
         td { padding: 15px; border-bottom: 1px solid #f1f5f9; }
-        .badge { padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+        .badge { padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
         .badge-brouillon { background: #fef3c7; color: #92400e; }
         .badge-soumis { background: #dbeafe; color: #1e40af; }
-        .badge-validé { background: #d1fae5; color: #065f46; }
-        .btn { padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none; font-size: 0.9rem; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-secondary { background: var(--primary); color: white; }
-        .btn-info { background: #3498db; color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-ia { background: #000; color: #e50914; border: 1px solid #e50914; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: white; border-radius: 16px; max-width: 600px; width: 100%; padding: 30px; }
-        label { display: block; font-weight: 600; margin-bottom: 8px; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; }
+        .badge-valide { background: #d1fae5; color: #065f46; }
+        .modal-reperage-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
+        .modal-reperage-overlay.active { display: flex; }
+        .modal-reperage { background: white; border-radius: 16px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 30px; }
+        
+        /* Styles Panneau IA flottant */
+        .ai-floating-btn { position: fixed; left: 20px; bottom: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 9999; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <div class="header">
-        <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RootsKeepers">
-        <p style="color: var(--accent); font-size: 1.5rem; font-weight: 500;">Pre-scouting platform</p>
-    </div>
-
-    <div class="nav" style="display: flex; gap: 15px; margin-bottom: 30px;">
-        <a href="/admin" class="btn btn-secondary active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-        <a href="/admin/fixers" class="btn btn-secondary"><i data-lucide="users"></i> Correspondants</a>
-        <button onclick="openNewModal()" class="btn btn-primary"><i data-lucide="file-plus"></i> Nouveau Repérage</button>
-    </div>
-
-    <div class="stats">
-        <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total</div></div>
-        <div class="stat-card"><div class="number">{{ stats.brouillons }}</div><div class="label">Brouillons</div></div>
-        <div class="stat-card"><div class="number">{{ stats.soumis }}</div><div class="label">Soumis</div></div>
-        <div class="stat-card" style="border-top-color: #27ae60;"><div class="number">{{ stats.valides }}</div><div class="label">Validés</div></div>
-    </div>
-
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Pays / Région</th>
-                    <th>Fixer</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in reperages %}
-                <tr>
-                    <td>#{{ item.reperage.id }}</td>
-                    <td><strong>{{ item.reperage.region }}</strong><br><small>{{ item.reperage.pays }}</small></td>
-                    <td>{{ item.reperage.fixer_nom }}</td>
-                    <td><span class="badge badge-{{ item.reperage.statut }}">{{ item.reperage.statut }}</span></td>
-                    <td>
-                        <div style="display: flex; gap: 6px;">
-                            <a href="/admin/reperage/{{ item.reperage.id }}" class="btn btn-secondary btn-small" title="Voir"><i data-lucide="eye"></i></a>
-                            <button onclick="ouvrirModif({{ item.reperage.id }})" class="btn btn-info btn-small" title="Modifier"><i data-lucide="edit"></i></button>
-                            <button onclick="sendToIA({{ item.reperage.id }})" class="btn btn-ia btn-small" title="Envoyer vers IA"><i data-lucide="rocket"></i></button>
-                            <a href="/formulaire/{{ item.reperage.token }}" target="_blank" class="btn btn-primary btn-small" style="background:#f39c12;" title="Lien"><i data-lucide="link"></i></a>
-                            <button onclick="confirmDel({{ item.reperage.id }})" class="btn btn-danger btn-small" title="Supprimer"><i data-lucide="trash-2"></i></button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- MODAL MODIFIER -->
-<div class="modal-overlay" id="modalModifier">
-    <div class="modal-box">
-        <h2>Modifier Repérage</h2>
-        <form onsubmit="sauverModif(event)">
-            <input type="hidden" id="e_id">
-            <label>Région</label><input type="text" id="e_region">
-            <label>Pays</label><input type="text" id="e_pays">
-            <label>Vignette Image (URL)</label><input type="url" id="e_image">
-            <label>Statut</label>
-            <select id="e_statut">
-                <option value="brouillon">🟡 Brouillon</option>
-                <option value="soumis">🟠 Soumis</option>
-                <option value="validé">🟢 Validé</option>
-            </select>
-            <label>Notes Administratives</label><textarea id="e_notes" style="height:100px;"></textarea>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button type="submit" class="btn btn-success">Enregistrer</button>
-                <button type="button" onclick="closeModifModal()" class="btn btn-secondary">Annuler</button>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RootsKeepers">
+            <div class="header-text">
+                <h1>RootsKeepers</h1>
+                <p class="subtitle">Pre-scouting platform</p>
             </div>
-        </form>
+        </div>
+
+        <div class="nav" style="display: flex; gap: 15px; margin-bottom: 30px;">
+            <a href="/admin" class="btn btn-secondary"><i data-lucide="layout-dashboard"></i> Tableau de bord</a>
+            <a href="/admin/fixers" class="btn btn-secondary"><i data-lucide="users"></i> Correspondants locaux</a>
+            <button onclick="openNouveauReperageModal()" class="btn btn-primary"><i data-lucide="file-plus"></i> Nouveau Repérage</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card"><div class="number" style="color:#D35400;">{{ stats.total }}</div><div class="label">Total</div></div>
+            <div class="stat-card"><div class="number">{{ stats.brouillons }}</div><div class="label">Brouillons</div></div>
+            <div class="stat-card"><div class="number">{{ stats.soumis }}</div><div class="label">Soumis</div></div>
+            <div class="stat-card"><div class="number" style="color:#27ae60;">{{ stats.valides }}</div><div class="label">Validés</div></div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Pays / Région</th>
+                        <th>Fixer</th>
+                        <th>Statut</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in reperages %}
+                    {% set rep = item.reperage %}
+                    <tr>
+                        <td>#{{ rep.id }}</td>
+                        <td><strong>{{ rep.region }}</strong><br><small>{{ rep.pays }}</small></td>
+                        <td>{{ rep.fixer_nom }}<br><small>{{ rep.fixer_email }}</small></td>
+                        <td><span class="badge badge-{{ rep.statut }}">{{ rep.statut }}</span></td>
+                        <td>{{ rep.created_at_display }}</td>
+                        <td>
+                            <div class="actions" style="display: flex; gap: 8px;">
+                                <a href="/admin/reperage/{{ rep.id }}" class="btn btn-primary btn-small"><i data-lucide="eye"></i> Voir</a>
+                                <a href="/formulaire/{{ rep.token }}" class="btn btn-warning btn-small" target="_blank"><i data-lucide="external-link"></i> Lien</a>
+                                
+                                <!-- MODIFIER SÉCURISÉ -->
+                                <button onclick="openModalModifier({{ rep.id }})" class="btn btn-info btn-small"><i data-lucide="edit"></i> Modifier</button>
+                                
+                                <!-- PASSERELLE IA 🚀 -->
+                                <button onclick="sendToIA({{ rep.id }})" class="btn btn-ia btn-small" title="Envoyer vers Docu-Gen IA"><i data-lucide="rocket"></i></button>
+                                
+                                <a href="/admin/reperage/{{ rep.id }}/pdf" class="btn btn-secondary btn-small"><i data-lucide="file-text"></i> PDF</a>
+                                <button onclick="confirmerSuppression({{ rep.id }}, '{{ rep.region }}')" class="btn btn-danger btn-small"><i data-lucide="trash-2"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<!-- MODAL NOUVEAU -->
-<div class="modal-overlay" id="modalNouveau">
-    <div class="modal-box">
-        <h2>Nouveau Repérage</h2>
-        <form onsubmit="creerRep(event)">
-            <label>Région *</label><input type="text" id="n_region" required>
-            <label>Pays *</label><input type="text" id="n_pays" required>
-            <label>Image Vignette (URL)</label><input type="url" id="n_image">
-            <label>Correspondant *</label>
-            <select id="n_fixer" required>
-                <option value="">Sélectionner...</option>
-                {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-            </select>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button type="submit" class="btn btn-primary">Créer</button>
-                <button type="button" onclick="closeNewModal()" class="btn btn-secondary">Annuler</button>
-            </div>
-        </form>
+    <!-- MODAL MODIFIER -->
+    <div class="modal-reperage-overlay" id="modalModifierReperage">
+        <div class="modal-reperage">
+            <h2 style="margin-bottom:20px;">Modifier Repérage</h2>
+            <form id="formModifierReperage" onsubmit="modifierReperage(event)">
+                <input type="hidden" id="modifier_reperage_id">
+                <div class="filter-group" style="grid-template-columns: 1fr 1fr;">
+                    <div><label>Région</label><input type="text" id="modifier_region"></div>
+                    <div><label>Pays</label><input type="text" id="modifier_pays"></div>
+                </div>
+                <div style="margin-top:15px;"><label>Correspondant</label>
+                    <select id="modifier_fixer_id">
+                        {% for fixer in fixers %}<option value="{{ fixer.id }}">{{ fixer.nom }} {{ fixer.prenom }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div style="margin-top:15px;"><label>Statut</label>
+                    <select id="modifier_statut">
+                        <option value="brouillon">Brouillon</option>
+                        <option value="soumis">Soumis</option>
+                        <option value="validé">Validé</option>
+                    </select>
+                </div>
+                <div style="margin-top:15px;"><label>Image Vignette (URL)</label><input type="url" id="modifier_image_region"></div>
+                <div style="margin-top:15px;"><label>Notes administratives</label><textarea id="modifier_notes_admin" style="width:100%; height:100px; border:1px solid #ddd;"></textarea></div>
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button type="submit" class="btn btn-primary">Sauvegarder</button>
+                    <button type="button" onclick="closeModifierReperageModal()" class="btn btn-secondary">Annuler</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 
-<script>
-    lucide.createIcons();
-    const dataReps = {{ reperages|tojson|safe }};
+    <!-- SCRIPTS -->
+    <script>
+        lucide.createIcons();
 
-    function openNewModal() { document.getElementById('modalNouveau').classList.add('active'); }
-    function closeNewModal() { document.getElementById('modalNouveau').classList.remove('active'); }
-    function closeModifModal() { document.getElementById('modalModifier').classList.remove('active'); }
+        // 1. DONNÉES SÉCURISÉES POUR ÉVITER LE CRASH APOSTROPHE
+        const reperagesData = {{ reperages|tojson|safe }};
 
-    function ouvrirModif(id) {
-        const item = dataReps.find(x => x.reperage.id === id);
-        if(!item) return;
-        document.getElementById('e_id').value = id;
-        document.getElementById('e_region').value = item.reperage.region || '';
-        document.getElementById('e_pays').value = item.reperage.pays || '';
-        document.getElementById('e_image').value = item.reperage.image_region || '';
-        document.getElementById('e_statut').value = item.reperage.statut;
-        document.getElementById('e_notes').value = item.reperage.notes_admin || '';
-        document.getElementById('modalModifier').classList.add('active');
-    }
-
-    async function sendToIA(id) {
-        if(!confirm("Envoyer à Docu-Gen ?")) return;
-        const res = await fetch(`/api/reperages/${id}/submit`, { method:'POST' });
-        const data = await res.json();
-        if(data.bridge_sent) alert("✅ Envoyé !");
-        window.location.reload();
-    }
-
-    async function sauverModif(e) {
-        e.preventDefault();
-        const id = document.getElementById('edit_id').value;
-        const payload = {
-            region: document.getElementById('e_region').value,
-            pays: document.getElementById('e_pays').value,
-            statut: document.getElementById('e_statut').value,
-            notes_admin: document.getElementById('e_notes').value,
-            image_region: document.getElementById('e_image').value
-        };
-        await fetch(`/api/reperages/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-        window.location.reload();
-    }
-
-    async function creerRep(e) {
-        e.preventDefault();
-        const sel = document.getElementById('n_fixer');
-        const payload = { region: document.getElementById('n_region').value, pays: document.getElementById('n_pays').value, image_region: document.getElementById('n_image').value, fixer_id: sel.value, fixer_nom: sel.options[sel.selectedIndex].text };
-        await fetch('/admin/reperages/create', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-        window.location.reload();
-    }
-
-    function confirmDel(id) {
-        if(confirm("Supprimer définitivement ?")) {
-            const f = document.createElement('form'); f.method='POST'; f.action=`/admin/reperage/${id}/supprimer`;
-            document.body.appendChild(f); f.submit();
+        function openModalModifier(id) {
+            const item = reperagesData.find(x => x.reperage.id === id);
+            if (!item) return;
+            const rep = item.reperage;
+            document.getElementById('modifier_reperage_id').value = id;
+            document.getElementById('modifier_region').value = rep.region || '';
+            document.getElementById('modifier_pays').value = rep.pays || '';
+            document.getElementById('modifier_fixer_id').value = rep.fixer_id || '';
+            document.getElementById('modifier_statut').value = rep.statut;
+            document.getElementById('modifier_image_region').value = rep.image_region || '';
+            document.getElementById('modifier_notes_admin').value = rep.notes_admin || '';
+            document.getElementById('modalModifierReperage').classList.add('active');
         }
-    }
-</script>
+
+        function closeModifierReperageModal() { document.getElementById('modalModifierReperage').classList.remove('active'); }
+
+        async function modifierReperage(e) {
+            e.preventDefault();
+            const id = document.getElementById('modifier_reperage_id').value;
+            const data = {
+                region: document.getElementById('modifier_region').value,
+                pays: document.getElementById('modifier_pays').value,
+                fixer_id: document.getElementById('modifier_fixer_id').value,
+                statut: document.getElementById('modifier_statut').value,
+                image_region: document.getElementById('modifier_image_region').value,
+                notes_admin: document.getElementById('modifier_notes_admin').value
+            };
+            const response = await fetch(`/admin/reperage/${id}/update`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            if (response.ok) window.location.reload();
+        }
+
+        async function sendToIA(id) {
+            if(!confirm("Envoyer les données à Docu-Gen ?")) return;
+            const response = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
+            const result = await response.json();
+            if (result.bridge_sent) alert("✅ Dossier transmis !");
+            else alert("⚠️ Erreur lors de l'envoi.");
+        }
+
+        function confirmerSuppression(id, region) {
+            if (confirm(`Supprimer définitivement le repérage de ${region} ?`)) {
+                const form = document.createElement('form');
+                form.method = 'POST'; form.action = `/admin/reperage/${id}/supprimer`;
+                document.body.appendChild(form); form.submit();
+            }
+        }
+    </script>
 </body>
 </html>
