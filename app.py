@@ -30,7 +30,7 @@ def linkify_text(text):
 app.jinja_env.filters['linkify'] = linkify_text
 
 def send_to_docugen(reperage_dict):
-    """Envoie vers Docu-Gen IA"""
+    """Envoie vers Docu-Gen IA via le Bridge"""
     url = os.environ.get('DOCUGEN_API_URL')
     token = os.environ.get('BRIDGE_SECRET_TOKEN')
     if not url: return False
@@ -52,17 +52,15 @@ def index_root():
 def admin_dashboard():
     session = get_session(engine)
     try:
-        # Filtres
         query = session.query(Reperage)
         statut_f = request.args.get('statut')
         if statut_f: query = query.filter(Reperage.statut == statut_f)
         pays_f = request.args.get('pays')
         if pays_f: query = query.filter(Reperage.pays == pays_f)
         
-        reps_raw = query.order_by(Reperage.created_at.desc()).all()
+        reperages_raw = query.order_by(Reperage.created_at.desc()).all()
         fixers_raw = session.query(Fixer).all()
         
-        # Stats
         stats = {
             'total': session.query(Reperage).count(),
             'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
@@ -70,12 +68,12 @@ def admin_dashboard():
             'valides': session.query(Reperage).filter_by(statut='validé').count()
         }
 
-        # Sérialisation avec injection des dates formatées
         reps_serialized = []
-        for r in reps_raw:
+        for r in reperages_raw:
             f_obj = next((f for f in fixers_raw if f.id == r.fixer_id), None)
             d = r.to_dict()
             d['created_at_display'] = r.created_at.strftime('%d/%m/%Y') if r.created_at else '-'
+            d['created_time_display'] = r.created_at.strftime('%H:%M') if r.created_at else ''
             reps_serialized.append({'reperage': d, 'fixer': f_obj.to_dict() if f_obj else None})
 
         pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
@@ -95,12 +93,12 @@ def admin_reperage_detail(id):
     finally: session.close()
 
 # =================================================================
-# 3. ROUTES FORMULAIRE DISTANT (SOUDURE DES DONNÉES)
+# 3. ROUTES FORMULAIRE DISTANT (ACTION 1.1 : INJECTION TOTALE)
 # =================================================================
 
 @app.route('/formulaire/<token>')
-def formulaire_token(token):
-    """Ouvre le formulaire avec les données de la région et du fixer pré-remplies"""
+def formulaire_reperage(token):
+    """Action 1.1 : Charge l'intégralité du dossier pour le correspondant"""
     session = get_session(engine)
     try:
         rep = session.query(Reperage).filter_by(token=token).first()
@@ -108,61 +106,92 @@ def formulaire_token(token):
         
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
-        # Injection des données attendues par index.html
+        # On prépare le paquet complet de données pour index.html
         fixer_data = {
             'region': rep.region,
             'pays': rep.pays,
             'image_region': rep.image_region,
             'prenom': fixer.prenom if fixer else '',
-            'nom': fixer.nom if fixer else ''
+            'nom': fixer.nom if fixer else '',
+            'email': fixer.email if fixer else '',
+            'telephone': fixer.telephone if fixer else '',
+            'langue_preferee': fixer.langue_preferee if fixer else 'FR',
+            # On passe les données JSON décodées pour que le JS les distribue
+            'territoire': json.loads(rep.territoire_data) if rep.territoire_data else {},
+            'episode': json.loads(rep.episode_data) if rep.episode_data else {},
+            'gardiens': [g.to_dict() for g in rep.gardiens],
+            'lieux': [l.to_dict() for l in rep.lieux]
         }
         
         return render_template('index.html', 
                              REPERAGE_ID=rep.id, 
                              FIXER_DATA=fixer_data, 
-                             fixer_id=rep.fixer_id)
+                             langue_default=fixer_data['langue_preferee'])
     finally: session.close()
 
 # =================================================================
-# 4. API DE SAUVEGARDE ET CHAT (OPÉRATIONNEL)
+# 4. API DE SAUVEGARDE ET CHAT (ACTION 1.6 : SAUVEGARDE INTEGRALE)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
 def update_reperage_api(id):
-    """Sauvegarde les données du formulaire terrain"""
+    """Action 1.6 : Reçoit et range chaque donnée dans la bonne table"""
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
         if not rep: return jsonify({'error': 'Dossier introuvable'}), 404
 
-        # Mise à jour des blocs JSON (Territoire et Épisode)
+        # 1. Sauvegarde des blocs JSON principaux
         if 'territoire_data' in data:
             rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data:
             rep.episode_data = json.dumps(data['episode_data'])
         
-        # Mise à jour des Gardiens si présents
+        # 2. Mise à jour ou Création des Gardiens (G1, G2, G3)
         if 'gardiens' in data:
-            # On peut ici gérer une logique de mise à jour des lignes de la table Gardien
-            pass 
+            for g_data in data['gardiens']:
+                # On cherche si le gardien existe déjà pour ce repérage et cet ordre
+                g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first()
+                if not g_obj:
+                    g_obj = Gardien(reperage_id=id, ordre=g_data.get('ordre'))
+                    session.add(g_obj)
+                
+                g_obj.nom = g_data.get('nom')
+                g_obj.fonction = g_data.get('fonction')
+                g_obj.savoir_transmis = g_data.get('savoir_transmis')
+                g_obj.histoire_personnelle = g_data.get('histoire_personnelle')
+                g_obj.evaluation_cinegenie = g_data.get('evaluation_cinegenie')
+
+        # 3. Mise à jour ou Création des Lieux (L1, L2, L3)
+        if 'lieux' in data:
+            for l_data in data['lieux']:
+                l_obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l_data.get('numero_lieu')).first()
+                if not l_obj:
+                    l_obj = Lieu(reperage_id=id, numero_lieu=l_data.get('numero_lieu'))
+                    session.add(l_obj)
+                
+                l_obj.nom = l_data.get('nom')
+                l_obj.description_visuelle = l_data.get('description_visuelle')
+                l_obj.ambiance_sonore = l_data.get('ambiance_sonore')
+                l_obj.cinegenie = l_data.get('cinegenie')
 
         session.commit()
         return jsonify({'status': 'success'})
     except Exception as e:
+        session.rollback()
         return jsonify({'error': str(e)}), 500
     finally: session.close()
 
 @app.route('/api/reperages/<int:reperage_id>/messages', methods=['GET', 'POST'])
 def handle_messages(reperage_id):
-    """Gère la lecture et l'envoi de messages de chat"""
+    """Action 1.5 : Rétablissement du Chat de production"""
     session = get_session(engine)
     try:
         if request.method == 'GET':
             msgs = session.query(Message).filter_by(reperage_id=reperage_id).order_by(Message.created_at.asc()).all()
             return jsonify([m.to_dict() for m in msgs])
         
-        # POST : Nouveau message
         data = request.json
         new_msg = Message(
             reperage_id=reperage_id,
@@ -170,14 +199,13 @@ def handle_messages(reperage_id):
             auteur_nom=data.get('auteur_nom', 'Anonyme'),
             contenu=data.get('contenu', '')
         )
-        session.add(new_msg)
-        session.commit()
+        session.add(new_msg); session.commit()
         return jsonify(new_msg.to_dict()), 201
     finally: session.close()
 
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def submit_final_ia(id):
-    """Bouton Soumettre du correspondant + Envoi IA"""
+    """Envoi définitif vers Docu-Gen IA"""
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
@@ -188,7 +216,7 @@ def submit_final_ia(id):
     finally: session.close()
 
 # =================================================================
-# 5. DÉMARRAGE
+# 5. SERVEUR & UPLOADS
 # =================================================================
 
 @app.route('/uploads/<path:filename>')
