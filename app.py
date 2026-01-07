@@ -93,12 +93,11 @@ def admin_reperage_detail(id):
     finally: session.close()
 
 # =================================================================
-# 3. ROUTES FORMULAIRE DISTANT (ACTION 1.1 : INJECTION TOTALE)
+# 3. ROUTES FORMULAIRE DISTANT
 # =================================================================
 
 @app.route('/formulaire/<token>')
 def formulaire_reperage(token):
-    """Action 1.1 : Charge l'intégralité du dossier pour le correspondant"""
     session = get_session(engine)
     try:
         rep = session.query(Reperage).filter_by(token=token).first()
@@ -106,7 +105,6 @@ def formulaire_reperage(token):
         
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
-        # On prépare le paquet complet de données pour index.html
         fixer_data = {
             'region': rep.region,
             'pays': rep.pays,
@@ -116,7 +114,6 @@ def formulaire_reperage(token):
             'email': fixer.email if fixer else '',
             'telephone': fixer.telephone if fixer else '',
             'langue_preferee': fixer.langue_preferee if fixer else 'FR',
-            # On passe les données JSON décodées pour que le JS les distribue
             'territoire': json.loads(rep.territoire_data) if rep.territoire_data else {},
             'episode': json.loads(rep.episode_data) if rep.episode_data else {},
             'gardiens': [g.to_dict() for g in rep.gardiens],
@@ -130,51 +127,85 @@ def formulaire_reperage(token):
     finally: session.close()
 
 # =================================================================
-# 4. API DE SAUVEGARDE ET CHAT (ACTION 1.6 : SAUVEGARDE INTEGRALE)
+# 4. API DE SAUVEGARDE INTEGRALE (PHASE 2 - RANGEMENT PROFOND)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
 def update_reperage_api(id):
-    """Action 1.6 : Reçoit et range chaque donnée dans la bonne table"""
+    """Phase 2 : Sauvegarde exhaustive de tous les champs sans simplification"""
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
         if not rep: return jsonify({'error': 'Dossier introuvable'}), 404
 
-        # 1. Sauvegarde des blocs JSON principaux
+        # 1. Mise à jour des informations Racine
+        if 'region' in data: rep.region = data['region']
+        if 'pays' in data: rep.pays = data['pays']
+
+        # 2. Sauvegarde des blocs JSON (Territoire et Épisode)
         if 'territoire_data' in data:
             rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data:
             rep.episode_data = json.dumps(data['episode_data'])
         
-        # 2. Mise à jour ou Création des Gardiens (G1, G2, G3)
+        # 3. Traitement exhaustif des GARDIENS
         if 'gardiens' in data:
             for g_data in data['gardiens']:
-                # On cherche si le gardien existe déjà pour ce repérage et cet ordre
-                g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first()
+                ordre = g_data.get('ordre')
+                if not ordre: continue
+                
+                g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=ordre).first()
                 if not g_obj:
-                    g_obj = Gardien(reperage_id=id, ordre=g_data.get('ordre'))
+                    g_obj = Gardien(reperage_id=id, ordre=ordre)
                     session.add(g_obj)
                 
+                # Mapping de tous les champs originaux
                 g_obj.nom = g_data.get('nom')
+                g_obj.prenom = g_data.get('prenom')
+                g_obj.age = g_data.get('age')
+                g_obj.genre = g_data.get('genre')
                 g_obj.fonction = g_data.get('fonction')
                 g_obj.savoir_transmis = g_data.get('savoir_transmis')
+                g_obj.adresse = g_data.get('adresse')
+                g_obj.telephone = g_data.get('telephone')
+                g_obj.email = g_data.get('email')
+                g_obj.contact_intermediaire = g_data.get('contact_intermediaire')
                 g_obj.histoire_personnelle = g_data.get('histoire_personnelle')
                 g_obj.evaluation_cinegenie = g_data.get('evaluation_cinegenie')
+                g_obj.langues_parlees = g_data.get('langues_parlees')
 
-        # 3. Mise à jour ou Création des Lieux (L1, L2, L3)
+        # 4. Traitement exhaustif des LIEUX
         if 'lieux' in data:
             for l_data in data['lieux']:
-                l_obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l_data.get('numero_lieu')).first()
+                num = l_data.get('numero_lieu')
+                if not num: continue
+                
+                l_obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=num).first()
                 if not l_obj:
-                    l_obj = Lieu(reperage_id=id, numero_lieu=l_data.get('numero_lieu'))
+                    l_obj = Lieu(reperage_id=id, numero_lieu=num)
                     session.add(l_obj)
                 
+                # Mapping de l'Analyse Artistique & Technique
                 l_obj.nom = l_data.get('nom')
+                l_obj.type_environnement = l_data.get('type_environnement')
                 l_obj.description_visuelle = l_data.get('description_visuelle')
-                l_obj.ambiance_sonore = l_data.get('ambiance_sonore')
+                l_obj.elements_symboliques = l_data.get('elements_symboliques')
+                l_obj.points_vue_remarquables = l_data.get('points_vue_remarquables')
                 l_obj.cinegenie = l_data.get('cinegenie')
+                l_obj.axes_camera = l_data.get('axes_camera')
+                l_obj.moments_favorables = l_data.get('moments_favorables')
+                l_obj.ambiance_sonore = l_data.get('ambiance_sonore')
+                l_obj.adequation_narration = l_data.get('adequation_narration')
+                l_obj.accessibilite = l_data.get('accessibilite')
+                l_obj.securite = l_data.get('securite')
+                l_obj.electricite = l_data.get('electricite')
+                l_obj.espace_equipe = l_data.get('espace_equipe')
+                l_obj.protection_meteo = l_data.get('protection_meteo')
+                l_obj.contraintes_meteo = l_data.get('contraintes_meteo')
+                l_obj.autorisations_necessaires = l_data.get('autorisations_necessaires')
+                l_obj.latitude = l_data.get('latitude')
+                l_obj.longitude = l_data.get('longitude')
 
         session.commit()
         return jsonify({'status': 'success'})
@@ -185,7 +216,6 @@ def update_reperage_api(id):
 
 @app.route('/api/reperages/<int:reperage_id>/messages', methods=['GET', 'POST'])
 def handle_messages(reperage_id):
-    """Action 1.5 : Rétablissement du Chat de production"""
     session = get_session(engine)
     try:
         if request.method == 'GET':
@@ -205,7 +235,6 @@ def handle_messages(reperage_id):
 
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def submit_final_ia(id):
-    """Envoi définitif vers Docu-Gen IA"""
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
