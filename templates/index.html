@@ -12,7 +12,7 @@
 </head>
 <body>
     
-    <!-- HEADER -->
+    <!-- HEADER DYNAMIQUE SANS SIMPLIFICATION -->
     <header class="{% if FIXER_DATA %}header-fixer{% endif %}">
         {% if FIXER_DATA and FIXER_DATA.region %}
         <div class="header-fixer-banner" style="background-image: url('{% if FIXER_DATA.image_region %}{{ FIXER_DATA.image_region }}{% else %}https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg{% endif %}');">
@@ -27,12 +27,10 @@
         </div>
         {% else %}
         <div class="header-content">
-            <div class="header-title">
-                <h1>RootsKeepers</h1>
-                <div class="subtitle">Studio System</div>
-            </div>
+            <div class="header-title"><h1>RootsKeepers</h1><div class="subtitle">Studio System</div></div>
         </div>
         {% endif %}
+        
         <div class="header-content">
             <div class="language-selector">
                 <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
@@ -45,47 +43,15 @@
     
     <div class="container">
         
-        <!-- PROGRESSION -->
+        <!-- COMPTEUR DE PROGRESSION (POUR APP.JS) -->
         <div class="progress-container" id="progress-container">
             <div class="progress-header">
-                <div class="progress-title">
-                    <i data-lucide="check-circle" style="width: 20px; height: 20px;"></i>
-                    <span>Progress..</span>
-                </div>
+                <div class="progress-title"><i data-lucide="check-circle"></i> <span>Progress..</span></div>
                 <div class="progress-percentage" id="progress-percentage">0%</div>
             </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-            </div>
-            <div class="progress-stats">
-                <span id="progress-filled">0</span> champs remplis sur 
-                <span id="progress-total">0</span>
-            </div>
+            <div class="progress-bar-container"><div class="progress-bar" id="progress-bar" style="width: 0%"></div></div>
+            <div class="progress-stats"><span id="progress-filled">0</span> champs sur <span id="progress-total">0</span></div>
         </div>
-        
-        <!-- INFORMATIONS CORRESPONDANT -->
-        <section>
-            <div class="section-header">
-                <i data-lucide="user-round" style="width: 32px; height: 32px;"></i>
-                <h2 class="section-title" data-i18n="fixer.title">INFORMATIONS SUR LE CORRESPONDANT LOCAL</h2>
-            </div>
-            <div class="text-content">
-                <div class="fields-grid">
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.nom">Nom</label>
-                        <input type="text" name="fixer_nom" value="{{ FIXER_DATA.nom if FIXER_DATA else '' }}" data-i18n-placeholder="fixer.nom_placeholder">
-                    </div>
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.email">Email</label>
-                        <input type="email" name="fixer_email" value="{{ FIXER_DATA.email if FIXER_DATA else '' }}" data-i18n-placeholder="fixer.email_placeholder">
-                    </div>
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.telephone">Téléphone</label>
-                        <input type="tel" name="fixer_telephone" value="{{ FIXER_DATA.telephone if FIXER_DATA else '' }}" data-i18n-placeholder="fixer.telephone_placeholder">
-                    </div>
-                </div>
-            </div>
-        </section>
         
         <!-- GRILLE DE REPÉRAGE -->
         <section>
@@ -95,7 +61,6 @@
             </div>
             
             <div class="tabs-container">
-                <div class="tabs-header">Grille de Repérage</div>
                 <div class="tabs-nav">
                     <button class="tab-btn active" data-tab="territoire"><i data-lucide="globe"></i> <span data-i18n="tabs.territoire">TERRITOIRE</span></button>
                     <button class="tab-btn" data-tab="episode"><i data-lucide="clapperboard"></i> <span data-i18n="tabs.episode">ÉPISODE</span></button>
@@ -104,12 +69,12 @@
                     <button class="tab-btn" data-tab="lieux"><i data-lucide="map-pin"></i> <span data-i18n="tabs.lieux">LIEUX</span></button>
                 </div>
                 
-                <!-- TAB: TERRITOIRE -->
+                <!-- TAB 1: TERRITOIRE -->
                 <div class="tab-content active" id="territoire">
-                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="territoire.title">Identité du territoire</h3>
+                    <h3 data-i18n="territoire.title">Identité du territoire</h3>
                     <div class="fields-grid">
-                        <div class="field-group"><label class="field-label" data-i18n="territoire.pays">Pays</label><input type="text" name="pays" value="{{ FIXER_DATA.pays if FIXER_DATA else '' }}"></div>
-                        <div class="field-group"><label class="field-label" data-i18n="territoire.region">Région</label><input type="text" name="region" value="{{ FIXER_DATA.region if FIXER_DATA else '' }}"></div>
+                        <div class="field-group"><label class="field-label">Pays</label><input type="text" name="pays"></div>
+                        <div class="field-group"><label class="field-label">Région</label><input type="text" name="region"></div>
                         <div class="field-group"><label class="field-label">Ville(s)</label><input type="text" name="ville"></div>
                         <div class="field-group"><label class="field-label">Population</label><input type="text" name="population"></div>
                         <div class="field-group"><label class="field-label">Langue(s)</label><input type="text" name="langues"></div>
@@ -123,9 +88,9 @@
                     </div>
                 </div>
                 
-                <!-- TAB: ÉPISODE -->
+                <!-- TAB 2: ÉPISODE -->
                 <div class="tab-content" id="episode">
-                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="episode.title">Épisode</h3>
+                    <h3 data-i18n="episode.title">Épisode</h3>
                     <div class="fields-grid">
                         <div class="field-group" style="grid-column: span 2;"><label class="field-label">Angle narratif</label><textarea name="angle" rows="3"></textarea></div>
                         <div class="field-group"><label class="field-label">Fête centrale</label><input type="text" name="fete"></div>
@@ -139,13 +104,11 @@
                     </div>
                 </div>
                 
-                <!-- TAB: GARDIENS VUE D'ENSEMBLE -->
+                <!-- TAB 3: GARDIENS (TABLE) -->
                 <div class="tab-content" id="gardiens">
-                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;">Vue d'ensemble des Gardiens</h3>
+                    <h3 data-i18n="gardiens_vue.title">Vue d'ensemble des Gardiens</h3>
                     <table class="gardiens-table">
-                        <thead>
-                            <tr><th>Gardien</th><th>Nom / Prénom</th><th>Âge</th><th>Genre</th><th>Fonction</th><th>Savoir</th></tr>
-                        </thead>
+                        <thead><tr><th>Gardien</th><th>Nom / Prénom</th><th>Âge</th><th>Genre</th><th>Fonction</th><th>Savoir</th></tr></thead>
                         <tbody>
                             {% for i in [1, 2, 3] %}
                             <tr>
@@ -161,9 +124,9 @@
                     </table>
                 </div>
                 
-                <!-- TAB: GARDIENS DÉTAILS -->
+                <!-- TAB 4: GARDIENS DÉTAILS -->
                 <div class="tab-content" id="gardiens-details">
-                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;">Détails des Gardiens</h3>
+                    <h3 data-i18n="gardiens_details.title">Détails des Gardiens</h3>
                     {% for i in [1, 2, 3] %}
                     <div class="sub-section">
                         <div class="sub-section-title">Gardien {{ i }}</div>
@@ -180,20 +143,21 @@
                     {% endfor %}
                 </div>
                 
-                <!-- TAB: LIEUX -->
+                <!-- TAB 5: LIEUX (HARMONISATION TOTALE) -->
                 <div class="tab-content" id="lieux">
-                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;">Lieux</h3>
+                    <h3 data-i18n="lieux.title">Lieux</h3>
                     <div class="lieux-tabs-container"><div class="lieux-tabs">
                         <button type="button" class="lieu-tab active" data-lieu="1">Lieu 1</button>
                         <button type="button" class="lieu-tab" data-lieu="2">Lieu 2</button>
                         <button type="button" class="lieu-tab" data-lieu="3">Lieu 3</button>
                     </div></div>
+                    
                     {% for i in [1, 2, 3] %}
                     <div class="lieu-content {% if i == 1 %}active{% endif %}" id="lieu-{{ i }}">
                         <div class="fields-grid">
                             <div class="field-group"><label class="field-label">Nom du lieu</label><input type="text" name="lieu{{ i }}_nom"></div>
                             <div class="field-group"><label class="field-label">Type d'environnement</label><input type="text" name="lieu{{ i }}_type"></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Description visuelle</label><textarea name="lieu{{ i }}_description" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Description visuelle générale</label><textarea name="lieu{{ i }}_description" rows="4"></textarea></div>
                             <div class="field-group" style="grid-column: span 2;"><label class="field-label">Éléments symboliques</label><textarea name="lieu{{ i }}_elements" rows="3"></textarea></div>
                             <div class="field-group" style="grid-column: span 2;"><label class="field-label">Points de vue remarquables</label><textarea name="lieu{{ i }}_points_vue" rows="3"></textarea></div>
                         </div>
@@ -225,7 +189,7 @@
             </div>
         </section>
         
-        <!-- PHOTOS -->
+        <!-- PHOTOS & DOCS -->
         <section>
             <div class="section-header"><div class="section-icon">📷</div><h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
             <div class="text-content">
@@ -240,8 +204,7 @@
         <!-- ACTIONS -->
         <div class="actions-bar">
             <button type="button" class="btn btn-secondary" id="btn-save">💾 Enregistrer</button>
-            <button type="button" class="btn btn-primary" id="btn-export-pdf">📄 Exporter PDF</button>
-            <button type="button" class="btn btn-success" id="btn-submit">✅ Soumettre</button>
+            <button type="button" class="btn btn-success" id="btn-submit">✅ Soumettre à la Production</button>
         </div>
     </div>
     
@@ -273,7 +236,7 @@
 
     <footer><div class="footer-content"><p>© 2025 — Durand & Pierson Associates</p></div></footer>
 
-    <!-- VARIABLES FLASK -->
+    <!-- VARIABLES FLASK (LOGIQUE ACTION 1.1) -->
     <script>
         window.FIXER_DATA = {
             fixer_id: {{ fixer_id|default('null')|tojson }},
