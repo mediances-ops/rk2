@@ -15,22 +15,17 @@
     <!-- HEADER -->
     <header class="{% if FIXER_DATA %}header-fixer{% endif %}">
         {% if FIXER_DATA and FIXER_DATA.region %}
+        <!-- Header personnalisé pour les fixers avec image de fond -->
         <div class="header-fixer-banner" style="background-image: url('{% if FIXER_DATA.image_region %}{{ FIXER_DATA.image_region }}{% else %}https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg{% endif %}');">
             <div class="header-fixer-overlay">
                 <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RootsKeepers" class="logo-header-fixer">
                 <div class="header-fixer-content">
-                    <h1 class="header-fixer-title" data-i18n="header.title">PRÉPARATION REPÉRAGE</h1>
+                    <h1 class="header-fixer-title"></h1>
                     <h2 class="header-fixer-region">{{ FIXER_DATA.region }}</h2>
                     <div class="header-fixer-name">{{ FIXER_DATA.prenom }} {{ FIXER_DATA.nom }}</div>
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="header-content">
-            <div class="header-title"><h1>RootsKeepers</h1><div class="subtitle">Studio System</div></div>
-        </div>
-        {% endif %}
-        
         <div class="header-content">
             <div class="language-selector">
                 <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
@@ -39,6 +34,21 @@
                 <button class="lang-btn" data-lang="ESP">🇪🇸 ESP</button>
             </div>
         </div>
+        {% else %}
+        <!-- Header standard pour l'admin -->
+        <div class="header-content">
+            <div class="header-title">
+                <h1></h1>
+                <div class="subtitle">RootsKeepers</div>
+            </div>
+            <div class="language-selector">
+                <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
+                <button class="lang-btn" data-lang="GB">🇬🇧 GB</button>
+                <button class="lang-btn" data-lang="ITAL">🇮🇹 ITAL</button>
+                <button class="lang-btn" data-lang="ESP">🇪🇸 ESP</button>
+            </div>
+        </div>
+        {% endif %}
     </header>
     
     <div class="container">
@@ -46,12 +56,48 @@
         <!-- COMPTEUR DE PROGRESSION -->
         <div class="progress-container" id="progress-container">
             <div class="progress-header">
-                <div class="progress-title"><i data-lucide="check-circle"></i> <span>Progress..</span></div>
+                <div class="progress-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <span>Progress..</span>
+                </div>
                 <div class="progress-percentage" id="progress-percentage">0%</div>
             </div>
-            <div class="progress-bar-container"><div class="progress-bar" id="progress-bar" style="width: 0%"></div></div>
-            <div class="progress-stats"><span id="progress-filled">0</span> champs sur <span id="progress-total">0</span></div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-stats">
+                <span id="progress-filled">0</span> champs remplis sur 
+                <span id="progress-total">0</span>
+            </div>
         </div>
+        
+        <!-- INFORMATIONS CORRESPONDANT -->
+        <section>
+            <div class="section-header">
+                <i data-lucide="user-round" style="width: 32px; height: 32px;"></i>
+                <h2 class="section-title" data-i18n="fixer.title">INFORMATIONS SUR LE CORRESPONDANT LOCAL</h2>
+            </div>
+            
+            <div class="text-content">
+                <div class="fields-grid">
+                    <div class="field-group">
+                        <label class="field-label" data-i18n="fixer.nom">Nom</label>
+                        <input type="text" name="fixer_nom" placeholder="Nom complet" data-i18n-placeholder="fixer.nom_placeholder" value="{{ FIXER_DATA.nom if FIXER_DATA else '' }}">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" data-i18n="fixer.email">Email</label>
+                        <input type="email" name="fixer_email" placeholder="email@example.com" data-i18n-placeholder="fixer.email_placeholder" value="{{ FIXER_DATA.email if FIXER_DATA else '' }}">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" data-i18n="fixer.telephone">Téléphone</label>
+                        <input type="tel" name="fixer_telephone" placeholder="+33 6 12 34 56 78" data-i18n-placeholder="fixer.telephone_placeholder" value="{{ FIXER_DATA.telephone if FIXER_DATA else '' }}">
+                    </div>
+                </div>
+            </div>
+        </section>
         
         <!-- GRILLE DE REPÉRAGE -->
         <section>
@@ -61,91 +107,282 @@
             </div>
             
             <div class="tabs-container">
+                <div class="tabs-header" data-i18n="tabs.territoire">Grille de Repérage</div>
+                
                 <div class="tabs-nav">
-                    <button class="tab-btn active" data-tab="territoire"><i data-lucide="globe"></i> <span data-i18n="tabs.territoire">TERRITOIRE</span></button>
-                    <button class="tab-btn" data-tab="episode"><i data-lucide="clapperboard"></i> <span data-i18n="tabs.episode">ÉPISODE</span></button>
-                    <button class="tab-btn" data-tab="gardiens"><i data-lucide="users"></i> <span data-i18n="tabs.gardiens">GARDIENS</span></button>
-                    <button class="tab-btn" data-tab="gardiens-details"><i data-lucide="file-text"></i> <span data-i18n="tabs.gardiens_details">GARDIENS (DÉTAILS)</span></button>
-                    <button class="tab-btn" data-tab="lieux"><i data-lucide="map-pin"></i> <span data-i18n="tabs.lieux">LIEUX</span></button>
+                    <button class="tab-btn active" data-tab="territoire">
+                        <i data-lucide="globe" style="width: 20px; height: 20px;"></i>
+                        <span data-i18n="tabs.territoire">TERRITOIRE</span>
+                    </button>
+                    <button class="tab-btn" data-tab="episode">
+                        <i data-lucide="clapperboard" style="width: 20px; height: 20px;"></i>
+                        <span data-i18n="tabs.episode">ÉPISODE</span>
+                    </button>
+                    <button class="tab-btn" data-tab="gardiens">
+                        <i data-lucide="users" style="width: 20px; height: 20px;"></i>
+                        <span data-i18n="tabs.gardiens">GARDIENS</span>
+                    </button>
+                    <button class="tab-btn" data-tab="gardiens-details">
+                        <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+                        <span data-i18n="tabs.gardiens_details">GARDIENS (DÉTAILS)</span>
+                    </button>
+                    <button class="tab-btn" data-tab="lieux">
+                        <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                        <span data-i18n="tabs.lieux">LIEUX</span>
+                    </button>
                 </div>
                 
                 <!-- TAB: TERRITOIRE -->
                 <div class="tab-content active" id="territoire">
-                    <h3 data-i18n="territoire.title">Identité du territoire</h3>
-                    <div class="fields-grid" id="fields-territoire">
+                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="territoire.title">Identité du territoire</h3>
+                    <div class="fields-grid">
                         <div class="field-group">
                             <label class="field-label" data-i18n="territoire.pays">Pays</label>
-                            <input type="text" name="pays" value="{{ FIXER_DATA.pays or '' }}">
+                            <input type="text" name="pays" value="{{ FIXER_DATA.pays if FIXER_DATA else '' }}" data-i18n-placeholder="territoire.pays">
                         </div>
                         <div class="field-group">
-                            <label class="field-label" data-i18n="territoire.region">Région</label>
-                            <input type="text" name="region" value="{{ FIXER_DATA.region or '' }}">
+                            <label class="field-label" data-i18n="territoire.region">Région / Province</label>
+                            <input type="text" name="region" value="{{ FIXER_DATA.region if FIXER_DATA else '' }}" data-i18n-placeholder="territoire.region">
                         </div>
-                        <div class="field-group"><label class="field-label" data-i18n="territoire.ville">Ville(s)</label><input type="text" name="ville" value="{{ FIXER_DATA.territoire.ville or '' }}"></div>
-                        <div class="field-group"><label class="field-label" data-i18n="territoire.population">Population</label><input type="text" name="population" value="{{ FIXER_DATA.territoire.population or '' }}"></div>
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label" data-i18n="territoire.histoire">Histoire</label><textarea name="histoire" rows="4">{{ FIXER_DATA.territoire.histoire or '' }}</textarea></div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.ville">Ville(s) principale(s)</label>
+                            <input type="text" name="ville" data-i18n-placeholder="territoire.ville">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.population">Population (estimation)</label>
+                            <input type="text" name="population" data-i18n-placeholder="territoire.population">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.langues">Langue(s) parlée(s)</label>
+                            <input type="text" name="langues" data-i18n-placeholder="territoire.langues">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.climat">Climat / Saison de tournage envisagée</label>
+                            <input type="text" name="climat" data-i18n-placeholder="territoire.climat">
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="territoire.histoire">Histoire / Contexte culturel</label>
+                            <textarea name="histoire" rows="4" data-i18n-placeholder="territoire.histoire"></textarea>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="territoire.traditions">Traditions culinaires / artisanales dominantes</label>
+                            <textarea name="traditions" rows="3" data-i18n-placeholder="territoire.traditions"></textarea>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="territoire.fetes">Fêtes locales / Calendrier culturel</label>
+                            <textarea name="fetes" rows="3" data-i18n-placeholder="territoire.fetes"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.acces">Accès depuis capitale / aéroport</label>
+                            <input type="text" name="acces" data-i18n-placeholder="territoire.acces">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.hebergement">Hébergement équipe disponible</label>
+                            <input type="text" name="hebergement" data-i18n-placeholder="territoire.hebergement">
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="territoire.contacts">Contacts locaux utiles</label>
+                            <textarea name="contacts" rows="2" data-i18n-placeholder="territoire.contacts"></textarea>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- TABS SUIVANTES (Vides, app.js va les remplir) -->
-                <div class="tab-content" id="episode"></div>
-                <div class="tab-content" id="gardiens"></div>
-                <div class="tab-content" id="gardiens-details"></div>
-                <div class="tab-content" id="lieux"></div>
+                <!-- TAB: ÉPISODE -->
+                <div class="tab-content" id="episode">
+                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="episode.title">Épisode</h3>
+                    <div class="fields-grid">
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="episode.angle">Angle narratif choisi</label>
+                            <textarea name="angle" rows="3" data-i18n-placeholder="episode.angle"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="episode.fete">Fête ou événement central</label>
+                            <input type="text" name="fete" data-i18n-placeholder="episode.fete">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="episode.contraintes">Contraintes temporelles</label>
+                            <input type="text" name="contraintes" data-i18n-placeholder="episode.contraintes">
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="episode.arc">Arc dramatique envisagé</label>
+                            <textarea name="arc" rows="4" data-i18n-placeholder="episode.arc"></textarea>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="episode.moments">Moments-clés identifiés</label>
+                            <textarea name="moments" rows="4" data-i18n-placeholder="episode.moments"></textarea>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="episode.sensibles">Éléments culturellement sensibles</label>
+                            <textarea name="sensibles" rows="3" data-i18n-placeholder="episode.sensibles"></textarea>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label class="field-label" data-i18n="episode.autorisations">Autorisations préalables nécessaires</label>
+                            <textarea name="autorisations" rows="3" data-i18n-placeholder="episode.autorisations"></textarea>
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="episode.budget">Budget local estimé</label>
+                            <input type="text" name="budget" data-i18n-placeholder="episode.budget">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="episode.notes">Notes production</label>
+                            <textarea name="notes" rows="3" data-i18n-placeholder="episode.notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TAB: GARDIENS VUE D'ENSEMBLE -->
+                <div class="tab-content" id="gardiens">
+                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="gardiens_vue.title">Vue d'ensemble des 3 Gardiens</h3>
+                    <table class="gardiens-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="gardiens_vue.gardien">Gardien</th>
+                                <th data-i18n="gardiens_vue.nom">Nom / Prénom</th>
+                                <th data-i18n="gardiens_vue.age">Âge</th>
+                                <th data-i18n="gardiens_vue.genre">Genre</th>
+                                <th data-i18n="gardiens_vue.fonction">Fonction</th>
+                                <th data-i18n="gardiens_vue.savoir">Savoir transmis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Gardien 1</strong></td><td><input type="text" name="gardien1_nom"></td><td><input type="number" name="gardien1_age"></td><td><input type="text" name="gardien1_genre"></td><td><input type="text" name="gardien1_fonction"></td><td><input type="text" name="gardien1_savoir"></td></tr>
+                            <tr><td><strong>Gardien 2</strong></td><td><input type="text" name="gardien2_nom"></td><td><input type="number" name="gardien2_age"></td><td><input type="text" name="gardien2_genre"></td><td><input type="text" name="gardien2_fonction"></td><td><input type="text" name="gardien2_savoir"></td></tr>
+                            <tr><td><strong>Gardien 3</strong></td><td><input type="text" name="gardien3_nom"></td><td><input type="number" name="gardien3_age"></td><td><input type="text" name="gardien3_genre"></td><td><input type="text" name="gardien3_fonction"></td><td><input type="text" name="gardien3_savoir"></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- TAB: GARDIENS DÉTAILS -->
+                <div class="tab-content" id="gardiens-details">
+                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="gardiens_details.title">Détails des Gardiens</h3>
+                    <div class="sub-section">
+                        <div class="sub-section-title">Gardien 1</div>
+                        <div class="fields-grid">
+                            <div class="field-group"><label class="field-label" data-i18n="gardiens_details.prenom">Prénom</label><input type="text" name="gardien1_prenom"></div>
+                            <div class="field-group"><label class="field-label" data-i18n="gardiens_details.telephone">Téléphone</label><input type="tel" name="gardien1_telephone"></div>
+                            <div class="field-group"><label class="field-label" data-i18n="gardiens_details.email">Email</label><input type="email" name="gardien1_email"></div>
+                            <div class="field-group"><label class="field-label" data-i18n="gardiens_details.langues">Langues parlées</label><input type="text" name="gardien1_langues"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label" data-i18n="gardiens_details.adresse">Adresse complète</label><input type="text" name="gardien1_adresse"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label" data-i18n="gardiens_details.histoire">Histoire personnelle</label><textarea name="gardien1_histoire" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label" data-i18n="gardiens_details.evaluation">Évaluation cinégénie</label><textarea name="gardien1_evaluation" rows="3"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="sub-section">
+                        <div class="sub-section-title">Gardien 2</div>
+                        <div class="fields-grid">
+                            <div class="field-group"><label class="field-label">Prénom</label><input type="text" name="gardien2_prenom"></div>
+                            <div class="field-group"><label class="field-label">Téléphone</label><input type="tel" name="gardien2_telephone"></div>
+                            <div class="field-group"><label class="field-label">Email</label><input type="email" name="gardien2_email"></div>
+                            <div class="field-group"><label class="field-label">Langues parlées</label><input type="text" name="gardien2_langues"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Adresse complète</label><input type="text" name="gardien2_adresse"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Histoire personnelle</label><textarea name="gardien2_histoire" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Évaluation cinégénie</label><textarea name="gardien2_evaluation" rows="3"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="sub-section">
+                        <div class="sub-section-title">Gardien 3</div>
+                        <div class="fields-grid">
+                            <div class="field-group"><label class="field-label">Prénom</label><input type="text" name="gardien3_prenom"></div>
+                            <div class="field-group"><label class="field-label">Téléphone</label><input type="tel" name="gardien3_telephone"></div>
+                            <div class="field-group"><label class="field-label">Email</label><input type="email" name="gardien3_email"></div>
+                            <div class="field-group"><label class="field-label">Langues parlées</label><input type="text" name="gardien3_langues"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Adresse complète</label><input type="text" name="gardien3_adresse"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Histoire personnelle</label><textarea name="gardien3_histoire" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Évaluation cinégénie</label><textarea name="gardien3_evaluation" rows="3"></textarea></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- TAB: LIEUX -->
+                <div class="tab-content" id="lieux">
+                    <h3 style="font-size: 1.4rem; color: var(--dark-color); margin-bottom: 25px;" data-i18n="lieux.title">Lieux</h3>
+                    <div class="lieux-tabs-container">
+                        <div class="lieux-tabs">
+                            <button class="lieu-tab active" data-lieu="1">Lieu 1</button>
+                            <button class="lieu-tab" data-lieu="2">Lieu 2</button>
+                            <button class="lieu-tab" data-lieu="3">Lieu 3</button>
+                        </div>
+                    </div>
+                    <div class="lieu-content active" id="lieu-1">
+                        <div class="fields-grid">
+                            <div class="field-group"><label class="field-label">Nom du lieu</label><input type="text" name="lieu1_nom"></div>
+                            <div class="field-group"><label class="field-label">Type d'environnement</label><input type="text" name="lieu1_type"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Description visuelle</label><textarea name="lieu1_description" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Analyse artistique</label><textarea name="lieu1_cinegenie" rows="3"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Analyse technique</label><textarea name="lieu1_securite" rows="3"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="lieu-content" id="lieu-2">
+                         <div class="fields-grid"><div class="field-group"><label class="field-label">Nom du lieu</label><input type="text" name="lieu2_nom"></div></div>
+                    </div>
+                    <div class="lieu-content" id="lieu-3">
+                         <div class="fields-grid"><div class="field-group"><label class="field-label">Nom du lieu</label><input type="text" name="lieu3_nom"></div></div>
+                    </div>
+                </div>
             </div>
         </section>
         
-        <!-- PHOTOS -->
+        <!-- UPLOAD PHOTOS -->
         <section>
-            <div class="section-header"><i data-lucide="camera"></i> <h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
-            <div class="upload-zone">
-                <input type="file" id="file-input" multiple accept="image/*,.pdf">
-                <div class="drop-area" id="drop-area"><p>Glissez vos fichiers ici ou cliquez</p></div>
+            <div class="section-header"><div class="section-icon">📷</div><h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
+            <div class="text-content">
+                <div class="upload-zone">
+                    <input type="file" id="file-input" multiple accept="image/*,.pdf">
+                    <div class="drop-area" id="drop-area"><p>Glissez vos photos ici ou cliquez</p></div>
+                </div>
+                <div class="files-preview" id="files-list"></div>
             </div>
-            <div class="files-preview" id="files-list"></div>
         </section>
         
         <!-- ACTIONS -->
         <div class="actions-bar">
             <button class="btn btn-secondary" id="btn-save">💾 Enregistrer</button>
-            <button class="btn btn-success" id="btn-submit">✅ Soumettre à la Production</button>
+            <button class="btn btn-success" id="btn-submit">✅ Soumettre</button>
         </div>
     </div>
     
-    <!-- CHAT LATÉRAL (RESTAURÉ) -->
-    <button class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i><span class="chat-badge" id="chat-badge">0</span></button>
+    <!-- CHAT FLOTTANT -->
+    <button class="chat-toggle-btn" id="chat-toggle-btn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span class="chat-badge" id="chat-badge">0</span></button>
     <div class="chat-panel" id="chat-panel">
         <div class="chat-header">
-            <div class="chat-header-title"><i data-lucide="message-square"></i> <span>Messages Production</span></div>
+            <div class="chat-header-title"><span>Messages Production</span></div>
             <button class="chat-close-btn" id="chat-close-btn"><i data-lucide="x"></i></button>
         </div>
-        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-messages" id="chat-messages"><div class="chat-empty"><p>Aucun message</p></div></div>
         <div class="chat-input-container">
-            <textarea class="chat-input" id="chat-input" placeholder="Écrivez votre message..." rows="2"></textarea>
+            <textarea class="chat-input" id="chat-input" placeholder="Message..." rows="2"></textarea>
             <button class="chat-send-btn" id="chat-send-btn"><i data-lucide="send"></i></button>
         </div>
     </div>
-
-    <!-- PANNEAU IA (RESTAURÉ) -->
+    
+    <!-- PANNEAU IA LATÉRAL -->
     <button class="ai-floating-btn" onclick="toggleAIPanel()"><i data-lucide="brain-circuit"></i></button>
     <div class="ai-panel-overlay" id="aiPanelOverlay" onclick="closeAIPanel()"></div>
     <div class="ai-panel" id="aiPanel">
-        <div class="ai-panel-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i data-lucide="brain-circuit" style="color: white;"></i>
-                <h3 style="margin: 0; color: white;">Assistant IA</h3>
-            </div>
-            <button class="ai-panel-close" onclick="closeAIPanel()"><i data-lucide="x"></i></button>
-        </div>
+        <div class="ai-panel-header"><h3>Assistant IA RootsKeepers</h3><button class="ai-panel-close" onclick="closeAIPanel()"><i data-lucide="x"></i></button></div>
         <div class="ai-panel-body"><iframe src="https://destinationsetcuisines.com/site" style="width: 100%; height: 100%; border: none;"></iframe></div>
     </div>
 
-    <!-- SCRIPTS -->
+    <footer><p>© 2025 — Durand & Pierson Associates</p></footer>
+
+    <!-- VARIABLES FLASK -->
     <script>
-        window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
-        window.REPERAGE_ID = {{ REPERAGE_ID }};
-        console.log("✅ DOC-OS Ready: Dossier injecté pour l'ID", window.REPERAGE_ID);
+        window.FIXER_DATA = {
+            fixer_id: {{ fixer_id|default('null')|tojson }},
+            fixer_nom: {{ fixer_nom|default('')|tojson }},
+            langue_default: {{ langue_default|default('FR')|tojson }},
+            reperage_id: {{ REPERAGE_ID|default('null')|tojson }},
+            region: {{ FIXER_DATA.region|default('')|tojson if FIXER_DATA else '""' }},
+            pays: {{ FIXER_DATA.pays|default('')|tojson if FIXER_DATA else '""' }},
+            image_region: {{ FIXER_DATA.image_region|default('')|tojson if FIXER_DATA else '""' }},
+            # On injecte les données complètes pour app.js
+            territoire: {{ FIXER_DATA.territoire|default({})|tojson if FIXER_DATA else '{}' }},
+            episode: {{ FIXER_DATA.episode|default({})|tojson if FIXER_DATA else '{}' }},
+            gardiens: {{ FIXER_DATA.gardiens|default([])|tojson if FIXER_DATA else '[]' }},
+            lieux: {{ FIXER_DATA.lieux|default([])|tojson if FIXER_DATA else '[]' }}
+        };
     </script>
+    
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="/static/js/app.js"></script>
     <script>
