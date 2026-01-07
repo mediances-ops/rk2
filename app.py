@@ -8,7 +8,7 @@ from PIL import Image
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
-# 1. INITIALISATION DE L'APP
+# 1. INITIALISATION DE L'APP (IMPÉRATIF EN HAUT)
 # =================================================================
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +29,7 @@ def linkify_text(text):
 app.jinja_env.filters['linkify'] = linkify_text
 
 def send_to_docugen(reperage_dict):
-    """Bridge vers Docu-Gen IA"""
+    """Envoie le dossier complet au cerveau IA Docu-Gen via le Bridge"""
     url = os.environ.get('DOCUGEN_API_URL')
     token = os.environ.get('BRIDGE_SECRET_TOKEN')
     if not url: return False
@@ -108,8 +108,34 @@ def admin_fixers():
     finally: session.close()
 
 # =================================================================
-# 4. API SAUVEGARDE INTEGRALE (COMMUNIQUE AVEC APP.JS)
+# 4. API SAUVEGARDE ET CRÉATION (COMMUNIQUE AVEC LE JS)
 # =================================================================
+
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_reperage():
+    """Rétablit la route de création qui manquait (Génère le Token Vital)"""
+    session = get_session(engine)
+    try:
+        data = request.json
+        new_rep = Reperage(
+            token=secrets.token_urlsafe(16), # Génération du token pour le lien distant
+            region=data.get('region'),
+            pays=data.get('pays'),
+            fixer_id=data.get('fixer_id'),
+            fixer_nom=data.get('fixer_nom'),
+            image_region=data.get('image_region'),
+            statut='brouillon',
+            territoire_data="{}", 
+            episode_data="{}"
+        )
+        session.add(new_rep)
+        session.commit()
+        return jsonify({'status': 'success', 'id': new_rep.id})
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
 def update_reperage_api(id):
@@ -150,7 +176,7 @@ def update_reperage_api(id):
     finally: session.close()
 
 # =================================================================
-# 5. FORMULAIRE DISTANT (RESTAURATION FIXER_DATA)
+# 5. FORMULAIRE DISTANT
 # =================================================================
 
 @app.route('/formulaire/<token>')
@@ -161,7 +187,6 @@ def formulaire_token(token):
         if not rep: return "Repérage non trouvé", 404
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
-        # Structure complète pour app.js
         fixer_data = {
             'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region,
             'prenom': fixer.prenom if fixer else '', 'nom': fixer.nom if fixer else '',
@@ -183,6 +208,19 @@ def handle_messages(reperage_id):
         data = request.json
         new_msg = Message(reperage_id=reperage_id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
         session.add(new_msg); session.commit(); return jsonify(new_msg.to_dict()), 201
+    finally: session.close()
+
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def submit_reperage(id):
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id)
+        if not rep: return jsonify({'error': 'Non trouvé'}), 404
+        rep.statut = 'soumis'
+        session.commit()
+        success = send_to_docugen(rep.to_dict())
+        return jsonify({'status': 'success', 'bridge_sent': success})
+    except Exception as e: return jsonify({'error': str(e)}), 500
     finally: session.close()
 
 @app.route('/uploads/<path:filename>')
