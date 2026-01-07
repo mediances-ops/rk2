@@ -15,7 +15,6 @@
     <!-- HEADER -->
     <header class="{% if FIXER_DATA %}header-fixer{% endif %}">
         {% if FIXER_DATA and FIXER_DATA.region %}
-        <!-- Header personnalisé pour les fixers avec image de fond -->
         <div class="header-fixer-banner" style="background-image: url('{% if FIXER_DATA.image_region %}{{ FIXER_DATA.image_region }}{% else %}https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg{% endif %}');">
             <div class="header-fixer-overlay">
                 <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RootsKeepers" class="logo-header-fixer">
@@ -26,6 +25,12 @@
                 </div>
             </div>
         </div>
+        {% else %}
+        <div class="header-content">
+            <div class="header-title"><h1>RootsKeepers</h1><div class="subtitle">Studio System</div></div>
+        </div>
+        {% endif %}
+        
         <div class="header-content">
             <div class="language-selector">
                 <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
@@ -34,19 +39,6 @@
                 <button class="lang-btn" data-lang="ESP">🇪🇸 ESP</button>
             </div>
         </div>
-        {% else %}
-        <!-- Header standard pour l'admin -->
-        <div class="header-content">
-            <div class="header-title">
-                <h1>RootsKeepers</h1>
-                <div class="subtitle">Studio System</div>
-            </div>
-            <div class="language-selector">
-                <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
-                <button class="lang-btn" data-lang="GB">🇬🇧 GB</button>
-            </div>
-        </div>
-        {% endif %}
     </header>
     
     <div class="container">
@@ -54,47 +46,14 @@
         <!-- COMPTEUR DE PROGRESSION -->
         <div class="progress-container" id="progress-container">
             <div class="progress-header">
-                <div class="progress-title">
-                    <i data-lucide="check-circle" style="width: 20px; height: 20px;"></i>
-                    <span>Progression du dossier</span>
-                </div>
+                <div class="progress-title"><i data-lucide="check-circle"></i> <span>Progress..</span></div>
                 <div class="progress-percentage" id="progress-percentage">0%</div>
             </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-            </div>
-            <div class="progress-stats">
-                <span id="progress-filled">0</span> champs remplis sur 
-                <span id="progress-total">0</span>
-            </div>
+            <div class="progress-bar-container"><div class="progress-bar" id="progress-bar" style="width: 0%"></div></div>
+            <div class="progress-stats"><span id="progress-filled">0</span> champs sur <span id="progress-total">0</span></div>
         </div>
         
-        <!-- INFORMATIONS CORRESPONDANT -->
-        <section>
-            <div class="section-header">
-                <i data-lucide="user-round" style="width: 32px; height: 32px;"></i>
-                <h2 class="section-title" data-i18n="fixer.title">INFORMATIONS SUR LE CORRESPONDANT LOCAL</h2>
-            </div>
-            
-            <div class="text-content">
-                <div class="fields-grid">
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.nom">Nom</label>
-                        <input type="text" name="fixer_nom" value="{{ FIXER_DATA.nom if FIXER_DATA else '' }}">
-                    </div>
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.email">Email</label>
-                        <input type="email" name="fixer_email" value="{{ FIXER_DATA.email if FIXER_DATA else '' }}">
-                    </div>
-                    <div class="field-group">
-                        <label class="field-label" data-i18n="fixer.telephone">Téléphone</label>
-                        <input type="tel" name="fixer_telephone" value="{{ FIXER_DATA.telephone if FIXER_DATA else '' }}">
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- GRILLE DE REPÉRAGE (ONGLETS) -->
+        <!-- GRILLE DE REPÉRAGE -->
         <section>
             <div class="section-header">
                 <i data-lucide="clipboard-list" style="width: 32px; height: 32px;"></i>
@@ -106,32 +65,33 @@
                     <button class="tab-btn active" data-tab="territoire"><i data-lucide="globe"></i> <span data-i18n="tabs.territoire">TERRITOIRE</span></button>
                     <button class="tab-btn" data-tab="episode"><i data-lucide="clapperboard"></i> <span data-i18n="tabs.episode">ÉPISODE</span></button>
                     <button class="tab-btn" data-tab="gardiens"><i data-lucide="users"></i> <span data-i18n="tabs.gardiens">GARDIENS</span></button>
+                    <button class="tab-btn" data-tab="gardiens-details"><i data-lucide="file-text"></i> <span data-i18n="tabs.gardiens_details">GARDIENS (DÉTAILS)</span></button>
                     <button class="tab-btn" data-tab="lieux"><i data-lucide="map-pin"></i> <span data-i18n="tabs.lieux">LIEUX</span></button>
                 </div>
                 
-                <!-- CONTENU DES ONGLETS (Gérés par app.js) -->
+                <!-- TAB: TERRITOIRE -->
                 <div class="tab-content active" id="territoire">
                     <h3 data-i18n="territoire.title">Identité du territoire</h3>
-                    <!-- Les champs seront remplis par app.js via window.FIXER_DATA -->
                     <div class="fields-grid" id="fields-territoire">
-                        <!-- Remplissage dynamique -->
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.pays">Pays</label>
+                            <input type="text" name="pays" value="{{ FIXER_DATA.pays or '' }}">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label" data-i18n="territoire.region">Région</label>
+                            <input type="text" name="region" value="{{ FIXER_DATA.region or '' }}">
+                        </div>
+                        <div class="field-group"><label class="field-label" data-i18n="territoire.ville">Ville(s)</label><input type="text" name="ville" value="{{ FIXER_DATA.territoire.ville or '' }}"></div>
+                        <div class="field-group"><label class="field-label" data-i18n="territoire.population">Population</label><input type="text" name="population" value="{{ FIXER_DATA.territoire.population or '' }}"></div>
+                        <div class="field-group" style="grid-column: span 2;"><label class="field-label" data-i18n="territoire.histoire">Histoire</label><textarea name="histoire" rows="4">{{ FIXER_DATA.territoire.histoire or '' }}</textarea></div>
                     </div>
                 </div>
-
-                <div class="tab-content" id="episode">
-                     <h3 data-i18n="episode.title">Épisode</h3>
-                     <div class="fields-grid" id="fields-episode"></div>
-                </div>
-
-                <div class="tab-content" id="gardiens">
-                     <h3 data-i18n="gardiens_vue.title">Gardiens</h3>
-                     <div id="fields-gardiens"></div>
-                </div>
-
-                <div class="tab-content" id="lieux">
-                     <h3 data-i18n="lieux.title">Lieux de tournage</h3>
-                     <div id="fields-lieux"></div>
-                </div>
+                
+                <!-- TABS SUIVANTES (Vides, app.js va les remplir) -->
+                <div class="tab-content" id="episode"></div>
+                <div class="tab-content" id="gardiens"></div>
+                <div class="tab-content" id="gardiens-details"></div>
+                <div class="tab-content" id="lieux"></div>
             </div>
         </section>
         
@@ -140,7 +100,7 @@
             <div class="section-header"><i data-lucide="camera"></i> <h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
             <div class="upload-zone">
                 <input type="file" id="file-input" multiple accept="image/*,.pdf">
-                <div class="drop-area" id="drop-area"><p>Glissez vos fichiers ici</p></div>
+                <div class="drop-area" id="drop-area"><p>Glissez vos fichiers ici ou cliquez</p></div>
             </div>
             <div class="files-preview" id="files-list"></div>
         </section>
@@ -148,41 +108,50 @@
         <!-- ACTIONS -->
         <div class="actions-bar">
             <button class="btn btn-secondary" id="btn-save">💾 Enregistrer</button>
-            <button class="btn btn-success" id="btn-submit">✅ Soumettre à l'IA</button>
+            <button class="btn btn-success" id="btn-submit">✅ Soumettre à la Production</button>
+        </div>
+    </div>
+    
+    <!-- CHAT LATÉRAL (RESTAURÉ) -->
+    <button class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i><span class="chat-badge" id="chat-badge">0</span></button>
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+            <div class="chat-header-title"><i data-lucide="message-square"></i> <span>Messages Production</span></div>
+            <button class="chat-close-btn" id="chat-close-btn"><i data-lucide="x"></i></button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-container">
+            <textarea class="chat-input" id="chat-input" placeholder="Écrivez votre message..." rows="2"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn"><i data-lucide="send"></i></button>
         </div>
     </div>
 
-    <!-- CHAT & IA -->
-    <button class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i><span class="chat-badge" id="chat-badge">0</span></button>
-    <div class="chat-panel" id="chat-panel">
-        <!-- Structure du chat originale -->
-    </div>
-
+    <!-- PANNEAU IA (RESTAURÉ) -->
     <button class="ai-floating-btn" onclick="toggleAIPanel()"><i data-lucide="brain-circuit"></i></button>
+    <div class="ai-panel-overlay" id="aiPanelOverlay" onclick="closeAIPanel()"></div>
     <div class="ai-panel" id="aiPanel">
-        <div class="ai-panel-header"><h3>Assistant IA</h3><button onclick="closeAIPanel()">×</button></div>
-        <div class="ai-panel-body"><iframe src="https://destinationsetcuisines.com/site"></iframe></div>
+        <div class="ai-panel-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i data-lucide="brain-circuit" style="color: white;"></i>
+                <h3 style="margin: 0; color: white;">Assistant IA</h3>
+            </div>
+            <button class="ai-panel-close" onclick="closeAIPanel()"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ai-panel-body"><iframe src="https://destinationsetcuisines.com/site" style="width: 100%; height: 100%; border: none;"></iframe></div>
     </div>
 
-    <!-- VARIABLES FLASK POUR JAVASCRIPT (LA SOUDURE ACTION 1.1) -->
+    <!-- SCRIPTS -->
     <script>
         window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
-        window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
-        console.log('🚀 DOC-OS Memory: Données injectées pour le repérage', window.REPERAGE_ID);
+        window.REPERAGE_ID = {{ REPERAGE_ID }};
+        console.log("✅ DOC-OS Ready: Dossier injecté pour l'ID", window.REPERAGE_ID);
     </script>
-    
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="/static/js/app.js"></script>
     <script>
         lucide.createIcons();
-        // Initialisation forcée des onglets si app.js tarde
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(btn.dataset.tab).classList.add('active');
-            });
-        });
+        function toggleAIPanel() { document.getElementById('aiPanel').classList.add('active'); document.getElementById('aiPanelOverlay').classList.add('active'); }
+        function closeAIPanel() { document.getElementById('aiPanel').classList.remove('active'); document.getElementById('aiPanelOverlay').classList.remove('active'); }
     </script>
 </body>
 </html>
