@@ -7,13 +7,23 @@ from sqlalchemy import or_
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
-# 1. INITIALISATION ET CONFIGURATION
+# 1. INITIALISATION ET CONFIGURATION (VERSION SÉCURISÉE)
 # =================================================================
 app = Flask(__name__)
 CORS(app)
 
-# Configuration Environnement (Railway PostgreSQL + Volume)
-DB_URL = os.environ.get('DATABASE_URL', 'sqlite:///reperage.db').replace('postgres://', 'postgresql://')
+# Récupération sécurisée de l'URL de base de données
+raw_db_url = os.environ.get('DATABASE_URL')
+
+if raw_db_url:
+    # Si Railway fournit l'URL, on s'assure du format postgresql://
+    DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
+    print("✅ Mode: PostgreSQL (Production)")
+else:
+    # Sinon, on utilise SQLite pour ne pas crash
+    DB_URL = 'sqlite:///reperage.db'
+    print("⚠️  Mode: SQLite (Fallback) - Vérifiez vos variables Railway")
+
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -23,13 +33,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialisation Base de données
 engine = init_db(DB_URL)
-
-# --- FILTRES JINJA ---
-@app.template_filter('linkify')
-def linkify_text(text):
-    if not text: return ""
-    url_pattern = r'(https?://[^\s]+)'
-    return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
 # 2. ROUTES DE NAVIGATION RACINE
@@ -305,3 +308,4 @@ def serve_uploads(rep_id, filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
