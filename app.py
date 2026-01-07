@@ -8,29 +8,32 @@ from PIL import Image
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
-# 1. INITIALISATION DE L'APPLICATION
+# 1. INITIALISATION DE L'APP (IMPÉRATIF EN HAUT)
 # =================================================================
 app = Flask(__name__)
 CORS(app)
 
-# Configuration dossiers
+# Configuration dossiers uploads
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads') if os.path.exists('/data') else 'static/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Base de données
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///reperage.db').replace('postgres://', 'postgresql://')
+# Configuration Base de données
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///reperage.db')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
 engine = init_db(database_url)
 
-# --- UTILITAIRES ---
+# --- FILTRES & UTILITAIRES ---
 def linkify_text(text):
     if not text: return text
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
-
 app.jinja_env.filters['linkify'] = linkify_text
 
 def send_to_docugen(reperage_dict):
+    """Envoie vers Docu-Gen IA via le Bridge"""
     url = os.environ.get('DOCUGEN_API_URL')
     token = os.environ.get('BRIDGE_SECRET_TOKEN')
     if not url: return False
@@ -41,7 +44,7 @@ def send_to_docugen(reperage_dict):
     except: return False
 
 # =================================================================
-# 2. ROUTES NAVIGATION & DASHBOARD
+# 2. ROUTES ADMINISTRATION (DASHBOARD)
 # =================================================================
 
 @app.route('/')
@@ -53,10 +56,11 @@ def admin_dashboard():
     session = get_session(engine)
     try:
         query = session.query(Reperage)
-        statut_f = request.args.get('statut')
-        if statut_f: query = query.filter(Reperage.statut == statut_f)
-        pays_f = request.args.get('pays')
-        if pays_f: query = query.filter(Reperage.pays == pays_f)
+        # Filtres
+        s_f = request.args.get('statut')
+        if s_f: query = query.filter(Reperage.statut == s_f)
+        p_f = request.args.get('pays')
+        if p_f: query = query.filter(Reperage.pays == p_f)
         
         reperages_raw = query.order_by(Reperage.created_at.desc()).all()
         fixers_raw = session.query(Fixer).all()
@@ -93,12 +97,11 @@ def admin_reperage_detail(id):
     finally: session.close()
 
 # =================================================================
-# 3. FORMULAIRE DISTANT (RESTAURATION 3x3 EXHAUSTIVE)
+# 3. FORMULAIRE DISTANT (INJECTION TOTALE SANS OMISSION)
 # =================================================================
 
 @app.route('/formulaire/<token>')
 def formulaire_reperage(token):
-    """Charge le dossier complet (3x3) avec TOUS les champs sans exception"""
     session = get_session(engine)
     try:
         rep = session.query(Reperage).filter_by(token=token).first()
@@ -106,60 +109,60 @@ def formulaire_reperage(token):
         
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
-        # --- GARDIENS : STRUCTURE 100% COMPLÈTE ---
-        gardiens_list = []
+        # --- GARDIENS : STRUCTURE 100% EXHAUSTIVE ---
+        g_list = []
         for i in range(1, 4):
             g_obj = next((g for g in rep.gardiens if g.ordre == i), None)
             if g_obj:
-                gardiens_list.append(g_obj.to_dict())
+                g_list.append(g_obj.to_dict())
             else:
-                gardiens_list.append({
+                g_list.append({
                     'ordre': i, 'nom': '', 'prenom': '', 'age': '', 'genre': '',
-                    'fonction': '', 'savoir_transmis': '', 'adresse': '',
-                    'telephone': '', 'email': '', 'histoire_personnelle': '',
-                    'evaluation_cinegenie': '', 'langues_parlees': ''
+                    'fonction': '', 'savoir_transmis': '', 'adresse': '', 'telephone': '',
+                    'email': '', 'histoire_personnelle': '', 'evaluation_cinegenie': '', 'langues_parlees': ''
                 })
 
-        # --- LIEUX : STRUCTURE 100% COMPLÈTE (ARTISTIQUE & TECHNIQUE) ---
-        lieux_list = []
+        # --- LIEUX : STRUCTURE 100% EXHAUSTIVE (ARTISTIQUE & TECHNIQUE) ---
+        l_list = []
         for i in range(1, 4):
             l_obj = next((l for l in rep.lieux if l.numero_lieu == i), None)
             if l_obj:
-                lieux_list.append(l_obj.to_dict())
+                l_list.append(l_obj.to_dict())
             else:
-                lieux_list.append({
-                    'numero_lieu': i, 'nom': '', 'type_environnement': '',
-                    'description_visuelle': '', 'elements_symboliques': '',
-                    'points_vue_remarquables': '', 'cinegenie': '', 'axes_camera': '',
-                    'moments_favorables': '', 'ambiance_sonore': '', 'adequation_narration': '',
-                    'accessibilite': '', 'securite': '', 'electricite': '',
-                    'espace_equipe': '', 'protection_meteo': '', 'contraintes_meteo': '',
-                    'autorisations_necessaires': '', 'latitude': '', 'longitude': ''
+                l_list.append({
+                    'numero_lieu': i, 'nom': '', 'type_environnement': '', 'description_visuelle': '',
+                    'elements_symboliques': '', 'points_vue_remarquables': '', 'cinegenie': '',
+                    'axes_camera': '', 'moments_favorables': '', 'ambiance_sonore': '',
+                    'adequation_narration': '', 'accessibilite': '', 'securite': '',
+                    'electricite': '', 'espace_equipe': '', 'protection_meteo': '',
+                    'contraintes_meteo': '', 'autorisations_necessaires': '',
+                    'latitude': None, 'longitude': None
                 })
 
         fixer_data = {
             'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region,
             'prenom': fixer.prenom if fixer else '', 'nom': fixer.nom if fixer else '',
+            'email': fixer.email if fixer else '', 'telephone': fixer.telephone if fixer else '',
+            'langue_preferee': fixer.langue_preferee if fixer else 'FR',
             'territoire': json.loads(rep.territoire_data) if rep.territoire_data else {},
             'episode': json.loads(rep.episode_data) if rep.episode_data else {},
-            'gardiens': gardiens_list, 'lieux': lieux_list
+            'gardiens': g_list, 'lieux': l_list
         }
         
-        return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=fixer_data)
+        return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=fixer_data, langue_default=fixer_data['langue_preferee'])
     finally: session.close()
 
 # =================================================================
-# 4. API SAUVEGARDE & BRIDGE
+# 4. API SAUVEGARDE INTEGRALE (FIXATION DES TIROIRS)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
 def update_reperage_api(id):
-    """Sauvegarde intégrale dans PostgreSQL"""
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
-        if not rep: return jsonify({'error': 'Introuvable'}), 404
+        if not rep: return jsonify({'error': 'Dossier introuvable'}), 404
 
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
@@ -189,17 +192,7 @@ def update_reperage_api(id):
         return jsonify({'error': str(e)}), 500
     finally: session.close()
 
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def submit_final_ia(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        rep.statut = 'soumis'
-        session.commit()
-        success = send_to_docugen(rep.to_dict())
-        return jsonify({'status': 'success', 'bridge_sent': success})
-    finally: session.close()
-
+# --- CHAT & BRIDGE ---
 @app.route('/api/reperages/<int:reperage_id>/messages', methods=['GET', 'POST'])
 def handle_messages(reperage_id):
     session = get_session(engine)
@@ -211,6 +204,17 @@ def handle_messages(reperage_id):
         new_msg = Message(reperage_id=reperage_id, auteur_type=data.get('auteur_type', 'fixer'), auteur_nom=data.get('auteur_nom', 'Anonyme'), contenu=data.get('contenu', ''))
         session.add(new_msg); session.commit()
         return jsonify(new_msg.to_dict()), 201
+    finally: session.close()
+
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def submit_final_ia(id):
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id)
+        rep.statut = 'soumis'
+        session.commit()
+        success = send_to_docugen(rep.to_dict())
+        return jsonify({'status': 'success', 'bridge_sent': success})
     finally: session.close()
 
 # =================================================================
