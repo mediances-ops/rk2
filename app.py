@@ -98,6 +98,7 @@ def admin_reperage_detail(id):
 
 @app.route('/formulaire/<token>')
 def formulaire_reperage(token):
+    """Action 1.1 : Charge le dossier complet (3x3) pour le correspondant"""
     session = get_session(engine)
     try:
         rep = session.query(Reperage).filter_by(token=token).first()
@@ -105,6 +106,29 @@ def formulaire_reperage(token):
         
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
+        # --- LOGIQUE DE COMPLÉTUDE DES GARDIENS (Force 3 gardiens) ---
+        gardiens_list = []
+        for i in range(1, 4):
+            # On cherche le gardien existant pour cet ordre
+            g_obj = next((g for g in rep.gardiens if g.ordre == i), None)
+            if g_obj:
+                gardiens_list.append(g_obj.to_dict())
+            else:
+                # On envoie un objet vide mais structuré pour que le JS crée le champ
+                gardiens_list.append({'ordre': i, 'nom': '', 'fonction': '', 'savoir_transmis': '', 'histoire_personnelle': '', 'evaluation_cinegenie': ''})
+
+        # --- LOGIQUE DE COMPLÉTUDE DES LIEUX (Force 3 lieux) ---
+        lieux_list = []
+        for i in range(1, 4):
+            # On cherche le lieu existant pour ce numéro
+            l_obj = next((l for l in rep.lieux if l.numero_lieu == i), None)
+            if l_obj:
+                lieux_list.append(l_obj.to_dict())
+            else:
+                # On envoie un objet vide mais structuré
+                lieux_list.append({'numero_lieu': i, 'nom': '', 'type_environnement': '', 'description_visuelle': '', 'cinegenie': '', 'ambiance_sonore': ''})
+
+        # --- PRÉPARATION DU PAQUET FIXER_DATA ---
         fixer_data = {
             'region': rep.region,
             'pays': rep.pays,
@@ -116,8 +140,8 @@ def formulaire_reperage(token):
             'langue_preferee': fixer.langue_preferee if fixer else 'FR',
             'territoire': json.loads(rep.territoire_data) if rep.territoire_data else {},
             'episode': json.loads(rep.episode_data) if rep.episode_data else {},
-            'gardiens': [g.to_dict() for g in rep.gardiens],
-            'lieux': [l.to_dict() for l in rep.lieux]
+            'gardiens': gardiens_list,
+            'lieux': lieux_list
         }
         
         return render_template('index.html', 
@@ -255,3 +279,4 @@ def uploaded_file(filename):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
