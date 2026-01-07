@@ -11,8 +11,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    
-    <!-- HEADER DYNAMIQUE SANS SIMPLIFICATION -->
+    <!-- HEADER -->
     <header class="{% if FIXER_DATA %}header-fixer{% endif %}">
         {% if FIXER_DATA and FIXER_DATA.region %}
         <div class="header-fixer-banner" style="background-image: url('{% if FIXER_DATA.image_region %}{{ FIXER_DATA.image_region }}{% else %}https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg{% endif %}');">
@@ -30,7 +29,6 @@
             <div class="header-title"><h1>RootsKeepers</h1><div class="subtitle">Studio System</div></div>
         </div>
         {% endif %}
-        
         <div class="header-content">
             <div class="language-selector">
                 <button class="lang-btn" data-lang="FR">🇫🇷 FR</button>
@@ -42,24 +40,31 @@
     </header>
     
     <div class="container">
-        
-        <!-- COMPTEUR DE PROGRESSION (POUR APP.JS) -->
+        <!-- PROGRESSION -->
         <div class="progress-container" id="progress-container">
             <div class="progress-header">
                 <div class="progress-title"><i data-lucide="check-circle"></i> <span>Progress..</span></div>
                 <div class="progress-percentage" id="progress-percentage">0%</div>
             </div>
             <div class="progress-bar-container"><div class="progress-bar" id="progress-bar" style="width: 0%"></div></div>
-            <div class="progress-stats"><span id="progress-filled">0</span> champs sur <span id="progress-total">0</span></div>
+            <div class="progress-stats"><span id="progress-filled">0</span> sur <span id="progress-total">0</span></div>
         </div>
+        
+        <!-- INFORMATIONS CORRESPONDANT -->
+        <section>
+            <div class="section-header"><i data-lucide="user-round" style="width:32px; height:32px;"></i><h2 class="section-title" data-i18n="fixer.title">INFOS CORRESPONDANT</h2></div>
+            <div class="text-content">
+                <div class="fields-grid">
+                    <div class="field-group"><label class="field-label">Nom</label><input type="text" name="fixer_nom" value="{{ FIXER_DATA.nom }}"></div>
+                    <div class="field-group"><label class="field-label">Email</label><input type="email" name="fixer_email" value="{{ FIXER_DATA.email }}"></div>
+                    <div class="field-group"><label class="field-label">Téléphone</label><input type="tel" name="fixer_telephone" value="{{ FIXER_DATA.telephone }}"></div>
+                </div>
+            </div>
+        </section>
         
         <!-- GRILLE DE REPÉRAGE -->
         <section>
-            <div class="section-header">
-                <i data-lucide="clipboard-list" style="width: 32px; height: 32px;"></i>
-                <h2 class="section-title" data-i18n="grille.title">GRILLE DE REPÉRAGE</h2>
-            </div>
-            
+            <div class="section-header"><i data-lucide="clipboard-list" style="width:32px; height:32px;"></i><h2 class="section-title" data-i18n="grille.title">GRILLE DE REPÉRAGE</h2></div>
             <div class="tabs-container">
                 <div class="tabs-nav">
                     <button class="tab-btn active" data-tab="territoire"><i data-lucide="globe"></i> <span data-i18n="tabs.territoire">TERRITOIRE</span></button>
@@ -69,12 +74,11 @@
                     <button class="tab-btn" data-tab="lieux"><i data-lucide="map-pin"></i> <span data-i18n="tabs.lieux">LIEUX</span></button>
                 </div>
                 
-                <!-- TAB 1: TERRITOIRE -->
                 <div class="tab-content active" id="territoire">
                     <h3 data-i18n="territoire.title">Identité du territoire</h3>
                     <div class="fields-grid">
-                        <div class="field-group"><label class="field-label">Pays</label><input type="text" name="pays"></div>
-                        <div class="field-group"><label class="field-label">Région</label><input type="text" name="region"></div>
+                        <div class="field-group"><label class="field-label">Pays</label><input type="text" name="pays" value="{{ FIXER_DATA.pays }}"></div>
+                        <div class="field-group"><label class="field-label">Région</label><input type="text" name="region" value="{{ FIXER_DATA.region }}"></div>
                         <div class="field-group"><label class="field-label">Ville(s)</label><input type="text" name="ville"></div>
                         <div class="field-group"><label class="field-label">Population</label><input type="text" name="population"></div>
                         <div class="field-group"><label class="field-label">Langue(s)</label><input type="text" name="langues"></div>
@@ -88,171 +92,58 @@
                     </div>
                 </div>
                 
-                <!-- TAB 2: ÉPISODE -->
-                <div class="tab-content" id="episode">
-                    <h3 data-i18n="episode.title">Épisode</h3>
-                    <div class="fields-grid">
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label">Angle narratif</label><textarea name="angle" rows="3"></textarea></div>
-                        <div class="field-group"><label class="field-label">Fête centrale</label><input type="text" name="fete"></div>
-                        <div class="field-group"><label class="field-label">Contraintes</label><input type="text" name="contraintes"></div>
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label">Arc dramatique</label><textarea name="arc" rows="4"></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label">Moments-clés</label><textarea name="moments" rows="4"></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label">Éléments sensibles</label><textarea name="sensibles" rows="3"></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label class="field-label">Autorisations</label><textarea name="autorisations" rows="3"></textarea></div>
-                        <div class="field-group"><label class="field-label">Budget local</label><input type="text" name="budget"></div>
-                        <div class="field-group"><label class="field-label">Notes production</label><textarea name="notes" rows="3"></textarea></div>
-                    </div>
-                </div>
-                
-                <!-- TAB 3: GARDIENS (TABLE) -->
-                <div class="tab-content" id="gardiens">
-                    <h3 data-i18n="gardiens_vue.title">Vue d'ensemble des Gardiens</h3>
-                    <table class="gardiens-table">
-                        <thead><tr><th>Gardien</th><th>Nom / Prénom</th><th>Âge</th><th>Genre</th><th>Fonction</th><th>Savoir</th></tr></thead>
-                        <tbody>
-                            {% for i in [1, 2, 3] %}
-                            <tr>
-                                <td><strong>Gardien {{ i }}</strong></td>
-                                <td><input type="text" name="gardien{{ i }}_nom"></td>
-                                <td><input type="number" name="gardien{{ i }}_age"></td>
-                                <td><input type="text" name="gardien{{ i }}_genre"></td>
-                                <td><input type="text" name="gardien{{ i }}_fonction"></td>
-                                <td><input type="text" name="gardien{{ i }}_savoir"></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- TAB 4: GARDIENS DÉTAILS -->
-                <div class="tab-content" id="gardiens-details">
-                    <h3 data-i18n="gardiens_details.title">Détails des Gardiens</h3>
-                    {% for i in [1, 2, 3] %}
-                    <div class="sub-section">
-                        <div class="sub-section-title">Gardien {{ i }}</div>
-                        <div class="fields-grid">
-                            <div class="field-group"><label class="field-label">Prénom</label><input type="text" name="gardien{{ i }}_prenom"></div>
-                            <div class="field-group"><label class="field-label">Téléphone</label><input type="tel" name="gardien{{ i }}_telephone"></div>
-                            <div class="field-group"><label class="field-label">Email</label><input type="email" name="gardien{{ i }}_email"></div>
-                            <div class="field-group"><label class="field-label">Langues</label><input type="text" name="gardien{{ i }}_langues"></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Adresse</label><input type="text" name="gardien{{ i }}_adresse"></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Histoire personnelle</label><textarea name="gardien{{ i }}_histoire" rows="4"></textarea></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Évaluation cinégénie</label><textarea name="gardien{{ i }}_evaluation" rows="3"></textarea></div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                
-                <!-- TAB 5: LIEUX (HARMONISATION TOTALE) -->
-                <div class="tab-content" id="lieux">
-                    <h3 data-i18n="lieux.title">Lieux</h3>
-                    <div class="lieux-tabs-container"><div class="lieux-tabs">
-                        <button type="button" class="lieu-tab active" data-lieu="1">Lieu 1</button>
-                        <button type="button" class="lieu-tab" data-lieu="2">Lieu 2</button>
-                        <button type="button" class="lieu-tab" data-lieu="3">Lieu 3</button>
-                    </div></div>
-                    
-                    {% for i in [1, 2, 3] %}
-                    <div class="lieu-content {% if i == 1 %}active{% endif %}" id="lieu-{{ i }}">
-                        <div class="fields-grid">
-                            <div class="field-group"><label class="field-label">Nom du lieu</label><input type="text" name="lieu{{ i }}_nom"></div>
-                            <div class="field-group"><label class="field-label">Type d'environnement</label><input type="text" name="lieu{{ i }}_type"></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Description visuelle générale</label><textarea name="lieu{{ i }}_description" rows="4"></textarea></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Éléments symboliques</label><textarea name="lieu{{ i }}_elements" rows="3"></textarea></div>
-                            <div class="field-group" style="grid-column: span 2;"><label class="field-label">Points de vue remarquables</label><textarea name="lieu{{ i }}_points_vue" rows="3"></textarea></div>
-                        </div>
-                        <div class="sub-section">
-                            <div class="sub-section-title">Analyse artistique</div>
-                            <div class="fields-grid">
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Cinégénie du lieu</label><textarea name="lieu{{ i }}_cinegenie" rows="3"></textarea></div>
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Axes de caméra possibles</label><textarea name="lieu{{ i }}_axes" rows="3"></textarea></div>
-                                <div class="field-group"><label class="field-label">Moments favorables</label><input type="text" name="lieu{{ i }}_moments"></div>
-                                <div class="field-group"><label class="field-label">Ambiance sonore</label><input type="text" name="lieu{{ i }}_ambiance"></div>
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Adéquation avec la narration</label><textarea name="lieu{{ i }}_adequation" rows="3"></textarea></div>
-                            </div>
-                        </div>
-                        <div class="sub-section">
-                            <div class="sub-section-title">Analyse technique & logistique</div>
-                            <div class="fields-grid">
-                                <div class="field-group"><label class="field-label">Accessibilité</label><textarea name="lieu{{ i }}_accessibilite" rows="2"></textarea></div>
-                                <div class="field-group"><label class="field-label">Sécurité</label><textarea name="lieu{{ i }}_securite" rows="2"></textarea></div>
-                                <div class="field-group"><label class="field-label">Électricité</label><input type="text" name="lieu{{ i }}_electricite"></div>
-                                <div class="field-group"><label class="field-label">Espace équipe</label><input type="text" name="lieu{{ i }}_espace"></div>
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Protection météo</label><textarea name="lieu{{ i }}_protection" rows="2"></textarea></div>
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Contraintes météorologiques</label><textarea name="lieu{{ i }}_contraintes_meteo" rows="2"></textarea></div>
-                                <div class="field-group" style="grid-column: span 2;"><label class="field-label">Autorisations nécessaires</label><textarea name="lieu{{ i }}_autorisations" rows="2"></textarea></div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                <!-- CONTENEURS VIDES POUR APP.JS -->
+                <div class="tab-content" id="episode"></div>
+                <div class="tab-content" id="gardiens"></div>
+                <div class="tab-content" id="gardiens-details"></div>
+                <div class="tab-content" id="lieux"></div>
             </div>
         </section>
         
-        <!-- PHOTOS & DOCS -->
+        <!-- PHOTOS -->
         <section>
             <div class="section-header"><div class="section-icon">📷</div><h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
-            <div class="text-content">
-                <div class="upload-zone">
-                    <input type="file" id="file-input" multiple accept="image/*,.pdf">
-                    <div class="drop-area" id="drop-area"><p>Glissez vos photos ici ou cliquez</p></div>
-                </div>
-                <div class="files-preview" id="files-list"></div>
+            <div class="upload-zone">
+                <input type="file" id="file-input" multiple accept="image/*,.pdf">
+                <div class="drop-area" id="drop-area"><p>Glissez vos fichiers ici ou cliquez</p></div>
             </div>
+            <div class="files-preview" id="files-list"></div>
         </section>
         
         <!-- ACTIONS -->
         <div class="actions-bar">
-            <button type="button" class="btn btn-secondary" id="btn-save">💾 Enregistrer</button>
-            <button type="button" class="btn btn-success" id="btn-submit">✅ Soumettre à la Production</button>
+            <button class="btn btn-secondary" id="btn-save">💾 Enregistrer</button>
+            <button class="btn btn-success" id="btn-submit">✅ Soumettre</button>
         </div>
     </div>
     
-    <!-- CHAT LATÉRAL (INTÉGRALITÉ RESTAURÉE) -->
-    <button type="button" class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i><span class="chat-badge" id="chat-badge">0</span></button>
+    <!-- CHAT LATÉRAL (STRUCTURE FIXÉE) -->
+    <button class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i><span class="chat-badge" id="chat-badge">0</span></button>
     <div class="chat-panel" id="chat-panel">
         <div class="chat-header">
-            <div class="chat-header-title"><i data-lucide="message-square"></i> <span>Messages Production</span></div>
-            <button type="button" class="chat-close-btn" id="chat-close-btn"><i data-lucide="x"></i></button>
+            <div class="chat-header-title"><span>Messages Production</span></div>
+            <button class="chat-close-btn" id="chat-close-btn"><i data-lucide="x"></i></button>
         </div>
         <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-typing-indicator" id="chat-typing" style="display: none;"><span></span><span></span><span></span> Production écrit...</div>
         <div class="chat-input-container">
-            <textarea class="chat-input" id="chat-input" placeholder="Écrivez votre message..." rows="2"></textarea>
-            <button type="button" class="chat-send-btn" id="chat-send-btn"><i data-lucide="send"></i></button>
+            <textarea class="chat-input" id="chat-input" placeholder="Message..." rows="2"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn"><i data-lucide="send"></i></button>
         </div>
     </div>
     
     <!-- PANNEAU IA LATÉRAL -->
-    <button type="button" class="ai-floating-btn" onclick="toggleAIPanel()"><i data-lucide="brain-circuit"></i></button>
+    <button class="ai-floating-btn" onclick="toggleAIPanel()"><i data-lucide="brain-circuit"></i></button>
     <div class="ai-panel-overlay" id="aiPanelOverlay" onclick="closeAIPanel()"></div>
     <div class="ai-panel" id="aiPanel">
-        <div class="ai-panel-header">
-            <div style="display: flex; align-items: center; gap: 12px;"><i data-lucide="brain-circuit" style="color: white;"></i><h3 style="margin: 0; color: white;">Assistant IA</h3></div>
-            <button type="button" class="ai-panel-close" onclick="closeAIPanel()"><i data-lucide="x"></i></button>
-        </div>
+        <div class="ai-panel-header"><h3>Assistant IA RootsKeepers</h3><button class="ai-panel-close" onclick="closeAIPanel()"><i data-lucide="x"></i></button></div>
         <div class="ai-panel-body"><iframe src="https://destinationsetcuisines.com/site" style="width: 100%; height: 100%; border: none;"></iframe></div>
     </div>
 
-    <footer><div class="footer-content"><p>© 2025 — Durand & Pierson Associates</p></div></footer>
-
-    <!-- VARIABLES FLASK (LOGIQUE ACTION 1.1) -->
+    <!-- VARIABLES FLASK POUR APP.JS -->
     <script>
-        window.FIXER_DATA = {
-            fixer_id: {{ fixer_id|default('null')|tojson }},
-            fixer_nom: {{ fixer_nom|default('')|tojson }},
-            fixer_email: {{ fixer_email|default('')|tojson }},
-            fixer_telephone: {{ fixer_telephone|default('')|tojson }},
-            langue_default: {{ langue_default|default('FR')|tojson }},
-            reperage_id: {{ REPERAGE_ID|default('null')|tojson }},
-            region: {{ FIXER_DATA.region|default('')|tojson if FIXER_DATA else '""' }},
-            pays: {{ FIXER_DATA.pays|default('')|tojson if FIXER_DATA else '""' }},
-            image_region: {{ FIXER_DATA.image_region|default('')|tojson if FIXER_DATA else '""' }},
-            territoire: {{ FIXER_DATA.territoire|default({})|tojson if FIXER_DATA else '{}' }},
-            episode: {{ FIXER_DATA.episode|default({})|tojson if FIXER_DATA else '{}' }},
-            gardiens: {{ FIXER_DATA.gardiens|default([])|tojson if FIXER_DATA else '[]' }},
-            lieux: {{ FIXER_DATA.lieux|default([])|tojson if FIXER_DATA else '[]' }}
-        };
+        window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
+        window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
+        console.log('🎬 Données injectées:', window.FIXER_DATA);
     </script>
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="/static/js/app.js"></script>
