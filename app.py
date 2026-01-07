@@ -25,15 +25,18 @@ if database_url and database_url.startswith('postgres://'):
 
 engine = init_db(database_url)
 
-# --- FILTRES & UTILITAIRES ---
+# --- UTILITAIRES ---
 def linkify_text(text):
     if not text: return text
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 app.jinja_env.filters['linkify'] = linkify_text
 
+def clean_dict(d):
+    """Remplace tous les None par des chaînes vides pour forcer l'affichage dans app.js"""
+    return {k: (v if v is not None else "") for k, v in d.items()}
+
 def send_to_docugen(reperage_dict):
-    """Envoie vers Docu-Gen IA via le Bridge"""
     url = os.environ.get('DOCUGEN_API_URL')
     token = os.environ.get('BRIDGE_SECRET_TOKEN')
     if not url: return False
@@ -56,7 +59,6 @@ def admin_dashboard():
     session = get_session(engine)
     try:
         query = session.query(Reperage)
-        # Filtres
         s_f = request.args.get('statut')
         if s_f: query = query.filter(Reperage.statut == s_f)
         p_f = request.args.get('pays')
@@ -84,20 +86,8 @@ def admin_dashboard():
         return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=[f.to_dict() for f in fixers_raw], stats=stats, pays_list=pays_list)
     finally: session.close()
 
-@app.route('/admin/reperage/<int:id>')
-def admin_reperage_detail(id):
-    session = get_session(engine)
-    try:
-        reperage = session.get(Reperage, id)
-        if not reperage: return "Non trouvé", 404
-        t = json.loads(reperage.territoire_data) if reperage.territoire_data else {}
-        e = json.loads(reperage.episode_data) if reperage.episode_data else {}
-        fixer = session.get(Fixer, reperage.fixer_id) if reperage.fixer_id else None
-        return render_template('admin_reperage_detail.html', reperage=reperage, territoire=t, episode=e, gardiens=reperage.gardiens, lieux=reperage.lieux, medias=reperage.medias, fixer=fixer)
-    finally: session.close()
-
 # =================================================================
-# 3. FORMULAIRE DISTANT (INJECTION TOTALE SANS OMISSION)
+# 3. FORMULAIRE DISTANT (HARMONISATION TOTALE 3x3)
 # =================================================================
 
 @app.route('/formulaire/<token>')
@@ -109,12 +99,12 @@ def formulaire_reperage(token):
         
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         
-        # --- GARDIENS : STRUCTURE 100% EXHAUSTIVE ---
+        # --- GARDIENS : STRUCTURE HARMONISÉE ---
         g_list = []
         for i in range(1, 4):
             g_obj = next((g for g in rep.gardiens if g.ordre == i), None)
             if g_obj:
-                g_list.append(g_obj.to_dict())
+                g_list.append(clean_dict(g_obj.to_dict()))
             else:
                 g_list.append({
                     'ordre': i, 'nom': '', 'prenom': '', 'age': '', 'genre': '',
@@ -122,12 +112,12 @@ def formulaire_reperage(token):
                     'email': '', 'histoire_personnelle': '', 'evaluation_cinegenie': '', 'langues_parlees': ''
                 })
 
-        # --- LIEUX : STRUCTURE 100% EXHAUSTIVE (ARTISTIQUE & TECHNIQUE) ---
+        # --- LIEUX : STRUCTURE HARMONISÉE (INDISPENSABLE POUR APP.JS) ---
         l_list = []
         for i in range(1, 4):
             l_obj = next((l for l in rep.lieux if l.numero_lieu == i), None)
             if l_obj:
-                l_list.append(l_obj.to_dict())
+                l_list.append(clean_dict(l_obj.to_dict()))
             else:
                 l_list.append({
                     'numero_lieu': i, 'nom': '', 'type_environnement': '', 'description_visuelle': '',
@@ -136,7 +126,7 @@ def formulaire_reperage(token):
                     'adequation_narration': '', 'accessibilite': '', 'securite': '',
                     'electricite': '', 'espace_equipe': '', 'protection_meteo': '',
                     'contraintes_meteo': '', 'autorisations_necessaires': '',
-                    'latitude': None, 'longitude': None
+                    'latitude': '', 'longitude': ''
                 })
 
         fixer_data = {
@@ -144,8 +134,8 @@ def formulaire_reperage(token):
             'prenom': fixer.prenom if fixer else '', 'nom': fixer.nom if fixer else '',
             'email': fixer.email if fixer else '', 'telephone': fixer.telephone if fixer else '',
             'langue_preferee': fixer.langue_preferee if fixer else 'FR',
-            'territoire': json.loads(rep.territoire_data) if rep.territoire_data else {},
-            'episode': json.loads(rep.episode_data) if rep.episode_data else {},
+            'territoire': clean_dict(json.loads(rep.territoire_data)) if rep.territoire_data else {},
+            'episode': clean_dict(json.loads(rep.episode_data)) if rep.episode_data else {},
             'gardiens': g_list, 'lieux': l_list
         }
         
@@ -153,7 +143,7 @@ def formulaire_reperage(token):
     finally: session.close()
 
 # =================================================================
-# 4. API SAUVEGARDE INTEGRALE (FIXATION DES TIROIRS)
+# 4. API SAUVEGARDE & CHAT
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
@@ -192,7 +182,6 @@ def update_reperage_api(id):
         return jsonify({'error': str(e)}), 500
     finally: session.close()
 
-# --- CHAT & BRIDGE ---
 @app.route('/api/reperages/<int:reperage_id>/messages', methods=['GET', 'POST'])
 def handle_messages(reperage_id):
     session = get_session(engine)
@@ -217,9 +206,17 @@ def submit_final_ia(id):
         return jsonify({'status': 'success', 'bridge_sent': success})
     finally: session.close()
 
-# =================================================================
-# 5. DÉMARRAGE
-# =================================================================
+@app.route('/admin/reperage/<int:id>')
+def admin_reperage_detail(id):
+    session = get_session(engine)
+    try:
+        reperage = session.get(Reperage, id)
+        t = json.loads(reperage.territoire_data) if reperage.territoire_data else {}
+        e = json.loads(reperage.episode_data) if reperage.episode_data else {}
+        fixer = session.get(Fixer, reperage.fixer_id) if reperage.fixer_id else None
+        return render_template('admin_reperage_detail.html', reperage=reperage, territoire=t, episode=e, gardiens=reperage.gardiens, lieux=reperage.lieux, medias=reperage.medias, fixer=fixer)
+    finally: session.close()
+
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
