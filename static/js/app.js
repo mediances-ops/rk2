@@ -68,8 +68,8 @@ async function loadReperage(id) {
     document.querySelectorAll('input[name], textarea[name]').forEach(input => {
         const n = input.name;
         if (data[n]) input.value = data[n];
-        else if (data.territoire_data && data.territoire_data[n]) input.value = data.territoire_data[name];
-        else if (data.episode_data && data.episode_data[n]) input.value = data.episode_data[name];
+        else if (data.territoire_data && data.territoire_data[n]) input.value = data.territoire_data[n];
+        else if (data.episode_data && data.episode_data[n]) input.value = data.episode_data[n];
     });
     if (data.gardiens) {
         data.gardiens.forEach(g => {
