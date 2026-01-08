@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>DOC-OS_PRINT_{{ rep.region }}</title>
+    <style>
+        body { font-family: 'Helvetica', Arial, sans-serif; color: #333; line-height: 1.4; padding: 20px; }
+        .header { border-bottom: 3px solid #E67E22; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; color: #2C3E50; font-size: 24pt; }
+        .section { margin-bottom: 25px; page-break-inside: avoid; }
+        .section-title { background: #2C3E50; color: white; padding: 8px 15px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .label { font-weight: bold; color: #E67E22; font-size: 10pt; text-transform: uppercase; }
+        .value { font-size: 11pt; margin-top: 3px; }
+        
+        @media print {
+            @page { size: A4; margin: 15mm; }
+            .no-print { display: none; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="background: #fdf2e9; padding: 20px; border: 1px solid #E67E22; margin-bottom: 30px; text-align: center;">
+        <p><strong>VUE D'IMPRESSION HAUTE SUBSTANCE</strong></p>
+        <button onclick="window.print()" style="padding: 10px 20px; background: #E67E22; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">🖨️ LANCER L'IMPRESSION / PDF</button>
+    </div>
+
+    <div class="header">
+        <div>
+            <h1>DOC-OS : {{ rep.region }}</h1>
+            <p>Dossier de production #{{ rep.id }} | {{ rep.statut.upper() }}</p>
+        </div>
+        <div style="text-align: right;">
+            <p><strong>Fixer :</strong> {{ rep.fixer_nom }}</p>
+            <p><strong>Pays :</strong> {{ rep.pays }}</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. Identité du Territoire</div>
+        <div class="grid">
+            {% for k, v in territoire.items() %}
+            {% if v %}
+            <div class="item">
+                <div class="label">{{ k }}</div>
+                <div class="value">{{ v|linkify|safe }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. Substance de l'Épisode</div>
+        <div class="grid">
+            {% for k, v in episode.items() %}
+            {% if v %}
+            <div class="item">
+                <div class="label">{{ k }}</div>
+                <div class="value">{{ v|linkify|safe }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. Galerie de Photos Terrain</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {% for m in rep.medias %}
+            <img src="/uploads/{{ rep.id }}/{{ m.nom_fichier }}" style="width: 30%; height: 150px; object-fit: cover; border: 1px solid #ddd;">
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
