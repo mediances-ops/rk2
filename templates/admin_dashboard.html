@@ -1,390 +1,174 @@
-import os, json, secrets, requests, re, io, zipfile
-from datetime import datetime
-from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort, send_file
-from flask_cors import CORS
-from sqlalchemy import or_, text
-from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-scouting Platform | Dashboard</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%); border-radius: 16px; padding: 40px; margin-bottom: 30px; display: flex; align-items: center; gap: 40px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+        .header img { height: 100px; }
+        .header h1 { color: white; font-size: 3rem; font-weight: 800; margin: 0; letter-spacing: -2px; line-height: 1; }
+        .header .subtitle { color: #E67E22; font-size: 1.5rem; font-weight: 500; margin-top: 5px; }
+        .nav { display: flex; gap: 15px; margin-bottom: 30px; }
+        .nav-link { background: white; color: #2C3E50; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border:none; cursor:pointer; }
+        .nav-link.active { background: #E67E22; color: white; }
+        .filter-bar { background: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .filter-bar select { padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; flex: 1; font-weight: 600; font-family: inherit; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 4px solid #E67E22; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .stat-card .number { font-size: 2.5rem; font-weight: 800; color: #D35400; }
+        .table-container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 18px; text-align: left; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+        td { padding: 18px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        .progress-mini-bar { width: 100%; background: #eee; height: 8px; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        .progress-mini-fill { height: 100%; background: #27ae60; transition: width 0.5s ease; }
+        .btn-action { padding: 10px; border-radius: 8px; border: none; cursor: pointer; color: white; transition: 0.2s; display: inline-flex; align-items: center; margin-right: 5px; text-decoration: none; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 20px; width: 600px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo">
+            <div class="header-text">
+                <h1>Pre-scouting Platform</h1>
+                <p class="subtitle">Production Intelligence System</p>
+            </div>
+        </div>
 
-app = Flask(__name__)
-CORS(app)
+        <div class="nav">
+            <a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> Tableau de bord</a>
+            <a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> Correspondants Internationaux</a>
+            <button onclick="openModal('modalNouveau')" class="nav-link"><i data-lucide="file-plus"></i> Nouveau Repérage</button>
+        </div>
 
-# --- CONFIGURATION RAILWAY ---
-raw_db_url = os.environ.get('DATABASE_URL')
-if raw_db_url:
-    if raw_db_url.startswith('postgres://'):
-        DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
-    else:
-        DB_URL = raw_db_url
-    print("✅ DATABASE: PostgreSQL Connectée")
-else:
-    DB_URL = 'sqlite:///reperage.db'
-    print("⚠️ DATABASE: Fallback SQLite")
+        <form class="filter-bar" method="GET" action="/admin">
+            <select name="pays"><option value="">-- Tous les Pays --</option>{% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select>
+            <select name="statut"><option value="">-- Tous les Statuts --</option><option value="brouillon">Brouillon</option><option value="soumis">Soumis</option><option value="validé">Validé</option></select>
+            <button type="submit" class="nav-link" style="background:#2C3E50; color:white;">FILTRER</button>
+            <a href="/admin" class="nav-link">RESET</a>
+        </form>
 
-UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
-BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
-DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
+        <div class="stats">
+            <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total</div></div>
+            <div class="stat-card"><div class="number" style="color:#E67E22;">{{ stats.brouillons }}</div><div class="label">Brouillons</div></div>
+            <div class="stat-card"><div class="number">{{ stats.soumis }}</div><div class="label">Soumis</div></div>
+            <div class="stat-card"><div class="number" style="color:#27ae60;">{{ stats.valides }}</div><div class="label">Validés</div></div>
+        </div>
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        <div class="table-container">
+            <table>
+                <thead><tr><th>ID</th><th>Région / Progress</th><th>Fixer / Chat</th><th>Actions</th></tr></thead>
+                <tbody>
+                    {% for item in reperages %}
+                    {% set rep = item.reperage %}
+                    <tr>
+                        <td>#{{ rep.id }}</td>
+                        <td>
+                            <strong>{{ rep.region }}</strong><br><small>{{ rep.pays }}</small>
+                            <div class="progress-mini-bar"><div class="progress-mini-fill" style="width: {{ rep.prog_pourcent }}%;"></div></div>
+                            <small style="color:#27ae60; font-weight:700;">{{ rep.prog_pourcent }}% Synchronisé</small>
+                        </td>
+                        <td>
+                            {{ rep.fixer_nom }}
+                            {% if rep.unread_count > 0 %}<span style="background:#e74c3c; color:white; padding:2px 8px; border-radius:10px; font-size:0.7rem;">✉️ {{ rep.unread_count }}</span>{% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/admin/reperage/{{ rep.id }}" class="btn-action" style="background:#2C3E50;"><i data-lucide="eye"></i></a>
+                                <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:#27ae60;"><i data-lucide="printer"></i></a>
+                                <a href="/formulaire/{{ rep.token }}" target="_blank" class="btn-action" style="background:#f39c12;"><i data-lucide="external-link"></i></a>
+                                <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;"><i data-lucide="edit"></i></button>
+                                <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:#e74c3c;"><i data-lucide="trash-2"></i></button>
+                                <button class="btn-action" style="background:black; border:1px solid red; color:red;"><i data-lucide="rocket"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-engine = init_db(DB_URL)
+    <!-- MODAL NOUVEAU -->
+    <div class="modal-overlay" id="modalNouveau">
+        <div class="modal-box">
+            <h2 style="margin-bottom:20px;">Nouveau Repérage</h2>
+            <form onsubmit="creerDossier(event)">
+                <input type="text" id="new_region" placeholder="Région" required style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px;">
+                <input type="text" id="new_pays" placeholder="Pays" required style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px;">
+                <select id="new_fixer_id" style="width:100%; padding:12px; margin:10px 0; border:1px solid #ddd; border-radius:8px;">
+                    {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="nav-link" style="background:#2C3E50; color:white; width:100%; justify-content:center;">LANCER</button>
+            </form>
+        </div>
+    </div>
 
-# Migration auto pour progression
-with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
-        conn.commit()
-    except Exception:
-        pass
+    <!-- MODAL EDIT -->
+    <div class="modal-overlay" id="modalEdit">
+        <div class="modal-box">
+            <h2 style="margin-bottom:20px;">Modifier Identité</h2>
+            <form onsubmit="updateRegion(event)">
+                <input type="hidden" id="edit_id">
+                <div style="margin-bottom:15px;"><label>Région</label><input type="text" id="edit_region" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></div>
+                <div style="margin-bottom:15px;"><label>Pays</label><input type="text" id="edit_pays" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></div>
+                <div style="margin-bottom:15px;"><label>Statut</label><select id="edit_statut" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"><option value="brouillon">Brouillon</option><option value="soumis">Soumis</option><option value="validé">Validé</option></select></div>
+                <div style="margin-bottom:15px;"><label>Notes Admin</label><textarea id="edit_notes" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;" rows="4"></textarea></div>
+                <button type="submit" class="nav-link" style="background:#E67E22; color:white; width:100%; justify-content:center;">SAUVEGARDER</button>
+            </form>
+        </div>
+    </div>
 
-@app.template_filter('linkify')
-def linkify_text(text):
-    if not text: return ""
-    url_pattern = r'(https?://[^\s]+)'
-    return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
+    <!-- ASSISTANT IA -->
+    <button onclick="toggleAI()" style="position:fixed; left:20px; bottom:20px; width:65px; height:65px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; cursor:pointer; z-index:1000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"><i data-lucide="brain-circuit"></i></button>
+    <div id="aiPanel" style="position:fixed; left:-85%; top:0; width:85%; height:100vh; background:white; z-index:2000; transition:0.4s; box-shadow:5px 0 25px rgba(0,0,0,0.2); display:flex; flex-direction:column;">
+        <div style="background:#2C3E50; padding:20px; color:white; display:flex; justify-content:space-between; align-items:center;"><h3>Assistant IA Production</h3><button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">×</button></div>
+        <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
+    </div>
 
-# =================================================================
-# I. ADMINISTRATION (DASHBOARD & FILTRES)
-# =================================================================
-
-@app.route('/')
-def index_root():
-    return redirect('/admin')
-
-@app.route('/admin')
-def admin_dashboard():
-    session = get_session(engine)
-    try:
-        query = session.query(Reperage)
-        # Fix 10 : Filtres actifs Dashboard
-        statut_f = request.args.get('statut')
-        pays_f = request.args.get('pays')
-        if statut_f:
-            query = query.filter(Reperage.statut == statut_f)
-        if pays_f:
-            query = query.filter(Reperage.pays == pays_f)
-        
-        reps = query.order_by(Reperage.created_at.desc()).all()
-        fixers = session.query(Fixer).all()
-        
-        stats = {
-            'total': session.query(Reperage).count(),
-            'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
-            'soumis': session.query(Reperage).filter_by(statut='soumis').count(),
-            'valides': session.query(Reperage).filter_by(statut='validé').count()
+    <script>
+        lucide.createIcons();
+        const reperagesData = {{ reperages|tojson|safe }};
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+        function toggleAI() { const p = document.getElementById('aiPanel'); p.style.left = (p.style.left==='0px') ? '-85%' : '0px'; }
+        function openEditModal(id) {
+            const item = reperagesData.find(x => x.reperage.id === id);
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_region').value = item.reperage.region;
+            document.getElementById('edit_pays').value = item.reperage.pays;
+            document.getElementById('edit_statut').value = item.reperage.statut;
+            document.getElementById('edit_notes').value = item.reperage.notes_admin || '';
+            openModal('modalEdit');
         }
-        
-        reps_serialized = []
-        for r in reps:
-            f = session.get(Fixer, r.fixer_id)
-            unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-            last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
-            
-            r_data = r.to_dict()
-            r_data['unread_count'] = unread
-            r_data['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
-            r_data['prog_pourcent'] = r.progression_pourcent or 0
-            
-            reps_serialized.append({
-                'reperage': r_data,
-                'fixer': f.to_dict() if f else None
-            })
-            
-        pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
-        return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats, pays_list=pays_list)
-    finally:
-        session.close()
-
-@app.route('/admin/fixers')
-def admin_fixers_list():
-    session = get_session(engine)
-    try:
-        query = session.query(Fixer)
-        search = request.args.get('search')
-        pays = request.args.get('pays')
-        if search:
-            query = query.filter(or_(Fixer.nom.like(f"%{search}%"), Fixer.societe.like(f"%{search}%")))
-        if pays:
-            query = query.filter(Fixer.pays == pays)
-        
-        fixers = query.order_by(Fixer.nom.asc()).all()
-        pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
-        return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
-    finally:
-        session.close()
-
-@app.route('/admin/fixer/new', methods=['GET', 'POST'])
-@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
-def admin_edit_fixer(id=None):
-    session = get_session(engine)
-    try:
-        fixer = session.get(Fixer, id) if id else None
-        if request.method == 'POST':
-            if not fixer:
-                fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
-                session.add(fixer)
-            
-            # SAUVEGARDE INTÉGRALE FIXER (Fix 4 & 5)
-            fields = ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 
-                      'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 
-                      'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 
-                      'langue_preferee', 'notes_internes']
-            for k in fields:
-                if k in request.form:
-                    setattr(fixer, k, request.form[k])
-            
-            fixer.actif = 'actif' in request.form
-            fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
-            fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
-            
-            session.commit()
-            return redirect('/admin/fixers')
-        return render_template('admin_fixer_edit_v2.html', fixer=fixer)
-    finally:
-        session.close()
-
-@app.route('/admin/fixer/<int:id>')
-def admin_view_fixer_profile(id):
-    session = get_session(engine)
-    try:
-        f = session.get(Fixer, id)
-        if not f: abort(404)
-        reps = session.query(Reperage).filter_by(fixer_id=id).all()
-        return render_template('admin_fixer_detail.html', fixer=f, reperages=reps)
-    finally:
-        session.close()
-
-# =================================================================
-# II. GESTION DES REPÉRAGES (FIX 1, 7 & SUPPRESSION)
-# =================================================================
-
-@app.route('/admin/reperage/<int:id>')
-def admin_view_reperage(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if not rep: abort(404)
-        t = json.loads(rep.territoire_data) if rep.territoire_data else {}
-        e = json.loads(rep.episode_data) if rep.episode_data else {}
-        f = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
-        return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, fixer=f)
-    finally:
-        session.close()
-
-@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
-def admin_update_quick(id):
-    session = get_session(engine)
-    try:
-        data = request.json
-        rep = session.get(Reperage, id)
-        if not rep: abort(404)
-        for f in ['region', 'pays', 'statut', 'notes_admin', 'image_region']:
-            if f in data: setattr(rep, f, data[f])
-        session.commit()
-        return jsonify({'status': 'success'})
-    finally:
-        session.close()
-
-@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
-def admin_delete_rep(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if rep:
-            session.delete(rep)
-            session.commit()
-        return jsonify({'status': 'success'})
-    finally:
-        session.close()
-
-# =================================================================
-# III. IMPRESSION HAUTE SUBSTANCE (FIX 7 - 7 POINTS)
-# =================================================================
-
-@app.route('/admin/reperage/<int:id>/print')
-def admin_print_high_sub(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if not rep: abort(404)
-        t = json.loads(rep.territoire_data) if rep.territoire_data else {}
-        e = json.loads(rep.episode_data) if rep.episode_data else {}
-        
-        # Couplage G+L pour le template print
-        pairs = []
-        for i in [1, 2, 3]:
-            g = session.query(Gardien).filter_by(reperage_id=id, ordre=i).first()
-            l = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=i).first()
-            pairs.append({'gardien': g, 'lieu': l, 'index': i})
-            
-        return render_template('print_reperage.html', rep=rep, territoire=t, episode=e, pairs=pairs, fixer=session.get(Fixer, rep.fixer_id))
-    finally:
-        session.close()
-
-@app.route('/admin/reperage/<int:id>/photos')
-def admin_zip_media(id):
-    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
-    if not os.path.exists(path): abort(404)
-    memory_file = io.BytesIO()
-    with zipfile.ZipFile(memory_file, 'w') as zf:
-        for root, _, files in os.walk(path):
-            for file in files:
-                zf.write(os.path.join(root, file), file)
-    memory_file.seek(0)
-    return send_file(memory_file, download_name=f"Substance_Photos_Rep_{id}.zip", as_attachment=True)
-
-# =================================================================
-# IV. API SOUDURE FRONT-END (SYNC INTÉGRALE)
-# =================================================================
-
-@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
-def api_sync_high_sub(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if not rep: return jsonify({'error': '404'}), 404
-        
-        if request.method == 'GET':
-            return jsonify(rep.to_dict())
-        
-        data = request.json
-        if 'progression' in data:
-            rep.progression_pourcent = data['progression']
-        
-        for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'statut']:
-            if f in data: setattr(rep, f, data[f])
-            
-        if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
-        if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
-        
-        # Sauvegarde segmentée Gardiens & Lieux (Fix 2)
-        if 'gardiens' in data:
-            for g_data in data['gardiens']:
-                obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first() or Gardien(reperage_id=id, ordre=g_data.get('ordre'))
-                for k, v in g_data.items():
-                    if hasattr(obj, k): setattr(obj, k, v)
-                session.add(obj)
-        
-        if 'lieux' in data:
-            for l_data in data['lieux']:
-                obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l_data.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l_data.get('numero_lieu'))
-                for k, v in l_data.items():
-                    if hasattr(obj, k): setattr(obj, k, v)
-                session.add(obj)
-                
-        session.commit()
-        return jsonify({'status': 'success', 'synced': rep.progression_pourcent})
-    finally:
-        session.close()
-
-@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
-def api_medias_handler(id):
-    session = get_session(engine)
-    try:
-        if request.method == 'GET':
-            ms = session.query(Media).filter_by(reperage_id=id).all()
-            return jsonify([m.to_dict() for m in ms])
-        
-        file = request.files['file']
-        filename = secrets.token_hex(8) + "_" + secure_filename(file.filename)
-        path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
-        os.makedirs(path, exist_ok=True)
-        file.save(os.path.join(path, filename))
-        
-        m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
-        session.add(m)
-        session.commit()
-        return jsonify(m.to_dict())
-    finally:
-        session.close()
-
-@app.route('/api/i18n/<lang>')
-def api_get_i18n_v31(lang):
-    try:
-        path = os.path.join(app.root_path, 'translations', 'i18n.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            trans = json.load(f)
-        return jsonify(trans.get(lang, trans.get('FR')))
-    except Exception:
-        return jsonify({}), 404
-
-# =================================================================
-# V. CHAT COLLABORATIF & BRIDGE
-# =================================================================
-
-@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-def api_handle_chat(id):
-    session = get_session(engine)
-    try:
-        if request.method == 'GET':
-            msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
-            return jsonify([m.to_dict() for m in msgs])
-        data = request.json
-        m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-        session.add(m)
-        session.commit()
-        return jsonify(m.to_dict()), 201
-    finally:
-        session.close()
-
-@app.route('/api/messages/<int:msg_id>/read', methods=['PUT'])
-def api_mark_read(msg_id):
-    session = get_session(engine)
-    try:
-        m = session.get(Message, msg_id)
-        if m: m.lu = True
-        session.commit()
-        return jsonify({'status': 'ok'})
-    finally:
-        session.close()
-
-@app.route('/formulaire/<token>')
-def route_form_dist(token):
-    session = get_session(engine)
-    try:
-        rep = session.query(Reperage).filter_by(token=token).first()
-        if not rep: abort(404)
-        f = session.get(Fixer, rep.fixer_id)
-        f_data = {
-            'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id,
-            'nom': f.nom if f else '', 'prenom': f.prenom if f else '', 'langue_default': f.langue_preferee if f else 'FR'
+        async function creerDossier(e) {
+            e.preventDefault();
+            const f = document.getElementById('new_fixer_id');
+            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, fixer_nom: f.options[f.selectedIndex].text };
+            await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            window.location.reload();
         }
-        return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
-    finally:
-        session.close()
-
-@app.route('/admin/reperages/create', methods=['POST'])
-def admin_create_new_rep():
-    session = get_session(engine)
-    try:
-        data = request.json
-        new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=data.get('fixer_nom'), statut='brouillon')
-        session.add(new_rep)
-        session.commit()
-        return jsonify({'status': 'success'})
-    finally:
-        session.close()
-
-@app.route('/uploads/<int:rep_id>/<filename>')
-def serve_uploads_folder(rep_id, filename):
-    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
-
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def api_bridge_to_docgen(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        rep.statut = 'soumis'
-        session.commit()
-        if DOCUGEN_URL:
-            headers = {"X-Bridge-Token": BRIDGE_TOKEN, "Content-Type": "application/json"}
-            requests.post(DOCUGEN_URL, json=rep.to_dict(), headers=headers, timeout=10)
-        return jsonify({'status': 'success', 'bridge_sent': True})
-    except Exception:
-        return jsonify({'status': 'error'}), 500
-    finally:
-        session.close()
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+        async function updateRegion(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_id').value;
+            const data = { region: document.getElementById('edit_region').value, pays: document.getElementById('edit_pays').value, statut: document.getElementById('edit_statut').value, notes_admin: document.getElementById('edit_notes').value };
+            await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            window.location.reload();
+        }
+        async function deleteRep(id, region) {
+            if (confirm(`Supprimer définitivement ${region} ?`)) {
+                await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' });
+                window.location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
