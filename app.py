@@ -1,9 +1,10 @@
 import os, json, secrets, requests, re, io
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
@@ -12,10 +13,8 @@ from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message
 app = Flask(__name__)
 CORS(app)
 
-# Récupération sécurisée de l'URL de base de données
 raw_db_url = os.environ.get('DATABASE_URL')
 if raw_db_url:
-    # On ne remplace QUE si c'est l'ancien format postgres://
     if raw_db_url.startswith('postgres://'):
         DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
     else:
@@ -25,7 +24,6 @@ else:
     DB_URL = 'sqlite:///reperage.db'
     print("⚠️  DATABASE: SQLite (Fallback)")
 
-# CONFIGURATION VOLUMES ET BRIDGE DOCU-GEN
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -33,10 +31,8 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialisation Base de données
 engine = init_db(DB_URL)
 
-# --- FILTRES JINJA ---
 @app.template_filter('linkify')
 def linkify_text(text):
     if not text: return ""
@@ -44,16 +40,15 @@ def linkify_text(text):
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
-# 2. ROUTES DE NAVIGATION RACINE
+# 2. ROUTES DE NAVIGATION
 # =================================================================
 
 @app.route('/')
 def index_root():
-    """Redirection automatique vers le dashboard admin"""
     return redirect(url_for('admin_dashboard'))
 
 # =================================================================
-# 3. ADMINISTRATION DES FIXERS (CORRESPONDANTS)
+# 3. ADMINISTRATION DES FIXERS
 # =================================================================
 
 @app.route('/admin/fixers')
@@ -77,6 +72,7 @@ def admin_fixer_detail(id):
     session = get_session(engine)
     try:
         fixer = session.get(Fixer, id)
+        if not fixer: abort(404)
         reperages = session.query(Reperage).filter_by(fixer_id=id).all()
         return render_template('admin_fixer_detail.html', fixer=fixer, reperages=reperages)
     finally: session.close()
@@ -89,8 +85,13 @@ def edit_fixer(id=None):
         fixer = session.get(Fixer, id) if id else None
         if request.method == 'POST':
             if not fixer:
-                fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
-                session.add(fixer)
+                # Sécurité : vérifier si l'email existe déjà avant de créer
+                existing = session.query(Fixer).filter_by(email=request.form.get('email')).first()
+                if existing:
+                    fixer = existing
+                else:
+                    fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
+                    session.add(fixer)
             
             for key in ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 
                         'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 
@@ -102,7 +103,12 @@ def edit_fixer(id=None):
             fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
             fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
             
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                return "Erreur : Cet email est déjà utilisé par un autre correspondant.", 400
+                
             return redirect(url_for('admin_fixers_list'))
         return render_template('admin_fixer_edit_v2.html', fixer=fixer)
     finally: session.close()
@@ -124,7 +130,6 @@ def admin_dashboard():
             'valides': len([r for r in reps if r.statut == 'validé'])
         }
         
-        # SÉRIALISATION CRITIQUE POUR ÉVITER L'ERREUR 500 JSON
         reps_serialized = []
         for r in reps:
             f = session.get(Fixer, r.fixer_id)
@@ -141,7 +146,7 @@ def admin_reperage_detail(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
-        if not rep: return "Non trouvé", 404
+        if not rep: abort(404)
         t = json.loads(rep.territoire_data) if rep.territoire_data else {}
         e = json.loads(rep.episode_data) if rep.episode_data else {}
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
@@ -172,6 +177,7 @@ def update_reperage_admin(id):
     try:
         data = request.json
         rep = session.get(Reperage, id)
+        if not rep: abort(404)
         for field in ['region', 'pays', 'statut', 'notes_admin', 'image_region']:
             if field in data: setattr(rep, field, data[field])
         session.commit()
@@ -185,17 +191,21 @@ def update_reperage_admin(id):
 @app.route('/api/i18n/<lang>')
 def get_i18n(lang):
     try:
-        with open('translations/i18n.json', 'r', encoding='utf-8') as f:
+        # Chercher le fichier i18n.json à la racine de l'app
+        path = os.path.join(app.root_path, 'translations', 'i18n.json')
+        with open(path, 'r', encoding='utf-8') as f:
             translations = json.load(f)
         return jsonify(translations.get(lang, translations.get('FR', {})))
-    except: return jsonify({'error': 'Dictionnaire introuvable'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 404
 
 @app.route('/api/reperages/<int:id>', methods=['GET'])
 def get_reperage_api(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
-        return jsonify(rep.to_dict()) if rep else ({'error': 'Introuvable'}, 404)
+        if not rep: return jsonify({'error': 'Introuvable'}), 404
+        return jsonify(rep.to_dict())
     finally: session.close()
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
@@ -255,7 +265,10 @@ def upload_media_api(id):
 def formulaire_token(token):
     session = get_session(engine)
     try:
-        rep = session.query(Reperage).filter_by(token=token).first_or_404()
+        # Correction : Remplacement de first_or_404 par un check standard
+        rep = session.query(Reperage).filter_by(token=token).first()
+        if not rep: abort(404)
+        
         fixer = session.get(Fixer, rep.fixer_id)
         fixer_data = {
             'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id,
@@ -270,6 +283,7 @@ def submit_to_docugen(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
+        if not rep: abort(404)
         rep.statut = 'soumis'
         session.commit()
         
