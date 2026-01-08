@@ -2,62 +2,62 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>DOC-OS_PRINT_{{ rep.region }}</title>
+    <title>DOSSIER_PRODUCTION_{{ rep.region }}</title>
     <style>
-        body { font-family: 'Helvetica', sans-serif; color: #333; line-height: 1.5; padding: 30px; }
-        .header { border-bottom: 4px solid #E67E22; padding-bottom: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .section { margin-bottom: 35px; page-break-inside: avoid; }
-        .section-title { background: #2C3E50; color: white; padding: 10px 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .label { font-weight: bold; color: #E67E22; font-size: 9pt; text-transform: uppercase; }
-        .value { font-size: 11pt; margin-bottom: 10px; }
-        .sub-box { border: 1px solid #eee; padding: 15px; margin-top: 10px; background: #fafafa; }
-        @media print { .no-print { display: none; } }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #2C3E50; line-height: 1.4; padding: 40px; }
+        .header { border-bottom: 5px solid #E67E22; padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; }
+        .section { margin-bottom: 40px; page-break-inside: avoid; }
+        .section-title { background: #2C3E50; color: white; padding: 10px 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fcfcfc; }
+        .label { font-weight: 800; color: #E67E22; font-size: 8pt; text-transform: uppercase; }
+        .value { font-size: 10pt; margin-bottom: 10px; }
+        @media print { .no-print { display: none; } body { padding: 0; } }
     </style>
 </head>
 <body>
-    <div class="no-print" style="text-align:right;"><button onclick="window.print()" style="padding:10px 20px; background:#E67E22; color:white; border:none; cursor:pointer; font-weight:bold;">🖨️ IMPRIMER / PDF</button></div>
+    <div class="no-print" style="text-align:right;"><button onclick="window.print()" style="padding:15px 30px; background:#E67E22; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">🖨️ GÉNÉRER DOSSIER PDF</button></div>
 
     <div class="header">
-        <h1>DOC-OS : {{ rep.region }}</h1>
-        <div style="text-align:right;">ID #{{ rep.id }} | {{ rep.statut.upper() }}</div>
+        <div><h1>{{ rep.region }}</h1><p>Dossier Haute Substance #{{ rep.id }}</p></div>
+        <div style="text-align:right;"><p><strong>Fixer:</strong> {{ rep.fixer_nom }}</p><p><strong>Pays:</strong> {{ rep.pays }}</p></div>
     </div>
 
     <!-- 1. CORRESPONDANT LOCAL -->
     <div class="section">
         <div class="section-title">1. Correspondant Local</div>
         <div class="grid">
-            <div><div class="label">Nom</div><div class="value">{{ rep.fixer_nom }}</div></div>
-            <div><div class="label">Pays / Ville</div><div class="value">{{ rep.pays }} / {{ territoire.ville }}</div></div>
+            <div class="box"><div class="label">Identité</div><div class="value">{{ rep.fixer_nom }} {{ rep.fixer_prenom }}</div></div>
+            <div class="box"><div class="label">Localisation</div><div class="value">{{ rep.pays }} / {{ territoire.ville }}</div></div>
         </div>
     </div>
 
-    <!-- 2. IDENTITÉ DU TERRITOIRE -->
+    <!-- 2. IDENTITÉ TERRITOIRE -->
     <div class="section">
         <div class="section-title">2. Identité du Territoire</div>
         <div class="grid">
             {% for k in ['population', 'langues', 'climat', 'histoire', 'traditions', 'acces', 'hebergement'] %}
-            <div><div class="label">{{ k }}</div><div class="value">{{ territoire[k]|linkify|safe }}</div></div>
+            <div class="box"><div class="label">{{ k }}</div><div class="value">{{ territoire[k]|linkify|safe }}</div></div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- 3, 4, 5. TRIPTYQUE GARDIEN + LIEU -->
-    {% for i in [1, 2, 3] %}
-    {% set g = rep.gardiens | selectattr('ordre', 'equalto', i) | first %}
-    {% set l = rep.lieux | selectattr('numero_lieu', 'equalto', i) | first %}
+    <!-- 3, 4, 5. TRIPTYQUE GARDIEN + LIEU (AUCUNE SIMPLIFICATION) -->
+    {% for pair in pairs %}
     <div class="section">
-        <div class="section-title">{{ 2 + i }}. Gardien {{ i }} & Son Lieu</div>
+        <div class="section-title">{{ 2 + pair.index }}. Gardien {{ pair.index }} & Lieu Associé</div>
         <div class="grid">
-            <div class="sub-box">
-                <div class="label">Gardien : {{ g.prenom }} {{ g.nom }}</div>
-                <p>{{ g.histoire }}</p>
-                <p><strong>Savoir :</strong> {{ g.savoir }}</p>
+            <div class="box">
+                <div class="label">GARDIEN {{ pair.index }}</div>
+                <p><strong>Nom:</strong> {{ pair.gardien.nom }} {{ pair.gardien.prenom }} ({{ pair.gardien.age }} ans)</p>
+                <p><strong>Savoir:</strong> {{ pair.gardien.savoir }}</p>
+                <p><strong>Histoire:</strong> {{ pair.gardien.histoire }}</p>
             </div>
-            <div class="sub-box">
-                <div class="label">Lieu : {{ l.nom }}</div>
-                <p>{{ l.description }}</p>
-                <p><strong>Cinégénie :</strong> {{ l.cinegenie }}</p>
+            <div class="box">
+                <div class="label">LIEU {{ pair.index }}</div>
+                <p><strong>Nom:</strong> {{ pair.lieu.nom }} ({{ pair.lieu.type }})</p>
+                <p><strong>Description:</strong> {{ pair.lieu.description }}</p>
+                <p><strong>Cinégénie:</strong> {{ pair.lieu.cinegenie }}</p>
             </div>
         </div>
     </div>
@@ -65,16 +65,16 @@
 
     <!-- 6. LA FETE -->
     <div class="section">
-        <div class="section-title">6. La Fête / Événement</div>
-        <div class="value">{{ episode.fete|linkify|safe }}</div>
+        <div class="section-title">6. La Fête / Événement Central</div>
+        <div class="box"><div class="value">{{ episode.fete }}</div></div>
     </div>
 
-    <!-- 7. SUBSTANCE DE L'ÉPISODE -->
+    <!-- 7. SUBSTANCE ÉPISODE -->
     <div class="section">
         <div class="section-title">7. Substance de l'Épisode</div>
         <div class="grid">
             {% for k in ['angle', 'arc', 'moments', 'contraintes', 'sensibles', 'budget'] %}
-            <div><div class="label">{{ k }}</div><div class="value">{{ episode[k]|linkify|safe }}</div></div>
+            <div class="box"><div class="label">{{ k }}</div><div class="value">{{ episode[k]|linkify|safe }}</div></div>
             {% endfor %}
         </div>
     </div>
