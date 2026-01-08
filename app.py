@@ -7,16 +7,15 @@ from sqlalchemy import or_
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
-# 1. INITIALISATION ET CONFIGURATION SÉCURISÉE (DOC-OS V.12)
+# 1. INITIALISATION ET CONFIGURATION SÉCURISÉE
 # =================================================================
 app = Flask(__name__)
 CORS(app)
 
 # Récupération sécurisée de l'URL de base de données
 raw_db_url = os.environ.get('DATABASE_URL')
-
 if raw_db_url:
-    # REPARATION : On ne remplace QUE si c'est l'ancien format postgres://
+    # On ne remplace QUE si c'est l'ancien format postgres://
     if raw_db_url.startswith('postgres://'):
         DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
     else:
@@ -24,7 +23,7 @@ if raw_db_url:
     print("✅ DATABASE: PostgreSQL (Production) Connectée")
 else:
     DB_URL = 'sqlite:///reperage.db'
-    print("⚠️  DATABASE: SQLite (Fallback) - Vérifiez vos variables Railway")
+    print("⚠️  DATABASE: SQLite (Fallback)")
 
 # CONFIGURATION VOLUMES ET BRIDGE DOCU-GEN
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
@@ -37,13 +36,20 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # Initialisation Base de données
 engine = init_db(DB_URL)
 
+# --- FILTRES JINJA ---
+@app.template_filter('linkify')
+def linkify_text(text):
+    if not text: return ""
+    url_pattern = r'(https?://[^\s]+)'
+    return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
+
 # =================================================================
 # 2. ROUTES DE NAVIGATION RACINE
 # =================================================================
 
 @app.route('/')
 def index_root():
-    """Redirection vers le dashboard admin"""
+    """Redirection automatique vers le dashboard admin"""
     return redirect(url_for('admin_dashboard'))
 
 # =================================================================
@@ -55,7 +61,6 @@ def admin_fixers_list():
     session = get_session(engine)
     try:
         query = session.query(Fixer)
-        # Filtres
         if request.args.get('search'):
             s = f"%{request.args.get('search')}%"
             query = query.filter(or_(Fixer.nom.like(s), Fixer.prenom.like(s), Fixer.societe.like(s)))
@@ -87,7 +92,6 @@ def edit_fixer(id=None):
                 fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
                 session.add(fixer)
             
-            # Mise à jour des champs via formulaire
             for key in ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 
                         'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 
                         'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 
@@ -119,10 +123,16 @@ def admin_dashboard():
             'soumis': len([r for r in reps if r.statut == 'soumis']),
             'valides': len([r for r in reps if r.statut == 'validé'])
         }
+        
+        # SÉRIALISATION CRITIQUE POUR ÉVITER L'ERREUR 500 JSON
         reps_serialized = []
         for r in reps:
             f = session.get(Fixer, r.fixer_id)
-            reps_serialized.append({'reperage': r.to_dict(), 'fixer': f})
+            reps_serialized.append({
+                'reperage': r.to_dict(), 
+                'fixer': f.to_dict() if f else None
+            })
+            
         return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats)
     finally: session.close()
 
@@ -158,16 +168,12 @@ def admin_create_reperage():
 
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 def update_reperage_admin(id):
-    """Mise à jour depuis le modal du dashboard"""
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
-        if 'region' in data: rep.region = data['region']
-        if 'pays' in data: rep.pays = data['pays']
-        if 'statut' in data: rep.statut = data['statut']
-        if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
-        if 'image_region' in data: rep.image_region = data['image_region']
+        for field in ['region', 'pays', 'statut', 'notes_admin', 'image_region']:
+            if field in data: setattr(rep, field, data[field])
         session.commit()
         return jsonify({'status': 'success'})
     finally: session.close()
@@ -200,14 +206,12 @@ def update_reperage_api(id):
         rep = session.get(Reperage, id)
         if not rep: return jsonify({'error': 'Introuvable'}), 404
 
-        # Mise à jour Identité et métadonnées
         for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'notes_admin', 'image_region', 'statut']:
             if f in data: setattr(rep, f, data[f])
 
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
         
-        # Gardiens
         if 'gardiens' in data:
             for g_data in data['gardiens']:
                 g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first() or Gardien(reperage_id=id, ordre=g_data.get('ordre'))
@@ -215,7 +219,6 @@ def update_reperage_api(id):
                     if hasattr(g_obj, k): setattr(g_obj, k, v)
                 session.add(g_obj)
 
-        # Lieux
         if 'lieux' in data:
             for l_data in data['lieux']:
                 l_obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l_data.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l_data.get('numero_lieu'))
@@ -270,7 +273,6 @@ def submit_to_docugen(id):
         rep.statut = 'soumis'
         session.commit()
         
-        # Envoi vers App 2
         if DOCUGEN_URL:
             headers = {"X-Bridge-Token": BRIDGE_TOKEN, "Content-Type": "application/json"}
             requests.post(DOCUGEN_URL, json=rep.to_dict(), headers=headers, timeout=10)
@@ -310,6 +312,5 @@ def serve_uploads(rep_id, filename):
     return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
-
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
