@@ -261,9 +261,16 @@ function calculateProgress() {
 
 function updateProgressDisplay(percentage, filled, total) {
     const bar = document.getElementById('progress-bar');
-    const text = document.getElementById('progress-percentage');
+    const textPercent = document.getElementById('progress-percentage');
+    const textFilled = document.getElementById('progress-filled');
+    const textTotal = document.getElementById('progress-total');
+    
     if (bar) bar.style.width = percentage + '%';
-    if (text) text.textContent = percentage + '%';
+    if (textPercent) textPercent.textContent = percentage + '%';
+    
+    // CORRECTIF : Mise à jour des chiffres bruts
+    if (textFilled) textFilled.textContent = filled;
+    if (textTotal) textTotal.textContent = total;
 }
 
 function initProgressTracking() {
@@ -375,3 +382,4 @@ function showNotification(msg, type) {
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 3000);
 }
+
