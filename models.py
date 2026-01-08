@@ -36,14 +36,21 @@ class Reperage(Base):
 
     def to_dict(self):
         return {
-            'id': self.id, 'token': self.token, 'statut': self.statut,
-            'fixer_nom': self.fixer_nom, 'fixer_prenom': self.fixer_prenom,
-            'pays': self.pays, 'region': self.region, 'image_region': self.image_region,
+            'id': self.id, 
+            'token': self.token, 
+            'statut': self.statut,
+            'fixer_nom': self.fixer_nom, 
+            'fixer_prenom': self.fixer_prenom,
+            'pays': self.pays, 
+            'region': self.region, 
+            'image_region': self.image_region,
+            'notes_admin': self.notes_admin,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'territoire_data': json.loads(self.territoire_data) if self.territoire_data else {},
             'episode_data': json.loads(self.episode_data) if self.episode_data else {},
             'gardiens': [g.to_dict() for g in self.gardiens],
-            'lieux': [l.to_dict() for l in self.lieux],
-            'medias': [m.to_dict() for m in self.medias]
+            'lieux': [l.to_dict() for l in self.lieux]
         }
 
 class Gardien(Base):
@@ -116,7 +123,8 @@ class Media(Base):
     def to_dict(self):
         return {
             'id': self.id, 'type': self.type, 'nom_original': self.nom_original,
-            'nom_fichier': self.nom_fichier, 'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
+            'nom_fichier': self.nom_fichier, 
+            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
         }
 
 class Fixer(Base):
@@ -148,6 +156,11 @@ class Fixer(Base):
     notes_internes = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
 
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        if d.get('created_at'): d['created_at'] = d['created_at'].isoformat()
+        return d
+
 class Message(Base):
     __tablename__ = 'messages'
     id = Column(Integer, primary_key=True)
@@ -162,7 +175,9 @@ class Message(Base):
     def to_dict(self):
         return {
             'id': self.id, 'auteur_type': self.auteur_type, 'auteur_nom': self.auteur_nom,
-            'contenu': self.contenu, 'created_at': self.created_at.isoformat(), 'lu': self.lu
+            'contenu': self.contenu, 
+            'created_at': self.created_at.isoformat() if self.created_at else None, 
+            'lu': self.lu
         }
 
 def init_db(database_url):
