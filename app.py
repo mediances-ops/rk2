@@ -17,7 +17,6 @@ from reportlab.lib.pagesizes import A4
 app = Flask(__name__)
 CORS(app)
 
-# Configuration de la base de données Railway
 raw_db_url = os.environ.get('DATABASE_URL')
 if raw_db_url:
     if raw_db_url.startswith('postgres://'):
@@ -29,7 +28,6 @@ else:
     DB_URL = 'sqlite:///reperage.db'
     print("⚠️  DATABASE: Fallback SQLite")
 
-# Configuration Volumes et Bridge Docu-Gen
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -37,18 +35,15 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialisation du moteur
 engine = init_db(DB_URL)
 
-# Patch de migration automatique pour les nouvelles colonnes
+# Patch de migration auto pour la progression
 with engine.connect() as conn:
     try:
         conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
         conn.commit()
-    except Exception as e:
-        print(f"ℹ️ Migration Check: {e}")
+    except Exception: pass
 
-# Filtre Jinja pour les liens cliquables
 @app.template_filter('linkify')
 def linkify_text(text):
     if not text: return ""
@@ -56,31 +51,36 @@ def linkify_text(text):
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
-# 2. ROUTES DE NAVIGATION RACINE
+# 2. ROUTES NAVIGATION & ADMIN
 # =================================================================
 
 @app.route('/')
 def index_root():
     return redirect(url_for('admin_dashboard'))
 
-# =================================================================
-# 3. ADMINISTRATION DES FIXERS (CRUD)
-# =================================================================
-
-@app.route('/admin/fixers')
-def admin_fixers_list():
+@app.route('/admin')
+def admin_dashboard():
     session = get_session(engine)
     try:
-        query = session.query(Fixer)
-        if request.args.get('search'):
-            s = f"%{request.args.get('search')}%"
-            query = query.filter(or_(Fixer.nom.like(s), Fixer.prenom.like(s), Fixer.societe.like(s)))
-        if request.args.get('pays'):
-            query = query.filter(Fixer.pays == request.args.get('pays'))
-        
-        fixers = query.order_by(Fixer.nom.asc()).all()
-        pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
-        return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
+        reps = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
+        fixers = session.query(Fixer).all()
+        stats = {
+            'total': len(reps),
+            'brouillons': len([r for r in reps if r.statut == 'brouillon']),
+            'soumis': len([r for r in reps if r.statut == 'soumis']),
+            'valides': len([r for r in reps if r.statut == 'validé'])
+        }
+        reps_serialized = []
+        for r in reps:
+            f = session.get(Fixer, r.fixer_id)
+            unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+            last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
+            r_data = r.to_dict()
+            r_data['unread_count'] = unread
+            r_data['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
+            r_data['prog_pourcent'] = r.progression_pourcent or 0
+            reps_serialized.append({'reperage': r_data, 'fixer': f.to_dict() if f else None})
+        return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats)
     finally: session.close()
 
 @app.route('/admin/fixer/new', methods=['GET', 'POST'])
@@ -91,139 +91,24 @@ def edit_fixer(id=None):
         fixer = session.get(Fixer, id) if id else None
         if request.method == 'POST':
             if not fixer:
-                # Éviter doublon d'email à la création
                 existing = session.query(Fixer).filter_by(email=request.form.get('email')).first()
-                if existing:
-                    fixer = existing
+                if existing: fixer = existing
                 else:
                     fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
                     session.add(fixer)
-            
-            for key in ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 
-                        'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 
-                        'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 
-                        'langue_preferee', 'notes_internes']:
+            for key in ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 'langue_preferee', 'notes_internes']:
                 if key in request.form: setattr(fixer, key, request.form[key])
-            
             fixer.actif = 'actif' in request.form
             fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
             fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
-            
             session.commit()
-            return redirect(url_for('admin_fixers_list'))
+            return redirect('/admin/fixers')
         return render_template('admin_fixer_edit_v2.html', fixer=fixer)
     finally: session.close()
 
 # =================================================================
-# 4. ADMINISTRATION DES REPÉRAGES (DASHBOARD)
+# 3. API SOUDURE (POUR APP.JS)
 # =================================================================
-
-@app.route('/admin')
-def admin_dashboard():
-    session = get_session(engine)
-    try:
-        reps = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
-        fixers = session.query(Fixer).all()
-        
-        stats = {
-            'total': len(reps),
-            'brouillons': len([r for r in reps if r.statut == 'brouillon']),
-            'soumis': len([r for r in reps if r.statut == 'soumis']),
-            'valides': len([r for r in reps if r.statut == 'validé'])
-        }
-        
-        reps_serialized = []
-        for r in reps:
-            f = session.get(Fixer, r.fixer_id)
-            # Notification : Compter les messages non lus du correspondant
-            unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-            last_msg = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
-            
-            r_data = r.to_dict()
-            r_data['unread_count'] = unread
-            r_data['last_sender'] = last_msg.auteur_nom if (last_msg and unread > 0) else None
-            r_data['prog_pourcent'] = r.progression_pourcent or 0
-
-            reps_serialized.append({'reperage': r_data, 'fixer': f.to_dict() if f else None})
-            
-        return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats)
-    finally: session.close()
-
-@app.route('/admin/reperage/<int:id>')
-def admin_reperage_detail(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if not rep: abort(404)
-        t = json.loads(rep.territoire_data) if rep.territoire_data else {}
-        e = json.loads(rep.episode_data) if rep.episode_data else {}
-        fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
-        return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, gardiens=rep.gardiens, lieux=rep.lieux, medias=rep.medias, fixer=fixer)
-    finally: session.close()
-
-@app.route('/admin/reperage/<int:id>/pdf')
-def generate_pdf(id):
-    session = get_session(engine)
-    rep = session.get(Reperage, id)
-    if not rep: abort(404)
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, 800, f"DOC-OS : RAPPORT DE REPÉRAGE #{rep.id}")
-    p.setFont("Helvetica", 11)
-    p.drawString(50, 780, f"Région : {rep.region} | Pays : {rep.pays}")
-    p.drawString(50, 765, f"Fixer : {rep.fixer_nom}")
-    p.line(50, 755, 550, 755)
-    p.showPage()
-    p.save()
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f"Reperage_{id}.pdf", mimetype='application/pdf')
-
-@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
-def update_reperage_admin(id):
-    session = get_session(engine)
-    try:
-        data = request.json
-        rep = session.get(Reperage, id)
-        for field in ['region', 'pays', 'statut', 'notes_admin', 'image_region']:
-            if field in data: setattr(rep, field, data[field])
-        session.commit()
-        return jsonify({'status': 'success'})
-    finally: session.close()
-
-@app.route('/admin/reperages/create', methods=['POST'])
-def admin_create_reperage():
-    session = get_session(engine)
-    try:
-        data = request.json
-        new_rep = Reperage(
-            token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'),
-            fixer_id=data.get('fixer_id'), fixer_nom=data.get('fixer_nom'), statut='brouillon'
-        )
-        session.add(new_rep); session.commit()
-        return jsonify({'status': 'success', 'id': new_rep.id})
-    finally: session.close()
-
-# =================================================================
-# 5. API CORE (POUR APP.JS ET FORMULAIRE)
-# =================================================================
-
-@app.route('/api/i18n/<lang>')
-def get_i18n(lang):
-    try:
-        path = os.path.join(app.root_path, 'translations', 'i18n.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            translations = json.load(f)
-        return jsonify(translations.get(lang, translations.get('FR', {})))
-    except: return jsonify({'error': 'JSON not found'}), 404
-
-@app.route('/api/reperages/<int:id>', methods=['GET'])
-def get_reperage_api(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        return jsonify(rep.to_dict()) if rep else ({'error': '404'}, 404)
-    finally: session.close()
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
 def update_reperage_api(id):
@@ -233,11 +118,10 @@ def update_reperage_api(id):
         rep = session.get(Reperage, id)
         if not rep: return jsonify({'error': '404'}), 404
 
-        # Synchronisation du pourcentage calculé par le front
+        # SYNCHRONISATION TOTALE AVEC LE JS
         if 'progression' in data:
             rep.progression_pourcent = data['progression']
 
-        # Identité et métadonnées
         for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'notes_admin', 'image_region', 'statut']:
             if f in data: setattr(rep, f, data[f])
 
@@ -256,89 +140,76 @@ def update_reperage_api(id):
                 for k, v in l.items():
                     if hasattr(obj, k): setattr(obj, k, v)
                 session.add(obj)
-
         session.commit()
-        return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'synced': rep.progression_pourcent})
     finally: session.close()
 
-@app.route('/api/reperages/<int:id>/medias', methods=['POST'])
-def upload_media_api(id):
-    if 'file' not in request.files: return "No file", 400
-    file = request.files['file']
-    filename = secure_filename(file.filename)
-    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
-    os.makedirs(path, exist_ok=True)
-    file.save(os.path.join(path, filename))
+@app.route('/api/i18n/<lang>')
+def get_i18n(lang):
+    try:
+        path = os.path.join(app.root_path, 'translations', 'i18n.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            translations = json.load(f)
+        return jsonify(translations.get(lang, translations.get('FR', {})))
+    except: return jsonify({'error': 'Not found'}), 404
+
+@app.route('/api/reperages/<int:id>', methods=['GET'])
+def get_reperage_api(id):
     session = get_session(engine)
     try:
-        m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, type='photo' if filename.lower().endswith(('.jpg','.png','.jpeg','.webp')) else 'document')
-        session.add(m); session.commit()
-        return jsonify(m.to_dict())
+        rep = session.get(Reperage, id)
+        return jsonify(rep.to_dict()) if rep else ({'error': '404'}, 404)
     finally: session.close()
 
-# =================================================================
-# 6. BRIDGE IA ET FORMULAIRE DISTANT
-# =================================================================
+@app.route('/admin/reperage/<int:id>/pdf')
+def generate_pdf(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.drawString(50, 800, f"DOC-OS : DOSSIER #{id}")
+    p.drawString(50, 780, f"Region: {rep.region}")
+    p.save(); buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"Rep_{id}.pdf", mimetype='application/pdf')
+
+# ============= FORMULAIRE & CHAT =============
 
 @app.route('/formulaire/<token>')
 def formulaire_token(token):
     session = get_session(engine)
-    try:
-        rep = session.query(Reperage).filter_by(token=token).first()
-        if not rep: abort(404)
-        fixer = session.get(Fixer, rep.fixer_id)
-        f_data = {
-            'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id,
-            'nom': fixer.nom if fixer else '', 'prenom': fixer.prenom if fixer else '',
-            'langue_default': fixer.langue_preferee if fixer else 'FR'
-        }
-        return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
-    finally: session.close()
-
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def submit_to_docugen(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        rep.statut = 'soumis'
-        session.commit()
-        if DOCUGEN_URL:
-            headers = {"X-Bridge-Token": BRIDGE_TOKEN, "Content-Type": "application/json"}
-            requests.post(DOCUGEN_URL, json=rep.to_dict(), headers=headers, timeout=10)
-        return jsonify({'status': 'success', 'bridge_sent': True})
-    except: return jsonify({'status': 'error'}), 500
-    finally: session.close()
-
-# =================================================================
-# 7. CHAT SYSTEM
-# =================================================================
+    rep = session.query(Reperage).filter_by(token=token).first_or_404()
+    f = session.get(Fixer, rep.fixer_id)
+    f_data = {'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id, 'nom': f.nom if f else '', 'prenom': f.prenom if f else '', 'langue_default': f.langue_preferee if f else 'FR'}
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
 
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-def handle_messages_api(id):
+def handle_messages(id):
     session = get_session(engine)
-    try:
-        if request.method == 'GET':
-            msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
-            return jsonify([m.to_dict() for m in msgs])
-        data = request.json
-        new_msg = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-        session.add(new_msg); session.commit()
-        return jsonify(new_msg.to_dict()), 201
-    finally: session.close()
+    if request.method == 'GET':
+        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
+        return jsonify([m.to_dict() for m in msgs])
+    data = request.json
+    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit(); return jsonify(m.to_dict()), 201
 
 @app.route('/api/messages/<int:msg_id>/read', methods=['PUT'])
-def mark_message_read(msg_id):
-    session = get_session(engine)
-    try:
-        msg = session.get(Message, msg_id)
-        if msg: msg.lu = True
-        session.commit(); return jsonify({'status': 'ok'})
-    finally: session.close()
+def mark_read(msg_id):
+    session = get_session(engine); m = session.get(Message, msg_id)
+    if m: m.lu = True
+    session.commit(); return jsonify({'status': 'ok'})
 
-@app.route('/uploads/<int:rep_id>/<filename>')
-def serve_uploads(rep_id, filename):
-    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
+@app.route('/admin/fixers')
+def admin_fixers():
+    session = get_session(engine); fixers = session.query(Fixer).all()
+    return render_template('admin_fixers.html', fixers=fixers, pays_list=[])
+
+@app.route('/api/reperages/<int:id>/medias', methods=['POST'])
+def upload_media(id):
+    file = request.files['file']; filename = secure_filename(file.filename)
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True)
+    file.save(os.path.join(path, filename))
+    session = get_session(engine); m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, type='photo'); session.add(m); session.commit()
+    return jsonify(m.to_dict())
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
