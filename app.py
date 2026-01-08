@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from sqlalchemy.exc import IntegrityError
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
@@ -12,12 +12,12 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 
 # =================================================================
-# 1. INITIALISATION ET CONFIGURATION SÉCURISÉE
+# 1. INITIALISATION ET SÉCURISATION POSTGRESQL
 # =================================================================
 app = Flask(__name__)
 CORS(app)
 
-# Récupération sécurisée de l'URL de base de données (Fix double 'ql')
+# Récupération et correction de l'URL Database
 raw_db_url = os.environ.get('DATABASE_URL')
 if raw_db_url:
     if raw_db_url.startswith('postgres://'):
@@ -29,7 +29,7 @@ else:
     DB_URL = 'sqlite:///reperage.db'
     print("⚠️  DATABASE: SQLite (Fallback)")
 
-# CONFIGURATION VOLUMES ET BRIDGE DOCU-GEN
+# Configuration Volumes et Bridge
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -37,8 +37,18 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Initialisation Base de données
+# Initialisation du moteur SQLAlchemy
 engine = init_db(DB_URL)
+
+# --- PATCH DE MIGRATION VOLANT (Répare l'Erreur 500 des colonnes manquantes) ---
+with engine.connect() as conn:
+    try:
+        # Ajout de progression_pourcent si absent (Syntaxe PostgreSQL)
+        conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
+        conn.commit()
+        print("🛠️  DATABASE: Colonne progression_pourcent vérifiée/ajoutée")
+    except Exception as e:
+        print(f"ℹ️  DATABASE: Info migration : {e}")
 
 # --- FILTRES JINJA ---
 @app.template_filter('linkify')
@@ -93,7 +103,7 @@ def edit_fixer(id=None):
         fixer = session.get(Fixer, id) if id else None
         if request.method == 'POST':
             if not fixer:
-                # Vérification email unique pour éviter crash IntegrityError
+                # Sécurité email unique
                 existing = session.query(Fixer).filter_by(email=request.form.get('email')).first()
                 if existing:
                     fixer = existing
@@ -117,7 +127,7 @@ def edit_fixer(id=None):
     finally: session.close()
 
 # =================================================================
-# 4. ADMINISTRATION DES REPÉRAGES (DASHBOARD PILOTAGE)
+# 4. ADMINISTRATION DES REPÉRAGES (TABLEAU DE BORD)
 # =================================================================
 
 @app.route('/admin')
@@ -136,16 +146,17 @@ def admin_dashboard():
         reps_serialized = []
         for r in reps:
             f = session.get(Fixer, r.fixer_id)
-            # Notification Chat: Compter les messages non lus du FIXER
+            # Notification Chat : Messages non lus du correspondant
             unread_count = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
             last_msg = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
             
-            rep_data = r.to_dict()
-            rep_data['unread_count'] = unread_count
-            rep_data['last_sender'] = last_msg.auteur_nom if (last_msg and unread_count > 0) else None
-            
+            r_dict = r.to_dict()
+            r_dict['unread_count'] = unread_count
+            r_dict['last_sender'] = last_msg.auteur_nom if (last_msg and unread_count > 0) else None
+            r_dict['prog_pourcent'] = r.progression_pourcent or 0
+
             reps_serialized.append({
-                'reperage': rep_data, 
+                'reperage': r_dict, 
                 'fixer': f.to_dict() if f else None
             })
             
@@ -166,7 +177,6 @@ def admin_reperage_detail(id):
 
 @app.route('/admin/reperage/<int:id>/pdf')
 def generate_pdf(id):
-    """Génération du PDF de repérage"""
     session = get_session(engine)
     rep = session.get(Reperage, id)
     if not rep: abort(404)
@@ -177,14 +187,12 @@ def generate_pdf(id):
     p.drawString(50, 800, f"DOC-OS : DOSSIER DE REPÉRAGE #{rep.id}")
     p.setFont("Helvetica", 12)
     p.drawString(50, 780, f"Région : {rep.region}")
-    p.drawString(50, 765, f"Pays : {rep.pays}")
-    p.drawString(50, 750, f"Fixer : {rep.fixer_nom}")
-    p.drawString(50, 735, f"Statut : {rep.statut}")
-    p.line(50, 720, 550, 720)
+    p.drawString(50, 765, f"Fixer : {rep.fixer_nom}")
+    p.line(50, 750, 550, 750)
     p.showPage()
     p.save()
     buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f"Reperage_{rep.region}_{id}.pdf", mimetype='application/pdf')
+    return send_file(buffer, as_attachment=True, download_name=f"Reperage_{id}.pdf", mimetype='application/pdf')
 
 @app.route('/admin/reperages/create', methods=['POST'])
 def admin_create_reperage():
@@ -193,12 +201,9 @@ def admin_create_reperage():
         data = request.json
         new_rep = Reperage(
             token=secrets.token_urlsafe(16),
-            region=data.get('region'),
-            pays=data.get('pays'),
-            fixer_id=data.get('fixer_id'),
-            fixer_nom=data.get('fixer_nom'),
-            image_region=data.get('image_region'),
-            statut='brouillon'
+            region=data.get('region'), pays=data.get('pays'),
+            fixer_id=data.get('fixer_id'), fixer_nom=data.get('fixer_nom'),
+            image_region=data.get('image_region'), statut='brouillon'
         )
         session.add(new_rep); session.commit()
         return jsonify({'status': 'success', 'id': new_rep.id})
@@ -228,15 +233,14 @@ def get_i18n(lang):
         with open(path, 'r', encoding='utf-8') as f:
             translations = json.load(f)
         return jsonify(translations.get(lang, translations.get('FR', {})))
-    except Exception as e:
-        return jsonify({'error': str(e)}), 404
+    except: return jsonify({'error': 'Not found'}), 404
 
 @app.route('/api/reperages/<int:id>', methods=['GET'])
 def get_reperage_api(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
-        if not rep: return jsonify({'error': 'Introuvable'}), 404
+        if not rep: return jsonify({'error': '404'}), 404
         return jsonify(rep.to_dict())
     finally: session.close()
 
@@ -246,37 +250,37 @@ def update_reperage_api(id):
     try:
         data = request.json
         rep = session.get(Reperage, id)
-        if not rep: return jsonify({'error': 'Introuvable'}), 404
+        if not rep: return jsonify({'error': '404'}), 404
 
+        # Identité
         for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'notes_admin', 'image_region', 'statut']:
             if f in data: setattr(rep, f, data[f])
 
+        # JSON
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
         
         # CALCUL DE PROGRESSION (JAUGE)
-        # On compte les champs remplis dans territoire et episode (approx 20 champs clés)
-        filled_count = 0
+        filled = 0
         if 'territoire_data' in data:
-            filled_count += len([v for v in data['territoire_data'].values() if v and len(str(v)) > 1])
+            filled += len([v for v in data['territoire_data'].values() if v and len(str(v)) > 2])
         if 'episode_data' in data:
-            filled_count += len([v for v in data['episode_data'].values() if v and len(str(v)) > 1])
-        
-        rep.progression_pourcent = min(100, int((filled_count / 18) * 100))
+            filled += len([v for v in data['episode_data'].values() if v and len(str(v)) > 2])
+        rep.progression_pourcent = min(100, int((filled / 18) * 100))
 
+        # Gardiens et Lieux
         if 'gardiens' in data:
-            for g_data in data['gardiens']:
-                g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first() or Gardien(reperage_id=id, ordre=g_data.get('ordre'))
-                for k, v in g_data.items():
-                    if hasattr(g_obj, k): setattr(g_obj, k, v)
-                session.add(g_obj)
-
+            for g in data['gardiens']:
+                obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g.get('ordre')).first() or Gardien(reperage_id=id, ordre=g.get('ordre'))
+                for k, v in g.items(): 
+                    if hasattr(obj, k): setattr(obj, k, v)
+                session.add(obj)
         if 'lieux' in data:
-            for l_data in data['lieux']:
-                l_obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l_data.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l_data.get('numero_lieu'))
-                for k, v in l_data.items():
-                    if hasattr(l_obj, k): setattr(l_obj, k, v)
-                session.add(l_obj)
+            for l in data['lieux']:
+                obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l.get('numero_lieu'))
+                for k, v in l.items():
+                    if hasattr(obj, k): setattr(obj, k, v)
+                session.add(obj)
 
         session.commit()
         return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
@@ -284,23 +288,22 @@ def update_reperage_api(id):
 
 @app.route('/api/reperages/<int:id>/medias', methods=['POST'])
 def upload_media_api(id):
-    if 'file' not in request.files: return "Aucun fichier", 400
+    if 'file' not in request.files: return "No file", 400
     file = request.files['file']
     filename = secure_filename(file.filename)
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
     os.makedirs(path, exist_ok=True)
     file.save(os.path.join(path, filename))
-    
     session = get_session(engine)
     try:
         m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, 
-                  type='photo' if filename.lower().endswith(('.jpg','.png','.jpeg','.webp','.heic')) else 'document')
+                  type='photo' if filename.lower().endswith(('.jpg','.png','.jpeg','.webp')) else 'document')
         session.add(m); session.commit()
         return jsonify(m.to_dict())
     finally: session.close()
 
 # =================================================================
-# 6. FORMULAIRE DISTANT ET BRIDGE IA
+# 6. FORMULAIRE DISTANT ET CHAT
 # =================================================================
 
 @app.route('/formulaire/<token>')
@@ -317,27 +320,6 @@ def formulaire_token(token):
         }
         return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=fixer_data)
     finally: session.close()
-
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def submit_to_docugen(id):
-    session = get_session(engine)
-    try:
-        rep = session.get(Reperage, id)
-        if not rep: abort(404)
-        rep.statut = 'soumis'
-        session.commit()
-        
-        if DOCUGEN_URL:
-            headers = {"X-Bridge-Token": BRIDGE_TOKEN, "Content-Type": "application/json"}
-            requests.post(DOCUGEN_URL, json=rep.to_dict(), headers=headers, timeout=10)
-        
-        return jsonify({'status': 'success', 'bridge_sent': True})
-    except: return jsonify({'status': 'error'}), 500
-    finally: session.close()
-
-# =================================================================
-# 7. CHAT ET MÉDIAS
-# =================================================================
 
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
 def handle_messages_api(id):
