@@ -4,17 +4,17 @@ let currentLanguage = localStorage.getItem('selectedLanguage') || 'FR';
 let currentReperageId = window.REPERAGE_ID || null;
 let translations = {};
 
-// ============= INITIALISATION =============
+// ============= INITIALISATION GLOBALE =============
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Initialisation DOC-OS V.24 - Synchronisation Totale');
+    console.log('🎬 Initialisation DOC-OS V.25 - Synchronisation Intégrale');
 
-    // Récupération des données injectées par le serveur
+    // Récupération des données injectées par le serveur (Flask)
     if (window.FIXER_DATA) {
         currentLanguage = window.FIXER_DATA.langue_default || 'FR';
         currentReperageId = window.FIXER_DATA.reperage_id;
     }
 
-    // Chargement des modules
+    // Chargement des modules systèmes
     await loadTranslations(currentLanguage);
     initLanguageSelector();
     initTabs();
@@ -22,19 +22,19 @@ document.addEventListener('DOMContentLoaded', async function() {
     initChat();
     initForms();
 
-    // Chargement des données existantes
+    // Chargement des données métier
     if (currentReperageId) {
         await loadReperage(currentReperageId);
-        await loadMedias(); // Affiche les photos dès l'ouverture
+        await loadMedias(); // Affiche la galerie photo existante
     }
 
-    // Auto-sauvegarde de sécurité toutes les 2 minutes
+    // Auto-sauvegarde de sécurité (toutes les 2 minutes)
     setInterval(() => saveReperage(false), 120000);
     
     if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 
-// ============= MODULE i18n (MULTILINGUE) =============
+// ============= MODULE 1 : MULTILINGUE (i18n) =============
 async function loadTranslations(lang) {
     try {
         const response = await fetch(`${API_URL}/i18n/${lang}`);
@@ -75,20 +75,20 @@ function initLanguageSelector() {
     });
 }
 
-// ============= MODULE PROGRESSION (SYNC ADMIN) =============
-// ... [Init identique] ...
-
+// ============= MODULE 2 : CALCUL DE PROGRESSION (SYNC 112) =============
 function calculateProgress() {
-    const fields = document.querySelectorAll('input[name], textarea[name], select[name]');
-    let total = 0; 
+    // Ciblage exhaustif : tous les champs de saisie portant un attribut name
+    const substanceFields = document.querySelectorAll('input[name], textarea[name], select[name]');
+    let total = 0;
     let filled = 0;
 
-    fields.forEach(input => {
-        // Exclure uniquement les champs d'identité
+    substanceFields.forEach(input => {
+        // Exclusion des métadonnées de structure pour ne pas fausser le calcul
         const excluded = ['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'];
         if (!excluded.includes(input.name)) {
-            total++; // Ce total sera maintenant de ~112
-            if (input.value && input.value.trim().length > 2) {
+            total++;
+            // Un champ est considéré rempli s'il contient au moins 2 caractères
+            if (input.value && input.value.trim().length >= 2) {
                 filled++;
             }
         }
@@ -96,46 +96,27 @@ function calculateProgress() {
 
     const percentage = total > 0 ? Math.round((filled / total) * 100) : 0;
     
-    // Mise à jour interface
-    document.getElementById('progress-bar').style.width = percentage + '%';
-    document.getElementById('progress-percentage').textContent = percentage + '%';
-    document.getElementById('progress-filled').textContent = filled;
-    document.getElementById('progress-total').textContent = total; // Affiche 112
+    // Mise à jour de l'affichage sur le formulaire
+    const bar = document.getElementById('progress-bar');
+    const textPercent = document.getElementById('progress-percentage');
+    const textFilled = document.getElementById('progress-filled');
+    const textTotal = document.getElementById('progress-total');
+
+    if (bar) bar.style.width = percentage + '%';
+    if (textPercent) textPercent.textContent = percentage + '%';
+    if (textFilled) textFilled.textContent = filled;
+    if (textTotal) textTotal.textContent = total;
 
     return percentage;
 }
 
-async function saveReperage(notif) {
-    const currentPercent = calculateProgress();
-    const data = { 
-        progression: currentPercent, 
-        territoire_data: {}, 
-        episode_data: {} 
-    };
-
-    // Segmentation des données pour le serveur
-    const episodeKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
-
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => {
-        if (['fixer_nom', 'fixer_email', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
-        else if (episodeKeys.includes(el.name)) data.episode_data[el.name] = el.value;
-        else data.territoire_data[el.name] = el.value; // Inclus Gardiens et Lieux
-    });
-
-    await fetch(`${API_URL}/reperages/${currentReperageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (notif) alert("✅ Sync Totale : " + currentPercent + "%");
-}
-// ============= MODULE DATA (CRUD) =============
+// ============= MODULE 3 : CHARGEMENT & SAUVEGARDE (CRUD) =============
 async function loadReperage(id) {
     try {
         const response = await fetch(`${API_URL}/reperages/${id}`);
         const data = await response.json();
         
-        // Remplissage intelligent des champs
+        // 1. Remplissage des champs racines
         document.querySelectorAll('input[name], textarea[name], select[name]').forEach(el => {
             const name = el.name;
             if (data[name]) el.value = data[name];
@@ -143,7 +124,7 @@ async function loadReperage(id) {
             else if (data.episode_data && data.episode_data[name]) el.value = data.episode_data[name];
         });
 
-        // Remplissage récursif Gardiens et Lieux
+        // 2. Remplissage récursif Gardiens et Lieux
         if (data.gardiens) {
             data.gardiens.forEach(g => {
                 Object.keys(g).forEach(key => {
@@ -161,9 +142,10 @@ async function loadReperage(id) {
             });
         }
 
+        // Calcul de progression avec délai pour rendu
         setTimeout(calculateProgress, 1000);
     } catch (error) {
-        console.error('Erreur chargement:', error);
+        console.error('Erreur chargement données:', error);
     }
 }
 
@@ -172,7 +154,7 @@ async function saveReperage(showNotif = true) {
 
     const progressVal = calculateProgress();
     const formData = collectFormData();
-    formData.progression = progressVal; // Synchronisation forcée pour l'Admin
+    formData.progression = progressVal; // Valeur transmise pour le Dashboard Admin
 
     try {
         const response = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
@@ -182,7 +164,7 @@ async function saveReperage(showNotif = true) {
         });
 
         if (response.ok && showNotif) {
-            alert("✅ Données synchronisées : " + progressVal + "%");
+            alert("✅ Données synchronisées avec la production (" + progressVal + "%)");
         }
     } catch (error) {
         console.error('Erreur sauvegarde:', error);
@@ -197,7 +179,7 @@ function collectFormData() {
         lieux: [] 
     };
 
-    // Clés réservées à la section Épisode pour le PDF
+    // Définition des clés réservées à la section ÉPISODE pour segmentation
     const episodeKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
 
     document.querySelectorAll('input[name], textarea[name], select[name]').forEach(el => {
@@ -209,6 +191,7 @@ function collectFormData() {
         } else if (episodeKeys.includes(name)) {
             data.episode_data[name] = val;
         } else {
+            // Toutes les autres données (incluant gardiens et lieux) vont dans territoire_data
             data.territoire_data[name] = val;
         }
     });
@@ -216,7 +199,7 @@ function collectFormData() {
     return data;
 }
 
-// ============= MODULE MÉDIAS (UPLOAD & VIEW) =============
+// ============= MODULE 4 : MÉDIAS (UPLOAD & GALERIE) =============
 function initFileUpload() {
     const area = document.getElementById('drop-area');
     if (!area) return;
@@ -227,7 +210,7 @@ function initFileUpload() {
             fd.append('file', file);
             await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
         }
-        await loadMedias(); // Recharge immédiate de la galerie photos
+        await loadMedias(); // Rafraîchissement immédiat de la vue
         alert("📷 Médias enregistrés.");
     };
 }
@@ -237,22 +220,21 @@ async function loadMedias() {
     try {
         const response = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
         const medias = await response.json();
-        const list = document.getElementById('files-list');
-        if (list) {
-            list.innerHTML = medias.map(m => `
+        const container = document.getElementById('files-list');
+        if (container) {
+            container.innerHTML = medias.map(m => `
                 <div class="file-item" style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: white; text-align:center;">
-                    <img src="/uploads/${currentReperageId}/${m.nom_fichier}" 
-                         style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;">
+                    <img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;">
                     <span style="display: block; font-size: 0.75rem; margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         ${m.nom_original}
                     </span>
                 </div>
             `).join('');
         }
-    } catch (e) { console.error('Erreur médias:', e); }
+    } catch (e) { console.error('Erreur chargement médias:', e); }
 }
 
-// ============= MODULE CHAT COLLABORATIF =============
+// ============= MODULE 5 : CHAT COLLABORATIF =============
 function initChat() {
     const toggleBtn = document.getElementById('chat-toggle-btn');
     const closeBtn = document.getElementById('chat-close-btn');
@@ -269,7 +251,8 @@ function initChat() {
 
     sendBtn?.addEventListener('click', async () => {
         const input = document.getElementById('chat-input');
-        if (!input.value.trim()) return;
+        const content = input.value.trim();
+        if (!content) return;
 
         await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
             method: 'POST',
@@ -277,7 +260,7 @@ function initChat() {
             body: JSON.stringify({
                 auteur_type: 'fixer',
                 auteur_nom: document.querySelector('[name="fixer_nom"]')?.value || 'Correspondant',
-                contenu: input.value
+                contenu: content
             })
         });
         input.value = '';
@@ -299,28 +282,32 @@ async function loadMessages() {
     container.scrollTop = container.scrollHeight;
 }
 
-// ============= MODULE INTERFACE (TABS) =============
+// ============= MODULE 6 : INTERFACE (TABS & EVENTS) =============
 function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
+            const target = this.dataset.tab;
             document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
             this.classList.add('active');
-            document.getElementById(this.dataset.tab).classList.add('active');
+            document.getElementById(target).classList.add('active');
             calculateProgress();
         });
     });
 
     document.querySelectorAll('.lieu-tab').forEach(tab => {
         tab.addEventListener('click', function() {
+            const num = this.dataset.lieu;
             document.querySelectorAll('.lieu-tab, .lieu-content').forEach(t => t.classList.remove('active'));
             this.classList.add('active');
-            document.getElementById(`lieu-${this.dataset.lieu}`).classList.add('active');
+            document.getElementById(`lieu-${num}`).classList.add('active');
         });
     });
 }
 
 function initForms() {
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
+    
+    // Écouteur en temps réel pour mettre à jour la jauge
     document.querySelectorAll('input, textarea').forEach(el => {
         el.addEventListener('input', () => {
             clearTimeout(window.calcTimer);
@@ -328,4 +315,3 @@ function initForms() {
         });
     });
 }
-
