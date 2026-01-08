@@ -23,7 +23,7 @@ def linkify_text(text):
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
-# I. ADMINISTRATION (DASHBOARD & FILTRES)
+# I. NAVIGATION & DASHBOARD (FILTRES & STATS)
 # =================================================================
 
 @app.route('/')
@@ -34,12 +34,18 @@ def admin_dashboard():
     session = get_session(engine)
     try:
         query = session.query(Reperage)
+        # Fix 10 : Filtres actifs Dashboard
         if request.args.get('statut'): query = query.filter(Reperage.statut == request.args.get('statut'))
         if request.args.get('pays'): query = query.filter(Reperage.pays == request.args.get('pays'))
         
         reps = query.order_by(Reperage.created_at.desc()).all()
         fixers = session.query(Fixer).all()
-        stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
+        stats = {
+            'total': session.query(Reperage).count(),
+            'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
+            'soumis': session.query(Reperage).filter_by(statut='soumis').count(),
+            'valides': session.query(Reperage).filter_by(statut='validé').count()
+        }
         
         reps_serialized = []
         for r in reps:
@@ -56,19 +62,23 @@ def admin_dashboard():
         return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats, pays_list=pays_list)
     finally: session.close()
 
-# FIX 10 : Filtres Fixers
+# =================================================================
+# II. GESTION DES FIXERS (FIX 404 & FIX 5 SAUVEGARDE)
+# =================================================================
+
 @app.route('/admin/fixers')
-def route_admin_fixers():
+def admin_fixers_list():
     session = get_session(engine)
-    query = session.query(Fixer)
-    if request.args.get('search'):
-        s = f"%{request.args.get('search')}%"
-        query = query.filter(or_(Fixer.nom.like(s), Fixer.prenom.like(s), Fixer.societe.like(s)))
-    if request.args.get('pays'): query = query.filter(Fixer.pays == request.args.get('pays'))
-    
-    fixers = query.order_by(Fixer.nom.asc()).all()
-    pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
-    return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
+    try:
+        query = session.query(Fixer)
+        # Filtre Fixers (Fix 10)
+        search = request.args.get('search')
+        if search: query = query.filter(or_(Fixer.nom.like(f"%{search}%"), Fixer.prenom.like(f"%{search}%"), Fixer.societe.like(f"%{search}%")))
+        
+        fixers = query.order_by(Fixer.nom.asc()).all()
+        pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
+        return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
+    finally: session.close()
 
 @app.route('/admin/fixer/new', methods=['GET', 'POST'])
 @app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
@@ -80,7 +90,9 @@ def admin_edit_fixer(id=None):
             if not fixer:
                 fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
                 session.add(fixer)
-            for k in ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 'langue_preferee', 'notes_internes']:
+            # Fix 5 : Enregistrement intégral des champs
+            fields = ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 'langue_preferee', 'notes_internes']
+            for k in fields:
                 if k in request.form: setattr(fixer, k, request.form[k])
             fixer.actif = 'actif' in request.form
             fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
@@ -90,119 +102,142 @@ def admin_edit_fixer(id=None):
         return render_template('admin_fixer_edit_v2.html', fixer=fixer)
     finally: session.close()
 
+@app.route('/admin/fixer/<int:id>')
+def admin_view_fixer_profile(id):
+    session = get_session(engine)
+    f = session.get(Fixer, id)
+    if not f: abort(404)
+    reps = session.query(Reperage).filter_by(fixer_id=id).all()
+    return render_template('admin_fixer_detail.html', fixer=f, reperages=reps)
+
 # =================================================================
-# II. SAUVEGARDE SEGMENTÉE (AUCUNE SIMPLIFICATION)
+# III. GESTION DES REPÉRAGES (FIX 1, 7 & SUPPRESSION)
 # =================================================================
 
-@app.route('/api/reperages/<int:id>', methods=['PUT'])
-def api_segmented_sync(id):
+@app.route('/admin/reperage/<int:id>')
+def admin_view_full_substance(id):
     session = get_session(engine)
-    try:
-        data = request.json
-        rep = session.get(Reperage, id)
-        if not rep: return jsonify({'error': '404'}), 404
-        
-        if 'progression' in data: rep.progression_pourcent = data['progression']
-        for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'statut']:
-            if f in data: setattr(rep, f, data[f])
-            
-        if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
-        if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
-        
-        # RESTAURATION LOGIQUE GARDIENS ET LIEUX (Soudure Fix 2)
-        if 'gardiens' in data:
-            for g in data['gardiens']:
-                obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g.get('ordre')).first() or Gardien(reperage_id=id, ordre=g.get('ordre'))
-                for k, v in g.items(): 
-                    if hasattr(obj, k): setattr(obj, k, v)
-                session.add(obj)
-        if 'lieux' in data:
-            for l in data['lieux']:
-                obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l.get('numero_lieu'))
-                for k, v in l.items():
-                    if hasattr(obj, k): setattr(obj, k, v)
-                session.add(obj)
-        
-        session.commit()
-        return jsonify({'status': 'success'})
-    finally: session.close()
+    rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    t = json.loads(rep.territoire_data) if rep.territoire_data else {}
+    e = json.loads(rep.episode_data) if rep.episode_data else {}
+    f = session.get(Fixer, rep.fixer_id)
+    return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, fixer=f)
 
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
-def admin_quick_update(id):
+def admin_quick_update_reperage(id):
+    """Fix 7 : Sauvegarde du modal Info Région"""
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
-        for f in ['region', 'pays', 'statut', 'notes_admin', 'image_region']:
+        for f in ['region', 'pays', 'statut', 'notes_admin']:
             if f in data: setattr(rep, f, data[f])
         session.commit()
         return jsonify({'status': 'success'})
     finally: session.close()
 
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_destroy_reperage(id):
+    """Fix Restauration : Bouton Suppression"""
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id)
+        if rep: session.delete(rep); session.commit()
+        return jsonify({'status': 'success'})
+    finally: session.close()
+
 # =================================================================
-# III. DOWNLOADS & PRINT (FIX 3 & 5)
+# IV. DOWNLOADS : PRINT & ZIP (FIX 3, 5, 6, 7)
 # =================================================================
 
 @app.route('/admin/reperage/<int:id>/print')
-def admin_haute_substance_print(id):
+def admin_print_high_substance(id):
     session = get_session(engine)
     rep = session.get(Reperage, id)
     t = json.loads(rep.territoire_data) if rep.territoire_data else {}
     e = json.loads(rep.episode_data) if rep.episode_data else {}
-    return render_template('print_reperage.html', rep=rep, territoire=t, episode=e, fixer=session.get(Fixer, rep.fixer_id))
+    f = session.get(Fixer, rep.fixer_id)
+    return render_template('print_reperage.html', rep=rep, territoire=t, episode=e, fixer=f)
 
 @app.route('/admin/reperage/<int:id>/photos')
-def admin_zip_gen(id):
+def admin_zip_all_photos(id):
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
-    if not os.path.exists(path): return "Aucune photo", 404
+    if not os.path.exists(path): return "Aucune donnée multimédia", 404
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, 'w') as zf:
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for file in files: zf.write(os.path.join(root, file), file)
     memory_file.seek(0)
     return send_file(memory_file, download_name=f"Substance_Photos_{id}.zip", as_attachment=True)
 
-# ... (Routes Chat, Medias, i18n, Formulaire maintenues) ...
+# =================================================================
+# V. API SOUDURE (FORMULAIRE & SYNC)
+# =================================================================
+
+@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
+def api_sync_engine(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    if not rep: return jsonify({'error': '404'}), 404
+    if request.method == 'GET': return jsonify(rep.to_dict())
+    
+    data = request.json
+    if 'progression' in data: rep.progression_pourcent = data['progression']
+    for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'statut']:
+        if f in data: setattr(rep, f, data[f])
+    if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
+    if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
+    
+    # SAUVEGARDE SEGMENTÉE (Fix 2 : Gardiens & Lieux pour fiche Voir)
+    if 'gardiens' in data:
+        for g in data['gardiens']:
+            obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g.get('ordre')).first() or Gardien(reperage_id=id, ordre=g.get('ordre'))
+            for k, v in g.items(): 
+                if hasattr(obj, k): setattr(obj, k, v)
+            session.add(obj)
+    if 'lieux' in data:
+        for l in data['lieux']:
+            obj = session.query(Lieu).filter_by(reperage_id=id, numero_lieu=l.get('numero_lieu')).first() or Lieu(reperage_id=id, numero_lieu=l.get('numero_lieu'))
+            for k, v in l.items():
+                if hasattr(obj, k): setattr(obj, k, v)
+            session.add(obj)
+    session.commit()
+    return jsonify({'status': 'success'})
+
 @app.route('/api/i18n/<lang>')
-def api_get_trans(lang):
+def api_i18n_server(lang):
     try:
-        with open(os.path.join(app.root_path, 'translations', 'i18n.json'), 'r', encoding='utf-8') as f:
+        path = os.path.join(app.root_path, 'translations', 'i18n.json')
+        with open(path, 'r', encoding='utf-8') as f:
             return jsonify(json.load(f).get(lang, {}))
     except: return jsonify({}), 404
 
+@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
+def api_chat_server(id):
+    session = get_session(engine)
+    if request.method == 'GET':
+        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
+        return jsonify([m.to_dict() for m in msgs])
+    data = request.json
+    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit(); return jsonify(m.to_dict()), 201
+
 @app.route('/formulaire/<token>')
-def route_form_fixer(token):
-    session = get_session(engine); rep = session.query(Reperage).filter_by(token=token).first()
+def route_correspondent_form(token):
+    session = get_session(engine)
+    rep = session.query(Reperage).filter_by(token=token).first()
     if not rep: abort(404)
     f = session.get(Fixer, rep.fixer_id)
     f_data = {'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id, 'nom': f.nom if f else '', 'prenom': f.prenom if f else '', 'langue_default': f.langue_preferee if f else 'FR'}
     return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
 
-@app.route('/api/reperages/<int:id>', methods=['GET'])
-def api_get_rep(id):
-    session = get_session(engine); rep = session.get(Reperage, id)
-    return jsonify(rep.to_dict())
-
-@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-def api_messages(id):
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_rep():
     session = get_session(engine)
-    if request.method == 'GET':
-        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
-        return jsonify([m.to_dict() for m in msgs])
-    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-    session.add(m); session.commit(); return jsonify(m.to_dict()), 201
-
-@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
-def api_medias(id):
-    session = get_session(engine)
-    if request.method == 'GET':
-        ms = session.query(Media).filter_by(reperage_id=id).all()
-        return jsonify([m.to_dict() for m in ms])
-    file = request.files['file']; filename = secrets.token_hex(8) + "_" + secure_filename(file.filename)
-    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True)
-    file_path = os.path.join(path, filename); file.save(file_path)
-    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
-    session.add(m); session.commit(); return jsonify(m.to_dict())
+    data = request.json
+    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=data.get('fixer_nom'), statut='brouillon')
+    session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
 
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
