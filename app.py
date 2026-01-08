@@ -7,7 +7,7 @@ from sqlalchemy import or_
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
 # =================================================================
-# 1. INITIALISATION ET CONFIGURATION (VERSION SÉCURISÉE)
+# 1. INITIALISATION ET CONFIGURATION SÉCURISÉE (DOC-OS V.12)
 # =================================================================
 app = Flask(__name__)
 CORS(app)
@@ -16,14 +16,17 @@ CORS(app)
 raw_db_url = os.environ.get('DATABASE_URL')
 
 if raw_db_url:
-    # Si Railway fournit l'URL, on s'assure du format postgresql://
-    DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
-    print("✅ Mode: PostgreSQL (Production)")
+    # REPARATION : On ne remplace QUE si c'est l'ancien format postgres://
+    if raw_db_url.startswith('postgres://'):
+        DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
+    else:
+        DB_URL = raw_db_url
+    print("✅ DATABASE: PostgreSQL (Production) Connectée")
 else:
-    # Sinon, on utilise SQLite pour ne pas crash
     DB_URL = 'sqlite:///reperage.db'
-    print("⚠️  Mode: SQLite (Fallback) - Vérifiez vos variables Railway")
+    print("⚠️  DATABASE: SQLite (Fallback) - Vérifiez vos variables Railway")
 
+# CONFIGURATION VOLUMES ET BRIDGE DOCU-GEN
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -308,4 +311,5 @@ def serve_uploads(rep_id, filename):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
 
