@@ -3,10 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Préparation Repérage - RootsKeepers</title>
+    <title>DOC-OS | {{ FIXER_DATA.region }}</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        .sub-section { border-left: 4px solid var(--secondary-color); padding: 20px; background: #fafafa; margin-bottom: 25px; border-radius: 0 8px 8px 0; }
+        .sub-section-title { font-weight: 800; color: var(--primary-color); text-transform: uppercase; margin-bottom: 15px; font-size: 0.9rem; letter-spacing: 1px; }
+    </style>
 </head>
 <body>
     
@@ -29,32 +35,181 @@
                 <button class="lang-btn" data-lang="ITAL">🇮🇹 ITAL</button>
                 <button class="lang-btn" data-lang="ESP">🇪🇸 ESP</button>
             </div>
-            <!-- AUCUN BOUTON DÉCONNEXION ICI (FIX 9) -->
         </div>
     </header>
     
     <div class="container">
-        <!-- COMPTEUR DE PROGRESSION 112 CHAMPS -->
-        <div class="progress-container">
+        
+        <!-- COMPTEUR DE PROGRESSION (SYNC 112) -->
+        <div class="progress-container" id="progress-container">
             <div class="progress-header">
-                <span><i data-lucide="check-circle"></i> Progress..</span>
-                <span id="progress-percentage">0%</span>
+                <div class="progress-title"><i data-lucide="check-circle"></i> <span>Progress..</span></div>
+                <div class="progress-percentage" id="progress-percentage">0%</div>
             </div>
-            <div class="progress-bar-container"><div class="progress-bar" id="progress-bar"></div></div>
+            <div class="progress-bar-container"><div class="progress-bar" id="progress-bar" style="width: 0%"></div></div>
             <div class="progress-stats"><span id="progress-filled">0</span> champs remplis sur 112</div>
         </div>
+        
+        <!-- I. IDENTITÉ CORRESPONDANT -->
+        <section class="text-content">
+            <div class="section-header"><i data-lucide="user"></i><h2 class="section-title">CORRESPONDANT LOCAL</h2></div>
+            <div class="fields-grid">
+                <div class="field-group"><label>Nom Complet</label><input type="text" name="fixer_nom" value="{{ FIXER_DATA.nom }}"></div>
+                <div class="field-group"><label>Email</label><input type="email" name="fixer_email" value="{{ FIXER_DATA.email }}"></div>
+                <div class="field-group"><label>Téléphone</label><input type="tel" name="fixer_telephone" value="{{ FIXER_DATA.telephone }}"></div>
+            </div>
+        </section>
+        
+        <!-- II. GRILLE DE REPÉRAGE (INTÉGRALE - 112 POINTS) -->
+        <section>
+            <div class="section-header"><i data-lucide="clipboard-list"></i><h2 class="section-title">GRILLE HAUTE SUBSTANCE</h2></div>
+            <div class="tabs-container">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="territoire">TERRITOIRE</button>
+                    <button class="tab-btn" data-tab="episode">ÉPISODE</button>
+                    <button class="tab-btn" data-tab="gardiens">GARDIENS (3)</button>
+                    <button class="tab-btn" data-tab="lieux">LIEUX (3)</button>
+                </div>
+                
+                <!-- TAB: TERRITOIRE (11 CHAMPS) -->
+                <div class="tab-content active" id="territoire">
+                    <div class="fields-grid">
+                        <div class="field-group"><label>Pays</label><input type="text" name="pays" value="{{ FIXER_DATA.pays }}"></div>
+                        <div class="field-group"><label>Région</label><input type="text" name="region" value="{{ FIXER_DATA.region }}"></div>
+                        <div class="field-group"><label>Ville principale</label><input type="text" name="ville"></div>
+                        <div class="field-group"><label>Population</label><input type="text" name="population"></div>
+                        <div class="field-group"><label>Langues</label><input type="text" name="langues"></div>
+                        <div class="field-group"><label>Période tournage</label><input type="text" name="climat"></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Histoire & Contexte</label><textarea name="histoire" rows="4"></textarea></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Traditions Culinaires</label><textarea name="traditions" rows="3"></textarea></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Autres Fêtes</label><textarea name="fetes" rows="3"></textarea></div>
+                        <div class="field-group"><label>Accès Logistique</label><input type="text" name="acces"></div>
+                        <div class="field-group"><label>Hébergement Équipe</label><input type="text" name="hebergement"></div>
+                    </div>
+                </div>
+                
+                <!-- TAB: ÉPISODE (9 CHAMPS) -->
+                <div class="tab-content" id="episode">
+                    <div class="fields-grid">
+                        <div class="field-group" style="grid-column: span 2;"><label>Particularité régionale (Angle)</label><textarea name="angle" rows="3"></textarea></div>
+                        <div class="field-group"><label>Fête centrale</label><input type="text" name="fete"></div>
+                        <div class="field-group"><label>Contraintes</label><input type="text" name="contraintes"></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Ce qu'il faut absolument filmer</label><textarea name="arc" rows="4"></textarea></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Moments-clés</label><textarea name="moments" rows="4"></textarea></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Éléments sensibles</label><textarea name="sensibles" rows="3"></textarea></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Autorisations</label><textarea name="autorisations" rows="3"></textarea></div>
+                        <div class="field-group"><label>Budget local</label><input type="text" name="budget"></div>
+                    </div>
+                </div>
+                
+                <!-- TAB: GARDIENS (3 x 14 = 42 CHAMPS) -->
+                <div class="tab-content" id="gardiens">
+                    {% for i in [1, 2, 3] %}
+                    <div class="sub-section">
+                        <div class="sub-section-title">Gardien {{ i }} : Identité & Transmission</div>
+                        <div class="fields-grid">
+                            <div class="field-group"><label>Nom</label><input type="text" name="gardien{{i}}_nom"></div>
+                            <div class="field-group"><label>Prénom</label><input type="text" name="gardien{{i}}_prenom"></div>
+                            <div class="field-group"><label>Âge</label><input type="number" name="gardien{{i}}_age"></div>
+                            <div class="field-group"><label>Genre</label><input type="text" name="gardien{{i}}_genre"></div>
+                            <div class="field-group"><label>Fonction sociale</label><input type="text" name="gardien{{i}}_fonction"></div>
+                            <div class="field-group"><label>Langues parlées</label><input type="text" name="gardien{{i}}_langues"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label>Savoir-faire transmis</label><textarea name="gardien{{i}}_savoir" rows="2"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label>Histoire personnelle & Parcours</label><textarea name="gardien{{i}}_histoire" rows="4"></textarea></div>
+                            <div class="field-group" style="grid-column: span 2;"><label>Évaluation Cinégénie</label><textarea name="gardien{{i}}_evaluation" rows="3"></textarea></div>
+                            <div class="field-group"><label>Adresse</label><input type="text" name="gardien{{i}}_adresse"></div>
+                            <div class="field-group"><label>Téléphone</label><input type="tel" name="gardien{{i}}_telephone"></div>
+                            <div class="field-group"><label>Email</label><input type="email" name="gardien{{i}}_email"></div>
+                            <div class="field-group"><label>Contact Intermédiaire</label><input type="text" name="gardien{{i}}_contact"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- TAB: LIEUX (3 x 15 = 45 CHAMPS) -->
+                <div class="tab-content" id="lieux">
+                    <div class="lieux-tabs">
+                        <button type="button" class="lieu-tab active" data-lieu="1">Lieu de vie</button>
+                        <button type="button" class="lieu-tab" data-lieu="2">Lieu de travail</button>
+                        <button type="button" class="lieu-tab" data-lieu="3">Lieu de fête</button>
+                    </div>
+                    {% for i in [1, 2, 3] %}
+                    <div class="lieu-content {% if i == 1 %}active{% endif %}" id="lieu-{{ i }}">
+                        <div class="fields-grid">
+                            <div class="field-group"><label>Nom du lieu</label><input type="text" name="lieu{{i}}_nom"></div>
+                            <div class="field-group"><label>Type d'environnement</label><input type="text" name="lieu{{i}}_type"></div>
+                            <div class="field-group" style="grid-column: span 2;"><label>Description visuelle</label><textarea name="lieu{{i}}_description" rows="3"></textarea></div>
+                            
+                            <div class="sub-section" style="grid-column: span 2;">
+                                <div class="sub-section-title">Analyse Artistique</div>
+                                <div class="fields-grid">
+                                    <div class="field-group"><label>Cinégénie</label><textarea name="lieu{{i}}_cinegenie"></textarea></div>
+                                    <div class="field-group"><label>Axes Caméra</label><textarea name="lieu{{i}}_axes"></textarea></div>
+                                    <div class="field-group"><label>Points de vue remarquables</label><textarea name="lieu{{i}}_points_vue"></textarea></div>
+                                    <div class="field-group"><label>Lumière / Moments</label><input type="text" name="lieu{{i}}_moments"></div>
+                                    <div class="field-group"><label>Ambiance sonore</label><input type="text" name="lieu{{i}}_ambiance"></div>
+                                    <div class="field-group" style="grid-column: span 2;"><label>Adéquation Narration</label><textarea name="lieu{{i}}_adequation"></textarea></div>
+                                </div>
+                            </div>
 
-        <!-- GRILLE INTÉGRALE (Territoire, Épisode, 3 Gardiens, 3 Lieux) -->
-        <!-- [Ici insérez le contenu des 112 champs sans aucune simplification] -->
-        <div class="tabs-nav">
-             <button class="tab-btn active" data-tab="territoire">TERRITOIRE</button>
-             <button class="tab-btn" data-tab="episode">ÉPISODE</button>
-             <button class="tab-btn" data-tab="gardiens">GARDIENS</button>
-             <button class="tab-btn" data-tab="lieux">LIEUX</button>
+                            <div class="sub-section" style="grid-column: span 2;">
+                                <div class="sub-section-title">Technique & Logistique</div>
+                                <div class="fields-grid">
+                                    <div class="field-group"><label>Accessibilité</label><input type="text" name="lieu{{i}}_accessibilite"></div>
+                                    <div class="field-group"><label>Sécurité / Risques</label><input type="text" name="lieu{{i}}_securite"></div>
+                                    <div class="field-group"><label>Électricité</label><input type="text" name="lieu{{i}}_electricite"></div>
+                                    <div class="field-group"><label>Espace équipe</label><input type="text" name="lieu{{i}}_espace"></div>
+                                    <div class="field-group"><label>Protection Météo</label><input type="text" name="lieu{{i}}_protection"></div>
+                                    <div class="field-group"><label>Autorisations</label><input type="text" name="lieu{{i}}_permis"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        
+        <!-- III. PHOTOS ET DOCUMENTS -->
+        <section class="text-content">
+            <div class="section-header"><i data-lucide="camera"></i><h2 class="section-title">PHOTOS & DOCUMENTS</h2></div>
+            <div class="upload-zone">
+                <input type="file" id="file-input" multiple accept="image/*,.pdf">
+                <div class="drop-area" id="drop-area">
+                    <i data-lucide="upload-cloud" style="width: 40px; height: 40px; color: var(--secondary-color);"></i>
+                    <p>Glissez vos fichiers ici ou cliquez pour parcourir</p>
+                </div>
+            </div>
+            <div class="files-preview" id="files-list"></div>
+        </section>
+        
+        <!-- IV. ACTIONS FINALES -->
+        <div class="actions-bar" style="display: flex; gap: 20px; justify-content: flex-end; margin-top: 40px;">
+            <button type="button" class="btn-save" id="btn-save" style="padding: 15px 40px; background: #2C3E50; color: white; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 ENREGISTRER LE BROUILLON</button>
+            <button type="button" class="btn-success" id="btn-submit" style="padding: 15px 40px; background: #27ae60; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; border: none;">✅ SOUMETTRE À LA PRODUCTION</button>
         </div>
-        <!-- ... Contenu des Tabs restauré ... -->
     </div>
     
+    <!-- CHAT SIDEPANEL -->
+    <button type="button" class="chat-toggle-btn" id="chat-toggle-btn"><i data-lucide="message-square"></i></button>
+    <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+            <span style="font-weight: bold;">Messages Production</span>
+            <button type="button" class="chat-close-btn" id="chat-close-btn"><i data-lucide="x"></i></button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-container">
+            <textarea class="chat-input" id="chat-input" placeholder="Écrire un message..."></textarea>
+            <button type="button" class="chat-send-btn" id="chat-send-btn"><i data-lucide="send"></i></button>
+        </div>
+    </div>
+
+    <!-- DATA BRIDGE -->
+    <script>
+        window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
+        window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
+    </script>
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="/static/js/app.js"></script>
     <script>lucide.createIcons();</script>
 </body>
