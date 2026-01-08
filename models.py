@@ -33,7 +33,7 @@ class Reperage(Base):
     lieux = relationship("Lieu", back_populates="reperage", cascade="all, delete-orphan")
     medias = relationship("Media", back_populates="reperage", cascade="all, delete-orphan")
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
-
+    progression_pourcent = Column(Integer, default=0) # Pour la jauge
     def to_dict(self):
         return {
             'id': self.id, 
