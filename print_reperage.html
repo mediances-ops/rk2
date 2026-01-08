@@ -4,73 +4,85 @@
     <meta charset="UTF-8">
     <title>DOC-OS_PRINT_{{ rep.region }}</title>
     <style>
-        body { font-family: 'Helvetica', Arial, sans-serif; color: #333; line-height: 1.4; padding: 20px; }
-        .header { border-bottom: 3px solid #E67E22; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { margin: 0; color: #2C3E50; font-size: 24pt; }
-        .section { margin-bottom: 25px; page-break-inside: avoid; }
-        .section-title { background: #2C3E50; color: white; padding: 8px 15px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .item { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .label { font-weight: bold; color: #E67E22; font-size: 10pt; text-transform: uppercase; }
-        .value { font-size: 11pt; margin-top: 3px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #2C3E50; line-height: 1.6; padding: 40px; background: white; }
+        .header { border-bottom: 4px solid #E67E22; padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 28pt; letter-spacing: -1px; }
+        .section { margin-bottom: 40px; page-break-inside: avoid; }
+        .section-title { background: #2C3E50; color: white; padding: 10px 20px; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; border-radius: 4px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .item { border-bottom: 1px solid #f1f1f1; padding: 10px 0; }
+        .label { font-weight: bold; color: #E67E22; font-size: 9pt; text-transform: uppercase; }
+        .value { font-size: 11pt; margin-top: 5px; color: #34495e; }
+        .full-width { grid-column: span 2; background: #fdfaf8; padding: 15px; border-radius: 8px; }
         
         @media print {
             @page { size: A4; margin: 15mm; }
-            .no-print { display: none; }
+            .no-print { display: none !important; }
             body { padding: 0; }
+            .section { border: 1px solid #eee; padding: 10px; }
         }
     </style>
 </head>
 <body>
-    <div class="no-print" style="background: #fdf2e9; padding: 20px; border: 1px solid #E67E22; margin-bottom: 30px; text-align: center;">
-        <p><strong>VUE D'IMPRESSION HAUTE SUBSTANCE</strong></p>
-        <button onclick="window.print()" style="padding: 10px 20px; background: #E67E22; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">🖨️ LANCER L'IMPRESSION / PDF</button>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <button onclick="window.print()" style="padding: 15px 30px; background: #E67E22; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">🖨️ IMPRIMER / GÉNÉRER PDF</button>
     </div>
 
     <div class="header">
         <div>
-            <h1>DOC-OS : {{ rep.region }}</h1>
-            <p>Dossier de production #{{ rep.id }} | {{ rep.statut.upper() }}</p>
+            <h1>{{ rep.region }}</h1>
+            <p><strong>Dossier de Production DOC-OS</strong> | ID #{{ rep.id }}</p>
         </div>
         <div style="text-align: right;">
-            <p><strong>Fixer :</strong> {{ rep.fixer_nom }}</p>
-            <p><strong>Pays :</strong> {{ rep.pays }}</p>
+            <p><strong>Statut :</strong> {{ rep.statut.upper() }}</p>
+            <p><strong>Synchronisation :</strong> {{ rep.progression_pourcent }}%</p>
         </div>
     </div>
 
+    <!-- SECTION 1 : FIXER -->
     <div class="section">
-        <div class="section-title">1. Identité du Territoire</div>
+        <div class="section-title">I. Correspondant Local</div>
+        <div class="grid">
+            <div class="item"><div class="label">Nom</div><div class="value">{{ rep.fixer_nom }}</div></div>
+            <div class="item"><div class="label">Pays</div><div class="value">{{ rep.pays }}</div></div>
+        </div>
+    </div>
+
+    <!-- SECTION 2 : TERRITOIRE -->
+    <div class="section">
+        <div class="section-title">II. Identité du Territoire</div>
         <div class="grid">
             {% for k, v in territoire.items() %}
-            {% if v %}
-            <div class="item">
-                <div class="label">{{ k }}</div>
+            <div class="item {% if v|length > 100 %}full-width{% endif %}">
+                <div class="label">{{ k.replace('_', ' ') }}</div>
                 <div class="value">{{ v|linkify|safe }}</div>
             </div>
-            {% endif %}
             {% endfor %}
         </div>
     </div>
 
+    <!-- SECTION 3 : ÉPISODE -->
     <div class="section">
-        <div class="section-title">2. Substance de l'Épisode</div>
+        <div class="section-title">III. Substance de l'Épisode</div>
         <div class="grid">
             {% for k, v in episode.items() %}
-            {% if v %}
-            <div class="item">
-                <div class="label">{{ k }}</div>
+            <div class="item {% if v|length > 100 %}full-width{% endif %}">
+                <div class="label">{{ k.replace('_', ' ') }}</div>
                 <div class="value">{{ v|linkify|safe }}</div>
             </div>
-            {% endif %}
             {% endfor %}
         </div>
     </div>
 
+    <!-- SECTION 4 : MÉDIAS -->
     <div class="section">
-        <div class="section-title">3. Galerie de Photos Terrain</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div class="section-title">IV. Galerie Photos Terrain</div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
             {% for m in rep.medias %}
-            <img src="/uploads/{{ rep.id }}/{{ m.nom_fichier }}" style="width: 30%; height: 150px; object-fit: cover; border: 1px solid #ddd;">
+            <div style="text-align: center;">
+                <img src="/uploads/{{ rep.id }}/{{ m.nom_fichier }}" style="width: 100%; height: 180px; object-fit: cover; border-radius: 5px;">
+                <p style="font-size: 8pt; color: #7f8c8d;">{{ m.nom_original }}</p>
+            </div>
             {% endfor %}
         </div>
     </div>
