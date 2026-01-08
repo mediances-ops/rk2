@@ -1,11 +1,15 @@
 import os, json, secrets, requests, re, io
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
+
+# PDF Generation
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
 # =================================================================
 # 1. INITIALISATION ET CONFIGURATION SÉCURISÉE
@@ -13,6 +17,7 @@ from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message
 app = Flask(__name__)
 CORS(app)
 
+# Récupération sécurisée de l'URL de base de données (Fix double 'ql')
 raw_db_url = os.environ.get('DATABASE_URL')
 if raw_db_url:
     if raw_db_url.startswith('postgres://'):
@@ -24,6 +29,7 @@ else:
     DB_URL = 'sqlite:///reperage.db'
     print("⚠️  DATABASE: SQLite (Fallback)")
 
+# CONFIGURATION VOLUMES ET BRIDGE DOCU-GEN
 UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -31,8 +37,10 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Initialisation Base de données
 engine = init_db(DB_URL)
 
+# --- FILTRES JINJA ---
 @app.template_filter('linkify')
 def linkify_text(text):
     if not text: return ""
@@ -40,7 +48,7 @@ def linkify_text(text):
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
-# 2. ROUTES DE NAVIGATION
+# 2. ROUTES DE NAVIGATION RACINE
 # =================================================================
 
 @app.route('/')
@@ -48,7 +56,7 @@ def index_root():
     return redirect(url_for('admin_dashboard'))
 
 # =================================================================
-# 3. ADMINISTRATION DES FIXERS
+# 3. ADMINISTRATION DES FIXERS (CORRESPONDANTS)
 # =================================================================
 
 @app.route('/admin/fixers')
@@ -85,7 +93,7 @@ def edit_fixer(id=None):
         fixer = session.get(Fixer, id) if id else None
         if request.method == 'POST':
             if not fixer:
-                # Sécurité : vérifier si l'email existe déjà avant de créer
+                # Vérification email unique pour éviter crash IntegrityError
                 existing = session.query(Fixer).filter_by(email=request.form.get('email')).first()
                 if existing:
                     fixer = existing
@@ -103,18 +111,13 @@ def edit_fixer(id=None):
             fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
             fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
             
-            try:
-                session.commit()
-            except IntegrityError:
-                session.rollback()
-                return "Erreur : Cet email est déjà utilisé par un autre correspondant.", 400
-                
+            session.commit()
             return redirect(url_for('admin_fixers_list'))
         return render_template('admin_fixer_edit_v2.html', fixer=fixer)
     finally: session.close()
 
 # =================================================================
-# 4. ADMINISTRATION DES REPÉRAGES
+# 4. ADMINISTRATION DES REPÉRAGES (DASHBOARD PILOTAGE)
 # =================================================================
 
 @app.route('/admin')
@@ -133,8 +136,16 @@ def admin_dashboard():
         reps_serialized = []
         for r in reps:
             f = session.get(Fixer, r.fixer_id)
+            # Notification Chat: Compter les messages non lus du FIXER
+            unread_count = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+            last_msg = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
+            
+            rep_data = r.to_dict()
+            rep_data['unread_count'] = unread_count
+            rep_data['last_sender'] = last_msg.auteur_nom if (last_msg and unread_count > 0) else None
+            
             reps_serialized.append({
-                'reperage': r.to_dict(), 
+                'reperage': rep_data, 
                 'fixer': f.to_dict() if f else None
             })
             
@@ -152,6 +163,28 @@ def admin_reperage_detail(id):
         fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
         return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, gardiens=rep.gardiens, lieux=rep.lieux, medias=rep.medias, fixer=fixer)
     finally: session.close()
+
+@app.route('/admin/reperage/<int:id>/pdf')
+def generate_pdf(id):
+    """Génération du PDF de repérage"""
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, 800, f"DOC-OS : DOSSIER DE REPÉRAGE #{rep.id}")
+    p.setFont("Helvetica", 12)
+    p.drawString(50, 780, f"Région : {rep.region}")
+    p.drawString(50, 765, f"Pays : {rep.pays}")
+    p.drawString(50, 750, f"Fixer : {rep.fixer_nom}")
+    p.drawString(50, 735, f"Statut : {rep.statut}")
+    p.line(50, 720, 550, 720)
+    p.showPage()
+    p.save()
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"Reperage_{rep.region}_{id}.pdf", mimetype='application/pdf')
 
 @app.route('/admin/reperages/create', methods=['POST'])
 def admin_create_reperage():
@@ -191,7 +224,6 @@ def update_reperage_admin(id):
 @app.route('/api/i18n/<lang>')
 def get_i18n(lang):
     try:
-        # Chercher le fichier i18n.json à la racine de l'app
         path = os.path.join(app.root_path, 'translations', 'i18n.json')
         with open(path, 'r', encoding='utf-8') as f:
             translations = json.load(f)
@@ -222,6 +254,16 @@ def update_reperage_api(id):
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
         
+        # CALCUL DE PROGRESSION (JAUGE)
+        # On compte les champs remplis dans territoire et episode (approx 20 champs clés)
+        filled_count = 0
+        if 'territoire_data' in data:
+            filled_count += len([v for v in data['territoire_data'].values() if v and len(str(v)) > 1])
+        if 'episode_data' in data:
+            filled_count += len([v for v in data['episode_data'].values() if v and len(str(v)) > 1])
+        
+        rep.progression_pourcent = min(100, int((filled_count / 18) * 100))
+
         if 'gardiens' in data:
             for g_data in data['gardiens']:
                 g_obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g_data.get('ordre')).first() or Gardien(reperage_id=id, ordre=g_data.get('ordre'))
@@ -237,7 +279,7 @@ def update_reperage_api(id):
                 session.add(l_obj)
 
         session.commit()
-        return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
     finally: session.close()
 
 @app.route('/api/reperages/<int:id>/medias', methods=['POST'])
@@ -265,10 +307,8 @@ def upload_media_api(id):
 def formulaire_token(token):
     session = get_session(engine)
     try:
-        # Correction : Remplacement de first_or_404 par un check standard
         rep = session.query(Reperage).filter_by(token=token).first()
         if not rep: abort(404)
-        
         fixer = session.get(Fixer, rep.fixer_id)
         fixer_data = {
             'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id,
