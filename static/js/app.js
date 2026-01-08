@@ -11,21 +11,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadTranslations(currentLanguage);
     initLanguageSelector();
     initTabs();
+    initFileUpload();
     initChat();
     if (currentReperageId) {
         await loadReperage(currentReperageId);
         await loadMedias(); 
     }
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
-    document.getElementById('chat-toggle-btn')?.addEventListener('click', () => document.getElementById('chat-panel').style.right = '0');
-    document.getElementById('chat-close-btn')?.addEventListener('click', () => document.getElementById('chat-panel').style.right = '-400px');
 });
 
-// FIX 4 : i18n Robustesse
+// i18n RESTAURATION (FIX 4)
 async function loadTranslations(lang) {
     try {
-        const response = await fetch(`${API_URL}/i18n/${lang}`);
-        translations = await response.json();
+        const res = await fetch(`${API_URL}/i18n/${lang}`);
+        translations = await res.json();
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const keys = el.getAttribute('data-i18n').split('.');
             let val = translations;
@@ -33,12 +32,16 @@ async function loadTranslations(lang) {
             if (val) el.textContent = val;
         });
         currentLanguage = lang;
-    } catch (e) { console.error("Erreur dictionnaire:", e); }
+    } catch (e) { console.error("i18n fail", e); }
 }
 
 function initLanguageSelector() {
     document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.addEventListener('click', () => loadTranslations(btn.dataset.lang));
+        btn.onclick = () => {
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadTranslations(btn.dataset.lang);
+        };
     });
 }
 
@@ -64,12 +67,12 @@ async function loadReperage(id) {
     const data = await res.json();
     // Remplissage Racine
     document.querySelectorAll('input[name], textarea[name]').forEach(input => {
-        const name = input.name;
-        if (data[name]) input.value = data[name];
-        else if (data.territoire_data && data.territoire_data[name]) input.value = data.territoire_data[name];
-        else if (data.episode_data && data.episode_data[name]) input.value = data.episode_data[name];
+        const n = input.name;
+        if (data[n]) input.value = data[n];
+        else if (data.territoire_data && data.territoire_data[n]) input.value = data.territoire_data[n];
+        else if (data.episode_data && data.episode_data[n]) input.value = data.episode_data[n];
     });
-    // Remplissage Segmenté Gardiens/Lieux (Fix 2)
+    // Remplissage Gardiens & Lieux (Segmentation Fix 2)
     if (data.gardiens) {
         data.gardiens.forEach(g => {
             Object.keys(g).forEach(k => {
@@ -91,39 +94,37 @@ async function loadReperage(id) {
 
 async function saveReperage(notif) {
     const p = calculateProgress();
-    // SEGMENTATION SÉCURISÉE (Fix 2)
     const data = { progression: p, territoire_data: {}, episode_data: {}, gardiens: [], lieux: [] };
     const epKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
 
-    // 1. Collecte Gardiens
+    // 1. Collecte Segmentée
     for (let i = 1; i <= 3; i++) {
         let g = { ordre: i };
         ['nom', 'prenom', 'age', 'genre', 'fonction', 'savoir', 'histoire', 'evaluation', 'langues', 'adresse', 'telephone', 'email', 'contact'].forEach(k => {
             g[k] = document.querySelector(`[name="gardien${i}_${k}"]`)?.value;
         });
         if (g.nom) data.gardiens.push(g);
-    }
-    // 2. Collecte Lieux
-    for (let i = 1; i <= 3; i++) {
+
         let l = { numero_lieu: i };
         ['nom', 'type', 'description', 'cinegenie', 'axes', 'points_vue', 'moments', 'ambiance', 'adequation', 'accessibilite', 'securite', 'electricite', 'espace', 'protection', 'permis'].forEach(k => {
             l[k] = document.querySelector(`[name="lieu${i}_${k}"]`)?.value;
         });
         if (l.nom) data.lieux.push(l);
     }
-    // 3. Dispatching Reste
+
+    // 2. Dispatch Reste
     document.querySelectorAll('input[name], textarea[name]').forEach(el => {
         if (['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
         else if (epKeys.includes(el.name)) data.episode_data[el.name] = el.value;
         else if (!el.name.startsWith('gardien') && !el.name.startsWith('lieu')) data.territoire_data[el.name] = el.value;
     });
 
-    await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     });
-    if (notif) alert("✅ Synchronisé (" + p + "%)");
+    if (res.ok && notif) alert("✅ Données Documentaires Synchronisées (" + p + "%)");
 }
 
 function initTabs() {
@@ -145,27 +146,42 @@ function initTabs() {
 
 async function loadMedias() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
-    const medias = await res.json();
-    document.getElementById('files-list').innerHTML = medias.map(m => `
+    const ms = await res.json();
+    document.getElementById('files-list').innerHTML = ms.map(m => `
         <div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:120px; object-fit:cover; border-radius:8px;"></div>
     `).join('');
 }
 
 function initChat() {
+    const toggle = document.getElementById('chat-toggle-btn');
+    if (!toggle) return;
+    toggle.onclick = () => { document.getElementById('chat-panel').style.right = '0'; loadMessages(); };
+    document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').style.right = '-400px';
     document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
         if (!input.value) return;
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondant', contenu: input.value })
-        });
-        input.value = '';
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondant', contenu: input.value }) });
+        input.value = ''; loadMessages();
     };
 }
 
-function initForms() {
-    document.querySelectorAll('input, textarea').forEach(el => {
-        el.oninput = () => { clearTimeout(window.t); window.t = setTimeout(calculateProgress, 500); };
-    });
+async function loadMessages() {
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
+    const msgs = await res.json();
+    document.getElementById('chat-messages').innerHTML = msgs.map(m => `
+        <div class="chat-message ${m.auteur_type}"><div class="chat-message-header"><strong>${m.auteur_nom}</strong></div><div class="chat-message-bubble">${m.contenu}</div></div>
+    `).join('');
+}
+
+function initFileUpload() {
+    const area = document.getElementById('drop-area');
+    if (!area) return;
+    area.onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = async (e) => {
+        for (let file of e.target.files) {
+            const fd = new FormData(); fd.append('file', file);
+            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
+        }
+        await loadMedias(); alert("📷 Photos sauvegardées.");
+    };
 }
