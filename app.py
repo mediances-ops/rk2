@@ -1,86 +1,218 @@
-const API_URL = '/api';
-let currentLanguage = localStorage.getItem('selectedLanguage') || 'FR';
-let currentReperageId = window.REPERAGE_ID || null;
-let translations = {};
+import os, json, secrets, requests, re, io
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort, send_file
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+from sqlalchemy import or_, text
+from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message, Fixer
 
-document.addEventListener('DOMContentLoaded', async function() {
-    if (window.FIXER_DATA) {
-        currentLanguage = window.FIXER_DATA.langue_default || 'FR';
-        currentReperageId = window.FIXER_DATA.reperage_id;
-    }
-    await loadTranslations(currentLanguage);
-    initLanguageSelector();
-    initTabs();
-    initFileUpload();
-    initChat();
-    if (currentReperageId) {
-        await loadReperage(currentReperageId);
-        await loadMedias(); // FIX : Charger les photos existantes
-    }
-    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
-});
+# PDF Moteur
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
-// ... (loadTranslations et i18n restent identiques)
+app = Flask(__name__)
+CORS(app)
 
-async function loadReperage(id) {
-    const res = await fetch(`${API_URL}/reperages/${id}`);
-    const data = await res.json();
-    fillFormData(data);
-    setTimeout(calculateProgress, 1000);
-}
+# --- CONFIGURATION RAILWAY ---
+raw_db_url = os.environ.get('DATABASE_URL')
+if raw_db_url:
+    DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url.startswith('postgres://') else raw_db_url
+else:
+    DB_URL = 'sqlite:///reperage.db'
 
-function calculateProgress() {
-    // On compte uniquement les textarea et inputs visibles
-    const inputs = document.querySelectorAll('.tab-content.active input[name], .tab-content.active textarea[name]');
-    // Note: Pour un calcul global, enlever ".tab-content.active"
-    const allInputs = document.querySelectorAll('input[name], textarea[name]');
-    let total = 0; let filled = 0;
-    
-    allInputs.forEach(input => {
-        if (!['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(input.name)) {
-            total++;
-            if (input.value && input.value.trim().length > 2) filled++;
+UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
+BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
+DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+engine = init_db(DB_URL)
+
+# Migration auto progression
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
+        conn.commit()
+    except Exception: pass
+
+@app.template_filter('linkify')
+def linkify_text(text):
+    if not text: return ""
+    url_pattern = r'(https?://[^\s]+)'
+    return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
+
+# =================================================================
+# I. ADMINISTRATION (DASHBOARD & FIXERS)
+# =================================================================
+
+@app.route('/')
+def index_root():
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin')
+def admin_dashboard():
+    session = get_session(engine)
+    try:
+        reps = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
+        fixers = session.query(Fixer).all()
+        stats = {
+            'total': len(reps),
+            'brouillons': len([r for r in reps if r.statut == 'brouillon']),
+            'soumis': len([r for r in reps if r.statut == 'soumis']),
+            'valides': len([r for r in reps if r.statut == 'validé'])
         }
-    });
+        reps_serialized = []
+        for r in reps:
+            f = session.get(Fixer, r.fixer_id)
+            unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+            last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
+            r_data = r.to_dict()
+            r_data['unread_count'] = unread
+            r_data['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
+            r_data['prog_pourcent'] = r.progression_pourcent or 0
+            reps_serialized.append({'reperage': r_data, 'fixer': f.to_dict() if f else None})
+        return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats)
+    finally: session.close()
 
-    const percent = Math.round((filled / total) * 100);
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-percentage').textContent = percent + '%';
-    document.getElementById('progress-filled').textContent = filled;
-    document.getElementById('progress-total').textContent = total;
-    return percent;
-}
+@app.route('/admin/fixers')
+def admin_fixers_list():
+    session = get_session(engine)
+    try:
+        query = session.query(Fixer)
+        search = request.args.get('search')
+        pays = request.args.get('pays')
+        if search:
+            query = query.filter(or_(Fixer.nom.like(f"%{search}%"), Fixer.prenom.like(f"%{search}%")))
+        if pays:
+            query = query.filter(Fixer.pays == pays)
+        
+        fixers = query.order_by(Fixer.nom.asc()).all()
+        pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
+        return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
+    finally: session.close()
 
-// FIX : Affichage des photos sur le formulaire
-async function loadMedias() {
-    if (!currentReperageId) return;
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
-    const medias = await res.json();
-    const list = document.getElementById('files-list');
-    if (list) {
-        list.innerHTML = medias.map(m => `
-            <div class="file-item">
-                <img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px; height:100px; object-fit:cover;">
-                <span>${m.nom_original}</span>
-            </div>
-        `).join('');
-    }
-}
+@app.route('/admin/fixer/new', methods=['GET', 'POST'])
+@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
+def edit_fixer(id=None):
+    session = get_session(engine)
+    try:
+        fixer = session.get(Fixer, id) if id else None
+        if request.method == 'POST':
+            if not fixer:
+                fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
+                session.add(fixer)
+            for k in ['nom', 'prenom', 'email', 'telephone', 'societe', 'pays', 'region', 'langue_preferee']:
+                if k in request.form: setattr(fixer, k, request.form[k])
+            fixer.actif = 'actif' in request.form
+            fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
+            session.commit()
+            return redirect(url_for('admin_fixers_list'))
+        return render_template('admin_fixer_edit_v2.html', fixer=fixer)
+    finally: session.close()
 
-async function saveReperage(notif) {
-    const currentPercent = calculateProgress();
-    const data = { progression: currentPercent, territoire_data: {}, episode_data: {} };
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => {
-        if (['fixer_nom', 'fixer_email', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
-        else data.territoire_data[el.name] = el.value;
-    });
-    await fetch(`${API_URL}/reperages/${currentReperageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (notif) alert("Sauvegarde : " + currentPercent + "%");
-}
+@app.route('/admin/fixer/<int:id>')
+def admin_fixer_detail(id):
+    session = get_session(engine)
+    fixer = session.get(Fixer, id)
+    reps = session.query(Reperage).filter_by(fixer_id=id).all()
+    return render_template('admin_fixer_detail.html', fixer=fixer, reperages=reps)
 
-// ... (initTabs, initChat et initFileUpload restent identiques à V20)
-// Ajouter l'appel à loadMedias() dans initFileUpload après chaque upload
+@app.route('/admin/reperage/<int:id>')
+def admin_reperage_detail(id):
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id)
+        if not rep: abort(404)
+        t = json.loads(rep.territoire_data) if rep.territoire_data else {}
+        e = json.loads(rep.episode_data) if rep.episode_data else {}
+        fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
+        return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, gardiens=rep.gardiens, lieux=rep.lieux, medias=rep.medias, fixer=fixer)
+    finally: session.close()
+
+# =================================================================
+# II. PDF & UPLOAD
+# =================================================================
+
+@app.route('/admin/reperage/<int:id>/pdf')
+def generate_pdf(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, 800, f"DOC-OS : RAPPORT #{id}")
+    p.setFont("Helvetica", 12)
+    p.drawString(50, 780, f"Region: {rep.region} | Fixer: {rep.fixer_nom}")
+    
+    y = 750
+    t_data = json.loads(rep.territoire_data) if rep.territoire_data else {}
+    for k, v in t_data.items():
+        if v and y > 50:
+            p.drawString(50, y, f"{k}: {str(v)[:70]}")
+            y -= 20
+    
+    p.save(); buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"Rep_{id}.pdf", mimetype='application/pdf')
+
+@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
+def handle_medias(id):
+    session = get_session(engine)
+    if request.method == 'GET':
+        ms = session.query(Media).filter_by(reperage_id=id).all()
+        return jsonify([m.to_dict() for m in ms])
+    
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+    os.makedirs(path, exist_ok=True)
+    file.save(os.path.join(path, filename))
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
+    session.add(m); session.commit()
+    return jsonify(m.to_dict())
+
+# =================================================================
+# III. API SOUDURE FORMULAIRE
+# =================================================================
+
+@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
+def api_rep_manage(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    if request.method == 'GET':
+        return jsonify(rep.to_dict())
+    
+    data = request.json
+    if 'progression' in data: rep.progression_pourcent = data['progression']
+    for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'statut']:
+        if f in data: setattr(rep, f, data[f])
+    if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
+    if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
+    session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/api/i18n/<lang>')
+def api_i18n(lang):
+    try:
+        path = os.path.join(app.root_path, 'translations', 'i18n.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            trans = json.load(f)
+        return jsonify(trans.get(lang, trans.get('FR')))
+    except: return jsonify({}), 404
+
+@app.route('/formulaire/<token>')
+def form_fixer(token):
+    session = get_session(engine)
+    rep = session.query(Reperage).filter_by(token=token).first()
+    if not rep: abort(404)
+    f = session.get(Fixer, rep.fixer_id)
+    f_data = {'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id, 'nom': f.nom if f else '', 'prenom': f.prenom if f else '', 'langue_default': f.langue_preferee if f else 'FR'}
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
+
+@app.route('/uploads/<int:rep_id>/<filename>')
+def custom_serve_file(rep_id, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
