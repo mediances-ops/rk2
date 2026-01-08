@@ -76,17 +76,18 @@ function initLanguageSelector() {
 }
 
 // ============= MODULE PROGRESSION (SYNC ADMIN) =============
+// ... [Init identique] ...
+
 function calculateProgress() {
-    // Ciblage des champs substantiels
     const fields = document.querySelectorAll('input[name], textarea[name], select[name]');
-    let total = 0;
+    let total = 0; 
     let filled = 0;
 
     fields.forEach(input => {
-        // On exclut les métadonnées pour ne pas fausser le calcul de la substance
+        // Exclure uniquement les champs d'identité
         const excluded = ['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'];
         if (!excluded.includes(input.name)) {
-            total++;
+            total++; // Ce total sera maintenant de ~112
             if (input.value && input.value.trim().length > 2) {
                 filled++;
             }
@@ -95,20 +96,39 @@ function calculateProgress() {
 
     const percentage = total > 0 ? Math.round((filled / total) * 100) : 0;
     
-    // Mise à jour de l'interface Correspondent
-    const bar = document.getElementById('progress-bar');
-    const textPercent = document.getElementById('progress-percentage');
-    const textFilled = document.getElementById('progress-filled');
-    const textTotal = document.getElementById('progress-total');
-
-    if (bar) bar.style.width = percentage + '%';
-    if (textPercent) textPercent.textContent = percentage + '%';
-    if (textFilled) textFilled.textContent = filled;
-    if (textTotal) textTotal.textContent = total;
+    // Mise à jour interface
+    document.getElementById('progress-bar').style.width = percentage + '%';
+    document.getElementById('progress-percentage').textContent = percentage + '%';
+    document.getElementById('progress-filled').textContent = filled;
+    document.getElementById('progress-total').textContent = total; // Affiche 112
 
     return percentage;
 }
 
+async function saveReperage(notif) {
+    const currentPercent = calculateProgress();
+    const data = { 
+        progression: currentPercent, 
+        territoire_data: {}, 
+        episode_data: {} 
+    };
+
+    // Segmentation des données pour le serveur
+    const episodeKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
+
+    document.querySelectorAll('input[name], textarea[name]').forEach(el => {
+        if (['fixer_nom', 'fixer_email', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
+        else if (episodeKeys.includes(el.name)) data.episode_data[el.name] = el.value;
+        else data.territoire_data[el.name] = el.value; // Inclus Gardiens et Lieux
+    });
+
+    await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (notif) alert("✅ Sync Totale : " + currentPercent + "%");
+}
 // ============= MODULE DATA (CRUD) =============
 async function loadReperage(id) {
     try {
@@ -308,3 +328,4 @@ function initForms() {
         });
     });
 }
+
