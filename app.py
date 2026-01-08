@@ -9,17 +9,15 @@ from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message
 # PDF Moteur
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
 
-# =================================================================
-# 1. INITIALISATION ET SÉCURISATION
-# =================================================================
 app = Flask(__name__)
 CORS(app)
 
+# --- CONFIGURATION RAILWAY ---
 raw_db_url = os.environ.get('DATABASE_URL')
 if raw_db_url:
     DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url.startswith('postgres://') else raw_db_url
+    print("✅ DATABASE: PostgreSQL Connectée")
 else:
     DB_URL = 'sqlite:///reperage.db'
 
@@ -32,6 +30,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 engine = init_db(DB_URL)
 
+# Migration volante pour la jauge
 with engine.connect() as conn:
     try:
         conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
@@ -45,7 +44,7 @@ def linkify_text(text):
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
 # =================================================================
-# 2. ROUTES NAVIGATION & ADMIN
+# I. ROUTES ADMINISTRATION (FIXERS & DASHBOARD)
 # =================================================================
 
 @app.route('/')
@@ -77,96 +76,64 @@ def admin_dashboard():
         return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats)
     finally: session.close()
 
-# =================================================================
-# 3. PDF HAUTE SUBSTANCE (CORRIGÉ)
-# =================================================================
-
-@app.route('/admin/reperage/<int:id>/pdf')
-def generate_pdf(id):
-    session = get_session(engine)
-    rep = session.get(Reperage, id)
-    if not rep: abort(404)
-    
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
-    # En-tête
-    p.setFont("Helvetica-Bold", 20)
-    p.drawString(50, height - 50, "DOC-OS | DOSSIER DE REPÉRAGE")
-    p.setFont("Helvetica", 12)
-    p.drawString(50, height - 70, f"Région : {rep.region or 'N/A'} | Pays : {rep.pays or 'N/A'}")
-    p.line(50, height - 80, width - 50, height - 80)
-
-    # Contenu
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, height - 110, "INFORMATIONS GÉNÉRALES")
-    p.setFont("Helvetica", 11)
-    p.drawString(60, height - 130, f"Fixer : {rep.fixer_nom or 'N/A'}")
-    p.drawString(60, height - 145, f"Date de création : {rep.created_at.strftime('%d/%m/%Y')}")
-    p.drawString(60, height - 160, f"Niveau de complétion : {rep.progression_pourcent}%")
-
-    # Section Territoire
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(50, height - 200, "1. LE TERRITOIRE")
-    t_data = json.loads(rep.territoire_data) if rep.territoire_data else {}
-    y = height - 220
-    for key, val in t_data.items():
-        if val and y > 50:
-            p.setFont("Helvetica-Bold", 10)
-            p.drawString(60, y, f"{key.capitalize()} :")
-            p.setFont("Helvetica", 10)
-            p.drawString(150, y, f"{str(val)[:80]}")
-            y -= 15
-
-    p.showPage()
-    p.save()
-    buffer.seek(0)
-    return send_file(buffer, as_attachment=True, download_name=f"DOC_OS_{rep.region}_{id}.pdf", mimetype='application/pdf')
-
-# =================================================================
-# 4. FORMULAIRE DISTANT (FIX ATTRIBUT ERROR)
-# =================================================================
-
-@app.route('/formulaire/<token>')
-def formulaire_token(token):
+@app.route('/admin/reperage/<int:id>')
+def route_admin_detail(id):
     session = get_session(engine)
     try:
-        # CORRECTION : Utilisation de first() car first_or_404 n'existe pas en standard
-        rep = session.query(Reperage).filter_by(token=token).first()
-        if not rep: 
-            abort(404)
-        
-        fixer = session.get(Fixer, rep.fixer_id)
-        f_data = {
-            'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id,
-            'nom': fixer.nom if fixer else '', 'prenom': fixer.prenom if fixer else '',
-            'langue_default': fixer.langue_preferee if fixer else 'FR'
-        }
-        return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
+        rep = session.get(Reperage, id)
+        if not rep: abort(404)
+        t = json.loads(rep.territoire_data) if rep.territoire_data else {}
+        e = json.loads(rep.episode_data) if rep.episode_data else {}
+        fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
+        return render_template('admin_reperage_detail.html', reperage=rep, territoire=t, episode=e, gardiens=rep.gardiens, lieux=rep.lieux, medias=rep.medias, fixer=fixer)
+    finally: session.close()
+
+@app.route('/admin/fixers')
+def route_admin_fixers():
+    session = get_session(engine)
+    try:
+        fixers = session.query(Fixer).all()
+        return render_template('admin_fixers.html', fixers=fixers, pays_list=[])
+    finally: session.close()
+
+@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
+def route_admin_update(id):
+    session = get_session(engine)
+    try:
+        data = request.json
+        rep = session.get(Reperage, id)
+        if not rep: abort(404)
+        for f in ['region', 'pays', 'statut', 'notes_admin']:
+            if f in data: setattr(rep, f, data[f])
+        session.commit()
+        return jsonify({'status': 'success'})
     finally: session.close()
 
 # =================================================================
-# 5. API SOUDURE (SYNCHRONISATION)
+# II. API SOUDURE (UTILISÉE PAR LE FORMULAIRE JS)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['PUT'])
-def update_reperage_api(id):
+def api_update_reperage(id):
     session = get_session(engine)
     try:
         data = request.json
         rep = session.get(Reperage, id)
         if not rep: return jsonify({'error': '404'}), 404
 
-        if 'progression' in data: rep.progression_pourcent = data['progression']
+        # SYNC PROGRESSION
+        if 'progression' in data:
+            rep.progression_pourcent = data['progression']
 
-        for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'notes_admin', 'image_region', 'statut']:
+        # Identité
+        for f in ['fixer_nom', 'fixer_prenom', 'pays', 'region', 'statut']:
             if f in data: setattr(rep, f, data[f])
 
+        # Datas
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'episode_data' in data: rep.episode_data = json.dumps(data['episode_data'])
         
-        # Gardiens et Lieux
+        # Deep Save Gardiens/Lieux
         if 'gardiens' in data:
             for g in data['gardiens']:
                 obj = session.query(Gardien).filter_by(reperage_id=id, ordre=g.get('ordre')).first() or Gardien(reperage_id=id, ordre=g.get('ordre'))
@@ -179,46 +146,66 @@ def update_reperage_api(id):
                 for k, v in l.items():
                     if hasattr(obj, k): setattr(obj, k, v)
                 session.add(obj)
+        
         session.commit()
         return jsonify({'status': 'success'})
     finally: session.close()
 
+@app.route('/api/reperages/<int:id>', methods=['GET'])
+def api_get_reperage(id):
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id)
+        return jsonify(rep.to_dict()) if rep else ({'error': '404'}, 404)
+    finally: session.close()
+
+@app.route('/api/i18n/<lang>')
+def api_get_i18n(lang):
+    try:
+        path = os.path.join(app.root_path, 'translations', 'i18n.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            trans = json.load(f)
+        return jsonify(trans.get(lang, trans.get('FR')))
+    except: return jsonify({}), 404
+
+# =================================================================
+# III. MÉDIAS, PDF ET CHAT
+# =================================================================
+
+@app.route('/admin/reperage/<int:id>/pdf')
+def route_generate_pdf(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    p.drawString(50, 800, f"DOC-OS Dossier #{id}")
+    p.drawString(50, 780, f"Région: {rep.region}")
+    p.save(); buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name=f"Rep_{id}.pdf", mimetype='application/pdf')
+
 @app.route('/api/reperages/<int:id>/medias', methods=['POST'])
-def upload_media_api(id):
-    if 'file' not in request.files: return "Aucun fichier", 400
+def api_upload_media(id):
     file = request.files['file']
     filename = secure_filename(file.filename)
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
     os.makedirs(path, exist_ok=True)
-    file_path = os.path.join(path, filename)
-    file.save(file_path)
-    
+    file.save(os.path.join(path, filename))
     session = get_session(engine)
-    try:
-        m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, 
-                  chemin_fichier=f"{id}/{filename}", type='photo' if filename.lower().endswith(('.jpg','.png','.jpeg')) else 'document')
-        session.add(m); session.commit()
-        return jsonify(m.to_dict())
-    finally: session.close()
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, type='photo')
+    session.add(m); session.commit()
+    return jsonify(m.to_dict())
 
-# --- AUTRES ROUTES (Identiques V18) ---
-@app.route('/api/i18n/<lang>')
-def get_i18n(lang):
-    try:
-        path = os.path.join(app.root_path, 'translations', 'i18n.json')
-        with open(path, 'r', encoding='utf-8') as f:
-            translations = json.load(f)
-        return jsonify(translations.get(lang, translations.get('FR', {})))
-    except: return jsonify({'error': 'Not found'}), 404
-
-@app.route('/api/reperages/<int:id>', methods=['GET'])
-def get_reperage_api_v2(id):
+@app.route('/formulaire/<token>')
+def route_formulaire_fixer(token):
     session = get_session(engine)
-    rep = session.get(Reperage, id)
-    return jsonify(rep.to_dict()) if rep else ({'error': '404'}, 404)
+    rep = session.query(Reperage).filter_by(token=token).first()
+    if not rep: abort(404)
+    f = session.get(Fixer, rep.fixer_id)
+    f_data = {'region': rep.region, 'pays': rep.pays, 'image_region': rep.image_region, 'reperage_id': rep.id, 'nom': f.nom if f else '', 'prenom': f.prenom if f else '', 'langue_default': f.langue_preferee if f else 'FR'}
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=f_data)
 
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-def handle_messages(id):
+def api_handle_messages(id):
     session = get_session(engine)
     if request.method == 'GET':
         msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
@@ -226,6 +213,10 @@ def handle_messages(id):
     data = request.json
     m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify(m.to_dict()), 201
+
+@app.route('/uploads/<int:rep_id>/<filename>')
+def serve_file(rep_id, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
