@@ -260,5 +260,35 @@
             }
         }
     </script>
+    <!-- PANNEAU IA PILOTAGE (PRODUCTION UNIQUEMENT) -->
+    <button type="button" class="ai-floating-btn" onclick="toggleAIPanel()" style="position: fixed; left: 20px; bottom: 20px; width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); display: flex; align-items: center; justify-content: center; z-index: 999;">
+        <i data-lucide="brain-circuit"></i>
+    </button>
+    
+    <div class="ai-panel-overlay" id="aiPanelOverlay" onclick="closeAIPanel()" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 1000;"></div>
+    
+    <div class="ai-panel" id="aiPanel" style="position: fixed; left: -75%; top: 0; width: 75%; height: 100vh; background: white; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2); z-index: 1001; transition: left 0.3s ease; display: flex; flex-direction: column;">
+        <div class="ai-panel-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; display: flex; justify-content: space-between; align-items: center; color: white;">
+            <h3>Assistant IA RootsKeepers</h3>
+            <button onclick="closeAIPanel()" style="background: rgba(255, 255, 255, 0.2); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer;">×</button>
+        </div>
+        <div class="ai-panel-body" style="flex: 1;">
+            <iframe src="https://destinationsetcuisines.com/site" style="width: 100%; height: 100%; border: none;"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function toggleAIPanel() { 
+            document.getElementById('aiPanel').style.left = '0'; 
+            document.getElementById('aiPanelOverlay').style.opacity = '1';
+            document.getElementById('aiPanelOverlay').style.visibility = 'visible';
+        }
+        function closeAIPanel() { 
+            document.getElementById('aiPanel').style.left = '-75%'; 
+            document.getElementById('aiPanelOverlay').style.opacity = '0';
+            document.getElementById('aiPanelOverlay').style.visibility = 'hidden';
+        }
+    </script>
 </body>
 </html>
+
