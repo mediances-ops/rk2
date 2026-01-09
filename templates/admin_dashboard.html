@@ -45,7 +45,7 @@
         }
         .btn-filter { background: #2C3E50; color: white; padding: 12px 30px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; text-transform: uppercase; }
 
-        /* STATS CARDS (TERMINOLOGIE "EN COURS") */
+        /* STATS CARDS */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid #E67E22; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-card .number { font-size: 3rem; font-weight: 800; color: #2C3E50; }
@@ -63,15 +63,15 @@
         .progress-mini-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width 0.6s ease; }
         
         .chat-notif { 
-            background: #e74c3c; color: white; padding: 4px 10px; border-radius: 20px; 
-            font-size: 0.7rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+            background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; 
+            font-size: 0.75rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
             animation: pulse 2s infinite; 
         }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-        /* BADGES STATUT RESTAURÉS */
+        /* BADGES STATUT */
         .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
-        .badge-brouillon { background: #fef3c7; color: #92400e; } /* Affiché comme EN COURS */
+        .badge-brouillon { background: #fef3c7; color: #92400e; } 
         .badge-soumis { background: #dbeafe; color: #1e40af; }
         .badge-validé { background: #d1fae5; color: #065f46; }
 
@@ -85,13 +85,28 @@
         .btn-rocket { background: #000; border: 1px solid #e50914; color: #e50914; }
         .btn-action:hover { transform: translateY(-3px); filter: brightness(1.2); }
 
-        /* MODALS & IA */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        /* MODALS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; border-radius: 24px; width: 650px; padding: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+
+        /* --- PANNEAUX COULISSANTS --- */
         
-        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 65px; height: 65px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
-        #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.4s; box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        /* CHAT ADMIN (À DROITE) */
+        #adminChatPanel { position: fixed; right: -450px; top: 0; width: 450px; height: 100vh; background: white; z-index: 20000; transition: 0.4s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: -10px 0 35px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+        .chat-header { background: #2C3E50; color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f9f9f9; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubble { padding: 12px 16px; border-radius: 15px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
+        .chat-bubble.production { background: #E67E22; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-bubble.fixer { background: white; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
+
+        /* ASSISTANT IA (À GAUCHE - 80%) */
+        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .ai-floating-btn:hover { transform: scale(1.1) rotate(10deg); }
+        #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        .ai-header { background: #2C3E50; padding: 25px 40px; color: white; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -129,7 +144,7 @@
             <a href="/admin" class="nav-link" style="padding: 12px 20px;">RESET</a>
         </form>
 
-        <!-- STATS (TERMINOLOGIE MISE À JOUR) -->
+        <!-- STATS -->
         <div class="stats">
             <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total Dossiers</div></div>
             <div class="stat-card"><div class="number" style="color:#E67E22;">{{ stats.brouillons }}</div><div class="label">En cours</div></div>
@@ -137,7 +152,7 @@
             <div class="stat-card"><div class="number" style="color:#27ae60;">{{ stats.valides }}</div><div class="label">Validés</div></div>
         </div>
 
-        <!-- TABLEAU DE PILOTAGE -->
+        <!-- TABLEAU -->
         <div class="table-container">
             <table>
                 <thead>
@@ -164,9 +179,11 @@
                         <td>
                             <span style="font-weight: 700;">{{ rep.fixer_nom }}</span><br>
                             {% if rep.unread_count > 0 %}
-                            <span class="chat-notif" onclick="toggleAI()">
+                            <span class="chat-notif" onclick="openAdminChat({{ rep.id }}, '{{ rep.fixer_nom }}')">
                                 <i data-lucide="message-circle" style="width:12px;"></i> {{ rep.unread_count }} NEW ({{ rep.last_sender }})
                             </span>
+                            {% else %}
+                            <button onclick="openAdminChat({{ rep.id }}, '{{ rep.fixer_nom }}')" style="background:none; border:none; color:#3498db; cursor:pointer;"><i data-lucide="message-square" style="width:16px;"></i></button>
                             {% endif %}
                         </td>
                         <td>
@@ -191,68 +208,97 @@
         </div>
     </div>
 
-    <!-- MODAL NOUVEAU -->
+    <!-- CHAT ADMIN (À DROITE) -->
+    <div id="adminChatPanel">
+        <div class="chat-header">
+            <h3 id="chatTitle" style="font-weight: 800; letter-spacing: -1px;">Dossier Chat</h3>
+            <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="chat-messages" id="adminChatMessages"></div>
+        <div class="chat-input-area">
+            <textarea id="adminChatInput" placeholder="Répondre au correspondant..." rows="2" style="flex:1; padding:12px; border-radius:10px; border:2px solid #e2e8f0; font-family:inherit;"></textarea>
+            <button onclick="sendAdminMessage()" style="background:#E67E22; color:white; border:none; border-radius:10px; padding:0 15px; cursor:pointer;"><i data-lucide="send"></i></button>
+        </div>
+    </div>
+
+    <!-- ASSISTANT IA (À GAUCHE) -->
+    <button onclick="toggleAI()" class="ai-floating-btn" title="Assistant IA"><i data-lucide="brain-circuit" style="width: 35px; height: 35px;"></i></button>
+    <div id="aiPanel">
+        <div class="ai-header">
+            <h2 style="font-weight:800; margin:0; letter-spacing: -1px;">ASSISTANT IA PRODUCTION</h2>
+            <button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+        </div>
+        <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
+    </div>
+
+    <!-- MODALS CRUD -->
     <div class="modal-overlay" id="modalNouveau">
         <div class="modal-box">
-            <h2 style="font-weight: 800; margin-bottom: 25px; letter-spacing: -1px;">CRÉER UN NOUVEAU DOSSIER</h2>
+            <div class="modal-header"><h2>CRÉER UN NOUVEAU DOSSIER</h2><button onclick="closeModal('modalNouveau')" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
             <form onsubmit="creerDossier(event)">
                 <div class="form-group"><label>Région Cible</label><input type="text" id="new_region" required></div>
                 <div class="form-group"><label>Pays</label><input type="text" id="new_pays" required></div>
-                <div class="form-group">
-                    <label>Correspondant</label>
-                    <select id="new_fixer_id" required>
-                        <option value="">-- SELECTIONNER --</option>
-                        {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="form-group"><label>Lien Image Bannière</label><input type="url" id="new_image"></div>
-                <div class="form-group"><label>Notes de Production</label><textarea id="new_notes" rows="3"></textarea></div>
-                <button type="submit" class="btn-filter" style="width:100%; margin-top:10px;">GÉNÉRER LE DOSSIER</button>
+                <div class="form-group"><label>Assigner Fixer</label><select id="new_fixer_id" required><option value="">-- CHOISIR --</option>{% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}</select></div>
+                <div class="form-group"><label>Notes Initiales</label><textarea id="new_notes" rows="3"></textarea></div>
+                <button type="submit" class="btn-filter" style="width:100%; margin-top:10px;">LANCER LE DOSSIER</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL MODIFIER -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
-            <h2 style="font-weight: 800; margin-bottom: 25px; letter-spacing: -1px;">MODIFIER L'IDENTITÉ</h2>
+            <div class="modal-header"><h2>MODIFIER L'IDENTITÉ</h2><button onclick="closeModal('modalEdit')" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
             <form onsubmit="updateRegion(event)">
                 <input type="hidden" id="edit_id">
                 <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
                 <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                <div class="form-group">
-                    <label>Statut Global</label>
-                    <select id="edit_statut">
-                        <option value="brouillon">🟠 EN COURS</option>
-                        <option value="soumis">🔵 SOUMIS</option>
-                        <option value="validé">🟢 VALIDÉ</option>
-                    </select>
-                </div>
+                <div class="form-group"><label>Statut</label><select id="edit_statut"><option value="brouillon">🟠 EN COURS</option><option value="soumis">🔵 SOUMIS</option><option value="validé">🟢 VALIDÉ</option></select></div>
                 <div class="form-group"><label>Notes Administratives</label><textarea id="edit_notes" rows="5"></textarea></div>
                 <button type="submit" class="btn-filter" style="width:100%; background: #E67E22;">SAUVEGARDER</button>
             </form>
         </div>
     </div>
 
-    <!-- IA SIDEBAR -->
-    <button onclick="toggleAI()" class="ai-floating-btn"><i data-lucide="brain-circuit" style="width: 32px; height: 32px;"></i></button>
-    <div id="aiPanel">
-        <div class="ai-header">
-            <h2 style="font-weight:800; margin:0;">ASSISTANT IA PRODUCTION</h2>
-            <button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
-        </div>
-        <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
-    </div>
-
     <script>
         lucide.createIcons();
         const reperagesData = {{ reperages|tojson|safe }};
-        function toggleAI() { const p = document.getElementById('aiPanel'); p.style.left = (p.style.left==='0px') ? '-82%' : '0px'; }
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { 
-            if(id) document.getElementById(id).classList.remove('active');
-            else document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+        let currentChatId = null;
+
+        /* LOGIQUE IA */
+        function toggleAI() {
+            const p = document.getElementById('aiPanel');
+            p.style.left = (p.style.left === '0px') ? '-82%' : '0px';
         }
+
+        /* LOGIQUE CHAT ADMIN */
+        function openAdminChat(id, name) {
+            currentChatId = id;
+            document.getElementById('chatTitle').textContent = "Dialogue Dossier #" + id + " (" + name + ")";
+            document.getElementById('adminChatPanel').style.right = '0';
+            loadAdminMessages();
+        }
+        function closeAdminChat() { document.getElementById('adminChatPanel').style.right = '-450px'; }
+        async function loadAdminMessages() {
+            const res = await fetch(`/api/reperages/${currentChatId}/messages`);
+            const msgs = await res.json();
+            document.getElementById('adminChatMessages').innerHTML = msgs.map(m => `
+                <div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>
+            `).join('');
+        }
+        async function sendAdminMessage() {
+            const input = document.getElementById('adminChatInput');
+            if(!input.value.trim()) return;
+            await fetch(`/api/reperages/${currentChatId}/messages`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value })
+            });
+            input.value = ''; loadAdminMessages();
+        }
+
+        /* LOGIQUE MODALS & ACTIONS */
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function openEditModal(id) {
             const item = reperagesData.find(x => x.reperage.id === id);
             document.getElementById('edit_id').value = id;
@@ -265,7 +311,7 @@
         async function creerDossier(e) {
             e.preventDefault();
             const f = document.getElementById('new_fixer_id');
-            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, fixer_nom: f.options[f.selectedIndex].text, notes_admin: document.getElementById('new_notes').value, image_region: document.getElementById('new_image').value };
+            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, fixer_nom: f.options[f.selectedIndex].text, notes_admin: document.getElementById('new_notes').value };
             await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             window.location.reload();
         }
@@ -277,19 +323,19 @@
             window.location.reload();
         }
         async function deleteRep(id, reg) {
-            if (confirm(`⚠️ Supprimer définitivement ${reg} ?`)) {
+            if (confirm(`⚠️ SUPPRIMER DÉFINITIVEMENT ${reg} ?`)) {
                 await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' });
                 window.location.reload();
             }
         }
         async function sendToIA(id) {
-            if(!confirm("🚀 Lancer Métamorphose IA ?")) return;
+            if(!confirm("🚀 LANCER MÉTAMORPHOSE IA ?")) return;
             const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
             const result = await res.json();
-            if (result.bridge_sent) alert("✅ Données transmises au Bridge !");
-            else alert("⚠️ Erreur.");
+            if (result.bridge_sent) alert("✅ TRANSMIS AU BRIDGE.");
+            else alert("⚠️ ERREUR.");
         }
-        window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) closeModal(); }
+        window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); }
     </script>
 </body>
 </html>
