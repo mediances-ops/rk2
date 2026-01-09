@@ -8,22 +8,50 @@ from models import init_db, get_session, Reperage, Gardien, Lieu, Media, Message
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURATION
+# =================================================================
+# 1. CONFIGURATION ET CONNEXION (RAILWAY POSTGRESQL)
+# =================================================================
 raw_db_url = os.environ.get('DATABASE_URL')
-DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
-app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
+if raw_db_url:
+    if raw_db_url.startswith('postgres://'):
+        DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1)
+    else:
+        DB_URL = raw_db_url
+    print("✅ DATABASE: PostgreSQL Connectée")
+else:
+    DB_URL = 'sqlite:///reperage.db'
+    print("⚠️ DATABASE: Fallback SQLite")
+
+UPLOAD_FOLDER = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 engine = init_db(DB_URL)
 
-# MIGRATION VOLANTE 5 ONGLETS
+# --- PATCH DE MIGRATION VOLANT (SÉCURITÉ POSTGRESQL) ---
 with engine.connect() as conn:
     try:
+        # Table Reperages : Segments 5 Onglets
         conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS particularite_data TEXT DEFAULT '{}'"))
         conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS fete_data TEXT DEFAULT '{}'"))
+        conn.execute(text("ALTER TABLE reperages ADD COLUMN IF NOT EXISTS progression_pourcent INTEGER DEFAULT 0"))
+        # Table Gardiens : Caractérisation
+        conn.execute(text("ALTER TABLE gardiens ADD COLUMN IF NOT EXISTS nom_prenom VARCHAR(255)"))
+        conn.execute(text("ALTER TABLE gardiens ADD COLUMN IF NOT EXISTS psychologie TEXT"))
+        conn.execute(text("ALTER TABLE gardiens ADD COLUMN IF NOT EXISTS intermediaire TEXT"))
+        # Table Lieux : Technique
+        conn.execute(text("ALTER TABLE lieux ADD COLUMN IF NOT EXISTS son TEXT"))
+        conn.execute(text("ALTER TABLE lieux ADD COLUMN IF NOT EXISTS elec TEXT"))
+        conn.execute(text("ALTER TABLE lieux ADD COLUMN IF NOT EXISTS espace TEXT"))
+        conn.execute(text("ALTER TABLE lieux ADD COLUMN IF NOT EXISTS meteo TEXT"))
+        conn.execute(text("ALTER TABLE lieux ADD COLUMN IF NOT EXISTS permis TEXT"))
         conn.commit()
-    except Exception: pass
+        print("🛠️ DATABASE: Migration structurelle V.32 OK")
+    except Exception as e:
+        print(f"ℹ️ DATABASE: Migration déjà effectuée ou : {e}")
 
 @app.template_filter('linkify')
 def linkify_text(text):
@@ -31,50 +59,114 @@ def linkify_text(text):
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
-# ROUTES
+# =================================================================
+# 2. ADMINISTRATION (DASHBOARD & FILTRES)
+# =================================================================
+
 @app.route('/')
 def index_root(): return redirect('/admin')
 
 @app.route('/admin')
 def admin_dashboard():
     session = get_session(engine)
-    reps = session.query(Reperage).order_by(Reperage.created_at.desc()).all()
-    stats = {'total': len(reps), 'brouillons': len([r for r in reps if r.statut == 'brouillon']), 'soumis': len([r for r in reps if r.statut == 'soumis']), 'valides': len([r for r in reps if r.statut == 'validé'])}
-    reps_serialized = []
-    for r in reps:
-        f = session.query(Fixer).get(r.fixer_id)
-        unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-        last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
-        r_data = r.to_dict(); r_data['unread_count'] = unread; r_data['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
-        reps_serialized.append({'reperage': r_data, 'fixer': f.to_dict() if f else None})
-    return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=session.query(Fixer).all(), stats=stats, pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
+    try:
+        query = session.query(Reperage)
+        statut_f = request.args.get('statut')
+        pays_f = request.args.get('pays')
+        if statut_f: query = query.filter(Reperage.statut == statut_f)
+        if pays_f: query = query.filter(Reperage.pays == pays_f)
+        
+        reps = query.order_by(Reperage.created_at.desc()).all()
+        fixers = session.query(Fixer).all()
+        
+        stats = {
+            'total': session.query(Reperage).count(),
+            'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
+            'soumis': session.query(Reperage).filter_by(statut='soumis').count(),
+            'valides': session.query(Reperage).filter_by(statut='validé').count()
+        }
+        
+        reps_serialized = []
+        for r in reps:
+            f = session.query(Fixer).get(r.fixer_id)
+            unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+            last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.created_at.desc()).first()
+            r_data = r.to_dict()
+            r_data['unread_count'] = unread
+            r_data['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
+            reps_serialized.append({'reperage': r_data, 'fixer': f.to_dict() if f else None})
+            
+        pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
+        return render_template('admin_dashboard.html', reperages=reps_serialized, fixers=fixers, stats=stats, pays_list=pays_list)
+    finally: session.close()
 
-@app.route('/admin/reperage/<int:id>')
-def admin_view_reperage(id):
+# =================================================================
+# 3. GESTION DES FIXERS (CRUD 100%)
+# =================================================================
+
+@app.route('/admin/fixers')
+def admin_fixers_list():
     session = get_session(engine)
-    rep = session.get(Reperage, id)
-    if not rep: abort(404)
-    return render_template('admin_reperage_detail.html', 
-        reperage=rep, 
-        territoire=json.loads(rep.territoire_data), 
-        particularites=json.loads(rep.particularite_data),
-        fete=json.loads(rep.fete_data),
-        episode=json.loads(rep.episode_data),
-        fixer=session.get(Fixer, rep.fixer_id)
-    )
+    try:
+        fixers = session.query(Fixer).order_by(Fixer.nom.asc()).all()
+        pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
+        return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
+    finally: session.close()
+
+@app.route('/admin/fixer/new', methods=['GET', 'POST'])
+@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
+def admin_edit_fixer(id=None):
+    session = get_session(engine)
+    try:
+        fixer = session.get(Fixer, id) if id else None
+        if request.method == 'POST':
+            if not fixer:
+                fixer = Fixer(token_unique=secrets.token_hex(4), created_at=datetime.now())
+                session.add(fixer)
+            
+            fields = ['nom', 'prenom', 'email', 'telephone', 'telephone_2', 'societe', 'fonction', 'site_web', 'numero_siret', 'adresse_1', 'adresse_2', 'code_postal', 'ville', 'pays', 'region', 'photo_profil_url', 'bio', 'specialites', 'langue_preferee', 'notes_internes']
+            for k in fields:
+                if k in request.form: setattr(fixer, k, request.form[k])
+            
+            fixer.actif = 'actif' in request.form
+            fixer.langues_parlees = ", ".join(request.form.getlist('langues_parlees'))
+            fixer.lien_personnel = f"{request.host_url}formulaire/{fixer.token_unique}"
+            session.commit()
+            return redirect('/admin/fixers')
+        return render_template('admin_fixer_edit_v2.html', fixer=fixer)
+    finally: session.close()
+
+@app.route('/admin/fixer/<int:id>')
+def admin_view_fixer_profile(id):
+    session = get_session(engine)
+    try:
+        f = session.get(Fixer, id)
+        if not f: abort(404)
+        reps = session.query(Reperage).filter_by(fixer_id=id).all()
+        return render_template('admin_fixer_detail.html', fixer=f, reperages=reps)
+    finally: session.close()
+
+# =================================================================
+# 4. API SOUDURE & SYNC (HAUTE SUBSTANCE)
+# =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
-def api_sync_5_tabs(id):
+def api_sync_high_sub(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
+        if not rep: return jsonify({'error': '404'}), 404
         if request.method == 'GET': return jsonify(rep.to_dict())
+        
         data = request.json
+        # Synchronisation Jauge
         if 'progression' in data: rep.progression_pourcent = data['progression']
+        
+        # Mise à jour Identité
         for f in ['fixer_nom', 'pays', 'region', 'statut']:
             if f in data: setattr(rep, f, data[f])
-        
-        # SAUVEGARDE SEGMENTÉE 5 RÉSERVOIRS
+            
+        # SAUVEGARDE SEGMENTÉE (SOUDURE RELATIONNELLE)
         if 'territoire_data' in data: rep.territoire_data = json.dumps(data['territoire_data'])
         if 'particularite_data' in data: rep.particularite_data = json.dumps(data['particularite_data'])
         if 'fete_data' in data: rep.fete_data = json.dumps(data['fete_data'])
@@ -92,17 +184,68 @@ def api_sync_5_tabs(id):
                 for k, v in l_data.items():
                     if hasattr(obj, k): setattr(obj, k, v)
                 session.add(obj)
+        
         session.commit()
-        return jsonify({'status': 'success'})
+        return jsonify({'status': 'success', 'synced': rep.progression_pourcent})
     finally: session.close()
 
-# Routes secondaires (ZIP, Print, Fixers, Chat, i18n) maintenues sans simplification
+# =================================================================
+# 5. MOTEURS DE SORTIE (PRINT & ZIP)
+# =================================================================
+
 @app.route('/admin/reperage/<int:id>/print')
-def admin_print(id):
-    session = get_session(engine); rep = session.get(Reperage, id)
-    t = json.loads(rep.territoire_data); p = json.loads(rep.particularite_data); f_d = json.loads(rep.fete_data); e = json.loads(rep.episode_data)
+def admin_print_high_sub(id):
+    session = get_session(engine)
+    rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    t = json.loads(rep.territoire_data or "{}")
+    p = json.loads(rep.particularite_data or "{}")
+    f_d = json.loads(rep.fete_data or "{}")
+    e = json.loads(rep.episode_data or "{}")
     pairs = [{'gardien': session.query(Gardien).filter_by(reperage_id=id, ordre=i).first(), 'lieu': session.query(Lieu).filter_by(reperage_id=id, numero_lieu=i).first(), 'index': i} for i in [1,2,3]]
     return render_template('print_reperage.html', rep=rep, territoire=t, particularites=p, fete=f_d, episode=e, pairs=pairs, fixer=session.get(Fixer, rep.fixer_id))
 
+@app.route('/admin/reperage/<int:id>/photos')
+def admin_zip_gen(id):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+    if not os.path.exists(path): return "Aucune photo", 404
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w') as zf:
+        for root, _, files in os.walk(path):
+            for file in files: zf.write(os.path.join(root, file), file)
+    memory_file.seek(0)
+    return send_file(memory_file, download_name=f"Substance_Photos_{id}.zip", as_attachment=True)
+
+# =================================================================
+# 6. COLLABORATION & BRIDGE
+# =================================================================
+
+@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
+def api_chat(id):
+    session = get_session(engine)
+    if request.method == 'GET':
+        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.created_at.asc()).all()
+        return jsonify([m.to_dict() for m in msgs])
+    data = request.json
+    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit(); return jsonify(m.to_dict()), 201
+
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_delete_rep(id):
+    session = get_session(engine); rep = session.get(Reperage, id)
+    if rep: session.delete(rep); session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_rep():
+    session = get_session(engine); data = request.json
+    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=data.get('fixer_nom'), notes_admin=data.get('notes_admin'), statut='brouillon')
+    session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/uploads/<int:rep_id>/<filename>')
+def serve_uploads(rep_id, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
