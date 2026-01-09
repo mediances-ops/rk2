@@ -1,6 +1,3 @@
-/**
- * DOC-OS V.38 - Cerveau Front-end de Synchronisation
- */
 const API_URL = '/api';
 let currentLanguage = localStorage.getItem('selectedLanguage') || 'FR';
 let currentReperageId = window.REPERAGE_ID || null;
@@ -14,43 +11,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadTranslations(currentLanguage);
     initLanguageSelector();
     initTabs();
-    initFileUpload();
     initChat();
-    initForms();
-    if (currentReperageId) {
-        await loadReperage(currentReperageId);
-        await loadMedias(); 
-    }
+    if (currentReperageId) await loadReperage(currentReperageId);
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
 });
 
-// MODULE i18n (FIX 8)
 async function loadTranslations(lang) {
-    try {
-        const res = await fetch(`${API_URL}/i18n/${lang}`);
-        translations = await res.json();
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            const val = key.split('.').reduce((p, c) => p && p[c], translations);
-            if (val) el.textContent = val;
-        });
-        currentLanguage = lang;
-    } catch (e) { console.error("i18n error", e); }
+    const res = await fetch(`${API_URL}/i18n/${lang}`);
+    translations = await res.json();
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const val = el.getAttribute('data-i18n').split('.').reduce((p, c) => p && p[c], translations);
+        if (val) el.textContent = val;
+    });
+    currentLanguage = lang;
 }
 
 function calculateProgress() {
     const fields = document.querySelectorAll('input[name], textarea[name]');
     let total = 0; let filled = 0;
-    fields.forEach(input => {
-        if (!['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(input.name)) {
-            total++; if (input.value && input.value.trim().length > 2) filled++;
+    fields.forEach(f => {
+        if (!['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(f.name)) {
+            total++; if (f.value && f.value.trim().length > 2) filled++;
         }
     });
-    const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-    document.getElementById('progress-bar').style.width = percent + '%';
-    document.getElementById('progress-percentage').textContent = percent + '%';
+    const p = Math.round((filled / total) * 100);
+    document.getElementById('progress-bar').style.width = p + '%';
+    document.getElementById('progress-percentage').textContent = p + '%';
     document.getElementById('progress-filled').textContent = filled;
-    return percent;
+    return p;
 }
 
 async function loadReperage(id) {
@@ -60,9 +48,10 @@ async function loadReperage(id) {
         const n = input.name;
         if (data[n]) input.value = data[n];
         else if (data.territoire_data && data.territoire_data[n]) input.value = data.territoire_data[n];
+        else if (data.particularite_data && data.particularite_data[n]) input.value = data.particularite_data[n];
+        else if (data.fete_data && data.fete_data[n]) input.value = data.fete_data[n];
         else if (data.episode_data && data.episode_data[n]) input.value = data.episode_data[n];
     });
-    // Remplissage Gardiens & Lieux segmentés
     if (data.gardiens) data.gardiens.forEach(g => {
         Object.keys(g).forEach(k => {
             const el = document.querySelector(`[name="gardien${g.ordre}_${k}"]`);
@@ -78,71 +67,32 @@ async function loadReperage(id) {
     setTimeout(calculateProgress, 1000);
 }
 
-// CHAT ENGAGEANT (FIX 9)
-function initChat() {
-    const toggle = document.getElementById('chat-toggle-btn');
-    const panel = document.getElementById('chat-panel');
-    if (!toggle) return;
-
-    toggle.onclick = () => {
-        panel.classList.toggle('active');
-        if (panel.classList.contains('active')) loadMessages();
-    };
-    document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
-
-    document.getElementById('chat-send-btn').onclick = async () => {
-        const input = document.getElementById('chat-input');
-        if (!input.value) return;
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                auteur_type: 'fixer',
-                auteur_nom: window.FIXER_DATA.prenom || 'Correspondant',
-                contenu: input.value
-            })
-        });
-        input.value = '';
-        loadMessages();
-    };
-}
-
-async function loadMessages() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
-    const msgs = await res.json();
-    const container = document.getElementById('chat-messages');
-    container.innerHTML = msgs.map(m => {
-        const isFixer = m.auteur_type === 'fixer';
-        return `
-            <div class="msg-wrapper ${isFixer ? 'msg-fixer' : 'msg-production'}">
-                <div class="bubble">${m.contenu}</div>
-                <div class="msg-meta">${m.auteur_nom} • ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-            </div>
-        `;
-    }).join('');
-    container.scrollTop = container.scrollHeight;
-}
-
 async function saveReperage(notif) {
     const p = calculateProgress();
-    const data = { progression: p, territoire_data: {}, episode_data: {}, gardiens: [], lieux: [] };
-    const epKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
+    const data = { progression: p, territoire_data: {}, particularite_data: {}, fete_data: {}, episode_data: {}, gardiens: [], lieux: [] };
+    
+    // Segmentation des clés
+    const partKeys = ['angle', 'fete_nom', 'contraintes', 'arc', 'moments', 'sensibles', 'budget', 'notes'];
+    const feteKeys = ['fete_lieu_date', 'fete_pourquoi', 'fete_origines', 'fete_deroulement', 'fete_visuel', 'fete_responsable'];
 
+    // Collecte Triptyques
     for (let i = 1; i <= 3; i++) {
         let g = { ordre: i };
-        ['nom', 'prenom', 'age', 'genre', 'fonction', 'savoir', 'histoire', 'evaluation', 'langues', 'adresse', 'telephone', 'email', 'contact'].forEach(k => {
+        ['nom_prenom', 'age', 'fonction', 'savoir', 'histoire', 'psychologie', 'evaluation', 'langues', 'contact', 'intermediaire'].forEach(k => {
             g[k] = document.querySelector(`[name="gardien${i}_${k}"]`)?.value;
         });
-        if (g.nom) data.gardiens.push(g);
+        if (g.nom_prenom) data.gardiens.push(g);
         let l = { numero_lieu: i };
-        ['nom', 'type', 'description', 'cinegenie', 'axes', 'points_vue', 'moments', 'ambiance', 'adequation', 'accessibilite', 'securite', 'electricite', 'espace', 'protection', 'permis'].forEach(k => {
+        ['nom', 'type', 'description', 'cinegenie', 'axes', 'points_vue', 'moments', 'son', 'adequation', 'acces', 'securite', 'elec', 'espace', 'meteo', 'permis'].forEach(k => {
             l[k] = document.querySelector(`[name="lieu${i}_${k}"]`)?.value;
         });
         if (l.nom) data.lieux.push(l);
     }
+
     document.querySelectorAll('input[name], textarea[name]').forEach(el => {
-        if (['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
-        else if (epKeys.includes(el.name)) data.episode_data[el.name] = el.value;
+        if (['fixer_nom', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
+        else if (partKeys.includes(el.name)) data.particularite_data[el.name] = el.value;
+        else if (feteKeys.includes(el.name)) data.fete_data[el.name] = el.value;
         else if (!el.name.startsWith('gardien') && !el.name.startsWith('lieu')) data.territoire_data[el.name] = el.value;
     });
 
@@ -150,32 +100,6 @@ async function saveReperage(notif) {
     if (notif) alert("✅ Synchronisé (" + p + "%)");
 }
 
-function initLanguageSelector() {
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            loadTranslations(btn.dataset.lang);
-        };
-    });
-}
-function initFileUpload() {
-    const area = document.getElementById('drop-area');
-    if (!area) return;
-    area.onclick = () => document.getElementById('file-input').click();
-    document.getElementById('file-input').onchange = async (e) => {
-        for (let file of e.target.files) {
-            const fd = new FormData(); fd.append('file', file);
-            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
-        }
-        await loadMedias(); 
-    };
-}
-async function loadMedias() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
-    const ms = await res.json();
-    document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;"></div>`).join('');
-}
 function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = () => {
@@ -184,16 +108,13 @@ function initTabs() {
             document.getElementById(btn.dataset.tab).classList.add('active');
         };
     });
-    document.querySelectorAll('.lieu-tab').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.lieu-tab, .lieu-content').forEach(el => el.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(`lieu-${btn.dataset.lieu}`).classList.add('active');
-        };
-    });
 }
-function initForms() {
-    document.querySelectorAll('input, textarea').forEach(el => {
-        el.oninput = () => { clearTimeout(window.t); window.t = setTimeout(calculateProgress, 500); };
-    });
+
+function initChat() {
+    document.getElementById('chat-send-btn').onclick = async () => {
+        const input = document.getElementById('chat-input');
+        if (!input.value) return;
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondant', contenu: input.value }) });
+        input.value = '';
+    };
 }
