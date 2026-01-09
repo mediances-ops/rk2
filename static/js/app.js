@@ -1,39 +1,34 @@
-// ============= CONFIGURATION & GLOBALES =============
+/**
+ * DOC-OS V.38 - Cerveau Front-end de Synchronisation
+ */
 const API_URL = '/api';
 let currentLanguage = localStorage.getItem('selectedLanguage') || 'FR';
 let currentReperageId = window.REPERAGE_ID || null;
 let translations = {};
 
-// ============= INITIALISATION =============
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Initialisation DOC-OS V.37');
-
     if (window.FIXER_DATA) {
         currentLanguage = window.FIXER_DATA.langue_default || 'FR';
         currentReperageId = window.FIXER_DATA.reperage_id;
     }
-
     await loadTranslations(currentLanguage);
     initLanguageSelector();
     initTabs();
     initFileUpload();
     initChat();
     initForms();
-
     if (currentReperageId) {
         await loadReperage(currentReperageId);
         await loadMedias(); 
     }
-
-    setInterval(() => saveReperage(false), 120000);
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
 });
 
-// ============= MODULE i18n =============
+// MODULE i18n (FIX 8)
 async function loadTranslations(lang) {
     try {
-        const response = await fetch(`${API_URL}/i18n/${lang}`);
-        translations = await response.json();
+        const res = await fetch(`${API_URL}/i18n/${lang}`);
+        translations = await res.json();
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const val = key.split('.').reduce((p, c) => p && p[c], translations);
@@ -43,36 +38,21 @@ async function loadTranslations(lang) {
     } catch (e) { console.error("i18n error", e); }
 }
 
-function initLanguageSelector() {
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            loadTranslations(btn.dataset.lang);
-        };
-    });
-}
-
-// ============= MODULE PROGRESSION (SOUDURE 2) =============
 function calculateProgress() {
     const fields = document.querySelectorAll('input[name], textarea[name]');
     let total = 0; let filled = 0;
     fields.forEach(input => {
-        const excluded = ['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'];
-        if (!excluded.includes(input.name)) {
-            total++;
-            if (input.value && input.value.trim().length > 2) filled++;
+        if (!['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(input.name)) {
+            total++; if (input.value && input.value.trim().length > 2) filled++;
         }
     });
     const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
-    
     document.getElementById('progress-bar').style.width = percent + '%';
     document.getElementById('progress-percentage').textContent = percent + '%';
     document.getElementById('progress-filled').textContent = filled;
     return percent;
 }
 
-// ============= MODULE CRUD =============
 async function loadReperage(id) {
     const res = await fetch(`${API_URL}/reperages/${id}`);
     const data = await res.json();
@@ -82,27 +62,68 @@ async function loadReperage(id) {
         else if (data.territoire_data && data.territoire_data[n]) input.value = data.territoire_data[n];
         else if (data.episode_data && data.episode_data[n]) input.value = data.episode_data[n];
     });
-    if (data.gardiens) {
-        data.gardiens.forEach(g => {
-            Object.keys(g).forEach(k => {
-                const el = document.querySelector(`[name="gardien${g.ordre}_${k}"]`);
-                if (el) el.value = g[k];
-            });
+    // Remplissage Gardiens & Lieux segmentés
+    if (data.gardiens) data.gardiens.forEach(g => {
+        Object.keys(g).forEach(k => {
+            const el = document.querySelector(`[name="gardien${g.ordre}_${k}"]`);
+            if (el) el.value = g[k];
         });
-    }
-    if (data.lieux) {
-        data.lieux.forEach(l => {
-            Object.keys(l).forEach(k => {
-                const el = document.querySelector(`[name="lieu${l.numero_lieu}_${k}"]`);
-                if (el) el.value = l[k];
-            });
+    });
+    if (data.lieux) data.lieux.forEach(l => {
+        Object.keys(l).forEach(k => {
+            const el = document.querySelector(`[name="lieu${l.numero_lieu}_${k}"]`);
+            if (el) el.value = l[k];
         });
-    }
+    });
     setTimeout(calculateProgress, 1000);
 }
 
+// CHAT ENGAGEANT (FIX 9)
+function initChat() {
+    const toggle = document.getElementById('chat-toggle-btn');
+    const panel = document.getElementById('chat-panel');
+    if (!toggle) return;
+
+    toggle.onclick = () => {
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) loadMessages();
+    };
+    document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
+
+    document.getElementById('chat-send-btn').onclick = async () => {
+        const input = document.getElementById('chat-input');
+        if (!input.value) return;
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                auteur_type: 'fixer',
+                auteur_nom: window.FIXER_DATA.prenom || 'Correspondant',
+                contenu: input.value
+            })
+        });
+        input.value = '';
+        loadMessages();
+    };
+}
+
+async function loadMessages() {
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
+    const msgs = await res.json();
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = msgs.map(m => {
+        const isFixer = m.auteur_type === 'fixer';
+        return `
+            <div class="msg-wrapper ${isFixer ? 'msg-fixer' : 'msg-production'}">
+                <div class="bubble">${m.contenu}</div>
+                <div class="msg-meta">${m.auteur_nom} • ${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            </div>
+        `;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
 async function saveReperage(notif) {
-    if (!currentReperageId) return;
     const p = calculateProgress();
     const data = { progression: p, territoire_data: {}, episode_data: {}, gardiens: [], lieux: [] };
     const epKeys = ['angle', 'fete', 'arc', 'moments', 'contraintes', 'sensibles', 'autorisations', 'budget', 'notes'];
@@ -119,22 +140,42 @@ async function saveReperage(notif) {
         });
         if (l.nom) data.lieux.push(l);
     }
-
     document.querySelectorAll('input[name], textarea[name]').forEach(el => {
         if (['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'].includes(el.name)) data[el.name] = el.value;
         else if (epKeys.includes(el.name)) data.episode_data[el.name] = el.value;
         else if (!el.name.startsWith('gardien') && !el.name.startsWith('lieu')) data.territoire_data[el.name] = el.value;
     });
 
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (res.ok && notif) alert("✅ Synchronisé (" + p + "%)");
+    await fetch(`${API_URL}/reperages/${currentReperageId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+    if (notif) alert("✅ Synchronisé (" + p + "%)");
 }
 
-// ... (initTabs, initChat, initFileUpload identiques V34)
+function initLanguageSelector() {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadTranslations(btn.dataset.lang);
+        };
+    });
+}
+function initFileUpload() {
+    const area = document.getElementById('drop-area');
+    if (!area) return;
+    area.onclick = () => document.getElementById('file-input').click();
+    document.getElementById('file-input').onchange = async (e) => {
+        for (let file of e.target.files) {
+            const fd = new FormData(); fd.append('file', file);
+            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
+        }
+        await loadMedias(); 
+    };
+}
+async function loadMedias() {
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
+    const ms = await res.json();
+    document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;"></div>`).join('');
+}
 function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = () => {
@@ -150,40 +191,6 @@ function initTabs() {
             document.getElementById(`lieu-${btn.dataset.lieu}`).classList.add('active');
         };
     });
-}
-function initChat() {
-    const toggle = document.getElementById('chat-toggle-btn');
-    if (!toggle) return;
-    toggle.onclick = () => { document.getElementById('chat-panel').style.right = '0'; loadMessages(); };
-    document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').style.right = '-400px';
-    document.getElementById('chat-send-btn').onclick = async () => {
-        const input = document.getElementById('chat-input');
-        if (!input.value) return;
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondant', contenu: input.value }) });
-        input.value = ''; loadMessages();
-    };
-}
-async function loadMessages() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
-    const msgs = await res.json();
-    document.getElementById('chat-messages').innerHTML = msgs.map(m => `<div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>`).join('');
-}
-function initFileUpload() {
-    const area = document.getElementById('drop-area');
-    if (!area) return;
-    area.onclick = () => document.getElementById('file-input').click();
-    document.getElementById('file-input').onchange = async (e) => {
-        for (let file of e.target.files) {
-            const fd = new FormData(); fd.append('file', file);
-            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
-        }
-        await loadMedias();
-    };
-}
-async function loadMedias() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
-    const ms = await res.json();
-    document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:100px;object-fit:cover;"></div>`).join('');
 }
 function initForms() {
     document.querySelectorAll('input, textarea').forEach(el => {
