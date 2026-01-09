@@ -2,87 +2,269 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>{{ reperage.region }} | Substance Detail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ reperage.region or 'Repérage' }} | Analyse de Substance</title>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; padding: 20px; color: #2C3E50; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .page-header { background: linear-gradient(rgba(44,80,121,0.9), rgba(44,80,121,0.9)), url('{{ reperage.image_region or "https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg" }}'); background-size:cover; border-radius: 16px; padding: 40px; color: white; margin-bottom: 30px; }
-        .tab-content { display: none; background: white; padding: 40px; border-radius: 0 0 16px 16px; }
-        .tab-content.active { display: block; }
-        .info-box { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1.5px solid #e2e8f0; margin-bottom: 20px; }
-        .label { font-size: 0.75rem; font-weight: 800; color: #E67E22; text-transform: uppercase; margin-bottom: 5px; display: block; }
-        .value { font-size: 1.05rem; font-weight: 600; white-space: pre-wrap; }
-        .sub-section { border-left: 4px solid #E67E22; padding-left: 20px; margin-bottom: 30px; }
+        /* ============================================================
+           ARCHITECTURE VISUELLE V7 - FICHE DE SUBSTANCE INTÉGRALE
+           ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; color: #2C3E50; line-height: 1.6; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* HEADER V7 AVEC BANNIÈRE RÉGION */
+        .page-header {
+            background: linear-gradient(rgba(44, 62, 80, 0.85), rgba(44, 62, 80, 0.85)), url('{{ reperage.image_region or "https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg" }}');
+            background-size: cover; background-position: center;
+            border-radius: 16px; padding: 60px 40px; margin-bottom: 30px; color: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        .page-header h1 { font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; text-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+        .header-meta { display: flex; gap: 30px; margin-top: 15px; font-weight: 600; align-items: center; }
+        .meta-item { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+        .status-badge { padding: 8px 20px; border-radius: 30px; font-weight: 800; text-transform: uppercase; font-size: 0.85rem; }
+        .status-brouillon { background: #fef3c7; color: #92400e; }
+        .status-soumis { background: #dbeafe; color: #1e40af; }
+        .status-validé { background: #d1fae5; color: #065f46; }
+
+        /* NAVIGATION ACTIONS */
+        .nav-actions { display: flex; gap: 12px; margin-bottom: 30px; flex-wrap: wrap; }
+        .btn { padding: 14px 24px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; transition: 0.3s; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-secondary { background: #2C3E50; }
+        .btn-info { background: #3b82f6; }
+        .btn-warning { background: #E67E22; }
+        .btn-success { background: #27ae60; }
+        .btn-zip { background: #8e44ad; }
+        .btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+
+        /* SECTIONS DE SUBSTANCE */
+        .section { background: white; border-radius: 20px; padding: 40px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
+        .section-title { font-size: 1.6rem; font-weight: 800; text-transform: uppercase; color: #2C3E50; }
+        
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .info-box { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1.5px solid #e2e8f0; }
+        .info-label { font-size: 0.75rem; font-weight: 800; color: #E67E22; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .info-value { font-size: 1.05rem; font-weight: 600; white-space: pre-wrap; }
+
+        /* DOSSIERS GARDIENS & LIEUX (TRIPTYQUE) */
+        .sub-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 16px; padding: 30px; margin-bottom: 25px; }
+        .card-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 20px; color: #2C3E50; border-left: 5px solid #E67E22; padding-left: 15px; }
+
+        /* CHAT ADMIN PANEL */
+        #adminChatPanel { position: fixed; right: -450px; top: 0; width: 450px; height: 100vh; background: white; z-index: 10000; transition: 0.4s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: -10px 0 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+        #adminChatPanel.active { right: 0; }
+        .chat-header { background: #2C3E50; color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f4f7f6; display: flex; flex-direction: column; gap: 12px; }
+        .chat-bubble { padding: 12px 16px; border-radius: 15px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
+        .chat-bubble.production { background: #E67E22; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .chat-bubble.fixer { background: white; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+        /* MODALS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10001; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 20px; max-width: 800px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 35px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
     </style>
 </head>
 <body>
+
     <div class="container">
+        <!-- HEADER ANALYTIQUE -->
         <header class="page-header">
-            <h1>{{ reperage.region }}</h1>
-            <p>Dossier de Substance #{{ reperage.id }} | Statut: {{ reperage.statut.upper() }}</p>
+            <div class="header-content">
+                <h1>{{ reperage.region }}</h1>
+                <div class="header-meta">
+                    <div class="meta-item"><i data-lucide="map-pin"></i> {{ reperage.pays }}</div>
+                    <div class="meta-item"><i data-lucide="user"></i> {{ reperage.fixer_nom }}</div>
+                    <div class="meta-item"><i data-lucide="calendar"></i> {{ reperage.created_at.strftime('%d/%m/%Y') }}</div>
+                    <span class="status-badge status-{{ reperage.statut }}">{{ 'EN COURS' if reperage.statut == 'brouillon' else reperage.statut.upper() }}</span>
+                </div>
+            </div>
         </header>
 
-        <div style="display:flex; background:#2C3E50; border-radius:16px 16px 0 0;">
-            <button class="tab-btn active" data-tab="territoire" style="flex:1; padding:20px; color:white; background:none; border:none; cursor:pointer; font-weight:bold;">TERRITOIRE</button>
-            <button class="tab-btn" data-tab="particularites" style="flex:1; padding:20px; color:white; background:none; border:none; cursor:pointer; font-weight:bold;">PARTICULARITÉS</button>
-            <button class="tab-btn" data-tab="gardiens" style="flex:1; padding:20px; color:white; background:none; border:none; cursor:pointer; font-weight:bold;">GARDIENS (3)</button>
-            <button class="tab-btn" data-tab="lieux" style="flex:1; padding:20px; color:white; background:none; border:none; cursor:pointer; font-weight:bold;">LIEUX (3)</button>
-            <button class="tab-btn" data-tab="fete" style="flex:1; padding:20px; color:white; background:none; border:none; cursor:pointer; font-weight:bold;">LA FÊTE</button>
+        <!-- BARRE D'ACTIONS SOUDÉE -->
+        <div class="nav-actions">
+            <a href="/admin" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Dashboard</a>
+            <button onclick="openInfoModal()" class="btn btn-info"><i data-lucide="map-pin"></i> Info Région</button>
+            <button onclick="openFixerModal()" class="btn btn-info" style="background:#8b5cf6;"><i data-lucide="user"></i> Profil Fixer</button>
+            <button onclick="toggleChat()" class="btn btn-warning"><i data-lucide="message-circle"></i> Chat Collaboratif</button>
+            <!-- SOUDURE : Pointage vers /print pour vue Haute Substance -->
+            <a href="/admin/reperage/{{ reperage.id }}/print" target="_blank" class="btn btn-primary"><i data-lucide="printer"></i> Télécharger PDF</a>
+            <!-- SOUDURE : Pointage vers /photos pour ZIP archive -->
+            <a href="/admin/reperage/{{ reperage.id }}/photos" class="btn btn-zip"><i data-lucide="package"></i> Photos (ZIP)</a>
         </div>
 
-        <!-- 1. TERRITOIRE -->
-        <div class="tab-content active" id="territoire">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                {% for k, v in territoire.items() %}<div class="info-box"><span class="label">{{ k }}</span><div class="value">{{ v|linkify|safe if v else '-' }}</div></div>{% endfor %}
+        <!-- 1. IDENTITÉ DU TERRITOIRE -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="globe"></i><h2 class="section-title">1. Identité du Territoire</h2></div>
+            <div class="info-grid">
+                {% for k, v in territoire.items() %}
+                <div class="info-box">
+                    <span class="info-label">{{ k.replace('_', ' ') }}</span>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- 2. PARTICULARITÉS -->
-        <div class="tab-content" id="particularites">
-            <div style="display:grid; grid-template-columns: 1fr; gap:20px;">
-                {% for k, v in particularites.items() %}<div class="info-box"><span class="label">{{ k }}</span><div class="value">{{ v|linkify|safe if v else '-' }}</div></div>{% endfor %}
+        <!-- 2. PARTICULARITÉS RÉGIONALES (FIX V.49) -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="sparkles"></i><h2 class="section-title">2. Particularités Régionales</h2></div>
+            <div class="info-grid">
+                {% for k, v in particularites.items() %}
+                <div class="info-box">
+                    <span class="info-label">{{ k.replace('_', ' ') }}</span>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- 3. GARDIENS -->
-        <div class="tab-content" id="gardiens">
+        <!-- 3. SUBSTANCE DE L'ÉPISODE -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="clapperboard"></i><h2 class="section-title">3. Substance de l'Épisode</h2></div>
+            <div class="info-grid">
+                {% for k, v in episode.items() %}
+                <div class="info-box">
+                    <span class="info-label">{{ k.replace('_', ' ') }}</span>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 4. GARDIENS (TRIPTYQUE RELAIONNEL) -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="users"></i><h2 class="section-title">4. Dossiers des Gardiens</h2></div>
             {% for g in reperage.gardiens %}
-            <div class="sub-section">
-                <h3>GARDIEN {{ g.ordre }} : {{ g.nom_prenom }}</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
-                    <div class="info-box"><span class="label">Fonction</span><div class="value">{{ g.fonction }}</div></div>
-                    <div class="info-box"><span class="label">Histoire</span><div class="value">{{ g.histoire }}</div></div>
+            <div class="sub-card">
+                <div class="card-title">GARDIEN {{ g.ordre }} : {{ g.nom_prenom }}</div>
+                <div class="info-grid">
+                    <div class="info-box"><span class="info-label">Âge / Fonction / Langues</span><div class="info-value">{{ g.age or '-' }} ans | {{ g.fonction or '-' }} | {{ g.langues or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Savoir Transmis</span><div class="info-value">{{ g.savoir or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Histoire & Psychologie</span><div class="info-value">{{ g.histoire or '-' }}<br><br><strong>Psychologie :</strong> {{ g.psychologie or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Évaluation Cinégénie</span><div class="info-value">{{ g.evaluation or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Contact / Intermédiaire</span><div class="info-value">{{ g.contact or '-' }}<br><br><strong>Intermédiaire :</strong> {{ g.intermediaire or '-' }}</div></div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- 4. LIEUX -->
-        <div class="tab-content" id="lieux">
+        <!-- 5. LIEUX (TRIPTYQUE TECHNIQUE) -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="map"></i><h2 class="section-title">5. Lieux de Tournage</h2></div>
             {% for l in reperage.lieux %}
-            <div class="sub-section">
-                <h3>LIEU {{ l.numero_lieu }} : {{ l.nom }}</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;">
-                    <div class="info-box"><span class="label">Description</span><div class="value">{{ l.description }}</div></div>
-                    <div class="info-box"><span class="label">Cinégénie</span><div class="value">{{ l.cinegenie }}</div></div>
+            <div class="sub-card">
+                <div class="card-title">LIEU {{ l.numero_lieu }} : {{ l.nom or 'Sans nom' }}</div>
+                <div class="info-grid">
+                    <div class="info-box"><span class="info-label">Type / Environnement / Adéquation</span><div class="info-value">{{ l.type or '-' }}<br><strong>Note Narration :</strong> {{ l.adequation or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Description Visuelle</span><div class="info-value">{{ l.description or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Cinégénie / Axes / Points de vue</span><div class="info-value"><strong>Potentiel :</strong> {{ l.cinegenie or '-' }}<br><strong>Axes :</strong> {{ l.axes or '-' }}<br><strong>Vues :</strong> {{ l.points_vue or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Logistique & Technique</span><div class="info-value">Accès: {{ l.acces or '-' }} | Elec: {{ l.elec or '-' }} | Son: {{ l.son or '-' }}<br>Espace: {{ l.espace or '-' }} | Météo: {{ l.meteo or '-' }}</div></div>
+                    <div class="info-box"><span class="info-label">Moments / Autorisations</span><div class="info-value">Lumière: {{ l.moments or '-' }}<br>Permis: {{ l.permis or '-' }}</div></div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- 5. LA FÊTE -->
-        <div class="tab-content" id="fete">
-            {% for k, v in fete.items() %}<div class="info-box"><span class="label">{{ k }}</span><div class="value">{{ v|linkify|safe if v else '-' }}</div></div>{% endfor %}
+        <!-- 6. LA FÊTE (FIX V.49) -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="frown"></i><h2 class="section-title">6. La Fête (Événement Central)</h2></div>
+            <div class="info-grid">
+                {% for k, v in fete.items() %}
+                <div class="info-box">
+                    <span class="info-label">{{ k.replace('_', ' ') }}</span>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 7. GALERIE PHOTOS -->
+        <div class="section">
+            <div class="section-header"><i data-lucide="camera"></i><h2 class="section-title">7. Galerie Terrain</h2></div>
+            <div class="info-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));">
+                {% for m in reperage.medias %}
+                <div style="border-radius:12px; overflow:hidden; border:1px solid #ddd; background:white; text-align:center;">
+                    <img src="/uploads/{{ reperage.id }}/{{ m.nom_fichier }}" style="width:100%; height:160px; object-fit:cover;">
+                    <p style="font-size:0.7rem; padding:8px; font-weight:700;">{{ m.nom_original }}</p>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+
+    <!-- MODALS DÉTAILLÉS -->
+    <div class="modal-overlay" id="modalRegion">
+        <div class="modal-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h2>📍 Informations Région</h2><button onclick="closeModals()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            <form onsubmit="saveRegion(event)">
+                <div style="margin-bottom:15px;"><label style="font-weight:700;">Région</label><input type="text" id="reg_name" value="{{ reperage.region }}" style="width:100%; padding:12px; border-radius:8px; border:1.5px solid #ddd;"></div>
+                <div style="margin-bottom:15px;"><label style="font-weight:700;">Pays</label><input type="text" id="reg_pays" value="{{ reperage.pays }}" style="width:100%; padding:12px; border-radius:8px; border:1.5px solid #ddd;"></div>
+                <div style="margin-bottom:15px;"><label style="font-weight:700;">Notes Administratives</label><textarea id="reg_notes" rows="6" style="width:100%; padding:12px; border-radius:8px; border:1.5px solid #ddd;">{{ reperage.notes_admin }}</textarea></div>
+                <button type="submit" class="btn" style="background:var(--secondary); width:100%; justify-content:center;">ENREGISTRER</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalFixer">
+        <div class="modal-box" style="max-width:500px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h2>👤 Correspondant</h2><button onclick="closeModals()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            {% if fixer %}
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:100px; height:100px; border-radius:50%; background:#2C3E50; color:white; display:inline-flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700;">{{ fixer.prenom[0] }}{{ fixer.nom[0] }}</div>
+                <h3 style="margin-top:15px;">{{ fixer.prenom }} {{ fixer.nom }}</h3>
+                <p>{{ fixer.email }}</p><p>{{ fixer.telephone }}</p>
+            </div>
+            <a href="/admin/fixer/{{ fixer.id }}" class="btn btn-secondary" style="width:100%; justify-content:center;">Fiche Complète</a>
+            {% else %}<p>Aucun fixer assigné.</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- CHAT ADMIN DRAWER -->
+    <div id="adminChatPanel">
+        <div class="chat-header">
+            <h3 style="font-weight:800;">Dialogue #{{ reperage.id }}</h3>
+            <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="chat-messages" id="adminChatMessages"></div>
+        <div style="padding:20px; border-top:1px solid #eee; display:flex; gap:10px;">
+            <textarea id="adminChatInput" placeholder="Consigne de production..." style="flex:1; padding:12px; border-radius:10px; border:2.2px solid #e2e8f0; font-family:inherit;"></textarea>
+            <button onclick="sendAdminMessage()" class="btn" style="background:var(--secondary); padding:0 20px;"><i data-lucide="send"></i></button>
+        </div>
+    </div>
+
     <script>
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-                btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active');
-            };
-        });
+        lucide.createIcons();
+        const repId = {{ reperage.id }};
+
+        function toggleChat() { document.getElementById('adminChatPanel').classList.toggle('active'); if(document.getElementById('adminChatPanel').classList.contains('active')) loadMessages(); }
+        async function loadMessages() {
+            const res = await fetch(`/api/reperages/${repId}/messages`);
+            const msgs = await res.json();
+            document.getElementById('adminChatMessages').innerHTML = msgs.map(m => `
+                <div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>
+            `).join('');
+            const container = document.getElementById('adminChatMessages'); container.scrollTop = container.scrollHeight;
+        }
+        async function sendAdminMessage() {
+            const input = document.getElementById('adminChatInput');
+            if(!input.value.trim()) return;
+            await fetch(`/api/reperages/${repId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
+            input.value = ''; loadMessages();
+        }
+
+        function openInfoModal() { document.getElementById('modalRegion').classList.add('active'); }
+        function openFixerModal() { document.getElementById('modalFixer').classList.add('active'); }
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+        async function saveRegion(e) {
+            e.preventDefault();
+            const data = { region: document.getElementById('reg_name').value, pays: document.getElementById('reg_pays').value, notes_admin: document.getElementById('reg_notes').value };
+            await fetch(`/admin/reperage/${repId}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            window.location.reload();
+        }
     </script>
 </body>
 </html>
