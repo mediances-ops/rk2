@@ -2,57 +2,251 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Correspondants | Pre-scouting</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-scouting Platform | Correspondants</title>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="/static/css/style.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; padding: 20px; }
+        /* ============================================================
+           ARCHITECTURE VISUELLE V7 - GESTION DES FIXERS SANS SIMPLIFICATION
+           ============================================================ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
         .container { max-width: 1400px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%); border-radius: 16px; padding: 40px; color: white; display: flex; align-items: center; gap: 30px; margin-bottom: 20px; }
-        .nav { display: flex; gap: 15px; margin-bottom: 20px; }
-        .nav-link { background: white; color: #2C3E50; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-        .filter-bar { background: white; border-radius: 12px; padding: 15px; display: flex; gap: 10px; margin-bottom: 20px; }
-        table { width: 100%; background: white; border-radius: 12px; border-collapse: collapse; overflow: hidden; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        .btn-small { padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; color: white; }
+        
+        /* HEADER V7 UNIFIÉ */
+        .header {
+            background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+            border-radius: 16px; padding: 60px 40px; margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 40px;
+        }
+        .header img { height: 110px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); }
+        .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; line-height: 1; }
+        .header .subtitle { color: #E67E22; font-size: 1.6rem; font-weight: 600; margin-top: 10px; text-transform: uppercase; }
+
+        /* NAVIGATION */
+        .nav { display: flex; gap: 15px; margin-bottom: 30px; }
+        .nav-link {
+            background: white; color: #2C3E50; padding: 14px 28px; border-radius: 12px;
+            text-decoration: none; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
+        }
+        .nav-link:hover { background: #E67E22; color: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(230, 126, 34, 0.3); }
+        .nav-link.active { background: #2C3E50; color: white; border-bottom: 4px solid #E67E22; }
+
+        /* FILTRES ENRICHIS */
+        .card { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .filter-grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { flex: 1; min-width: 200px; }
+        .filter-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; }
+        .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-weight: 600; color: #2C3E50; }
+
+        /* TABLEAU SUBSTANTIEL */
+        .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; font-weight: 800; }
+        td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        
+        /* CERCLE PHOTO / INITIALES */
+        .fixer-photo {
+            width: 55px; height: 55px; border-radius: 50%; object-fit: cover;
+            border: 3px solid #e2e8f0; background: #eee; display: flex;
+            align-items: center; justify-content: center; font-weight: 800; color: #7f8c8d; font-size: 1.2rem;
+        }
+
+        /* BADGES LANGUES AVEC DRAPEAUX */
+        .lang-badge {
+            display: inline-flex; align-items: center; gap: 4px; background: #f0f9ff;
+            padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+            color: #0369a1; margin-right: 5px; margin-bottom: 5px; border: 1px solid #e0f2fe;
+        }
+
+        .badge-status { padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+        .status-actif { background: #d1fae5; color: #065f46; }
+        .status-inactif { background: #fee2e2; color: #991b1b; }
+
+        .btn-action { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
+        
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; padding: 40px; width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+
+        /* ASSISTANT IA */
+        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5); display: flex; align-items: center; justify-content: center; transition: 0.4s; }
+        #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="header">
-            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo" style="height:60px;">
-            <h1>Correspondants Internationaux</h1>
+        <!-- HEADER V7 -->
+        <header class="header">
+            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo">
+            <div class="header-text">
+                <h1>Pre-scouting Platform</h1>
+                <p class="subtitle">Correspondents Management System</p>
+            </div>
+        </header>
+
+        <!-- NAVIGATION -->
+        <nav class="nav">
+            <a href="/admin" class="nav-link"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
+            <a href="/admin/fixers" class="nav-link active"><i data-lucide="users"></i> CORRESPONDANTS LOCAUX</a>
+            <button onclick="openModal()" class="nav-link" style="background:#E67E22; color:white;"><i data-lucide="user-plus"></i> NOUVEAU CORRESPONDANT</button>
+            <!-- FIX 9 : DÉCONNEXION SUPPRIMÉE -->
+        </nav>
+
+        <!-- FILTRES ENRICHIS -->
+        <div class="card">
+            <form method="GET" action="/admin/fixers" class="filter-grid">
+                <div class="filter-group">
+                    <label><i data-lucide="search" style="width:14px;"></i> Recherche</label>
+                    <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Nom, société, spécialité...">
+                </div>
+                <div class="filter-group">
+                    <label><i data-lucide="map" style="width:14px;"></i> Pays</label>
+                    <select name="pays">
+                        <option value="">Tous les pays</option>
+                        {% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i data-lucide="languages" style="width:14px;"></i> Langue</label>
+                    <select name="langue">
+                        <option value="">Toutes les langues</option>
+                        <option value="Français">Français</option>
+                        <option value="Anglais">Anglais</option>
+                        <option value="Italien">Italien</option>
+                        <option value="Espagnol">Espagnol</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="nav-link" style="background:#2C3E50; color:white; padding:12px 25px;">FILTRER</button>
+                    <a href="/admin/fixers" class="nav-link" style="padding:12px 20px;">RESET</a>
+                </div>
+            </form>
         </div>
 
-        <div class="nav">
-            <a href="/admin" class="nav-link"><i data-lucide="layout-dashboard"></i> Dashboard</a>
-            <a href="/admin/fixer/new" class="nav-link" style="background:#E67E22; color:white;"><i data-lucide="plus"></i> Nouveau Fixer</a>
-            <!-- FIX 5 : Bouton déconnexion supprimé -->
+        <!-- TABLEAU DES FIXERS -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Profil</th>
+                        <th>Nom / Société</th>
+                        <th>Localisation</th>
+                        <th>Contact</th>
+                        <th>Langues Maîtrisées</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in fixers %}
+                    <tr>
+                        <td>
+                            {% if f.photo_profil_url %}
+                            <img src="{{ f.photo_profil_url }}" class="fixer-photo" alt="{{ f.nom }}">
+                            {% else %}
+                            <div class="fixer-photo">
+                                {{ f.prenom[0]|upper if f.prenom else '' }}{{ f.nom[0]|upper if f.nom else '?' }}
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong style="font-size: 1.1rem;">{{ f.prenom }} {{ f.nom }}</strong><br>
+                            <small style="color: #E67E22; font-weight: 700;">{{ f.societe or 'Indépendant' }}</small>
+                        </td>
+                        <td>
+                            <strong>{{ f.pays or '-' }}</strong><br>
+                            <span style="color: #7f8c8d; font-size: 0.85rem;">{{ f.ville or f.region or '-' }}</span>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ f.email }}" style="color: #3498db; text-decoration: none; font-weight: 600;">{{ f.email }}</a><br>
+                            <small style="color: #7f8c8d;">{{ f.telephone or '-' }}</small>
+                        </td>
+                        <td>
+                            {% if f.langues_parlees %}
+                                {% for lang in f.langues_parlees.split(',') %}
+                                <span class="lang-badge">
+                                    {% if 'Français' in lang %}🇫🇷{% elif 'Anglais' in lang %}🇬🇧{% elif 'Italien' in lang %}🇮🇹{% elif 'Espagnol' in lang %}🇪🇸{% endif %}
+                                    {{ lang.strip() }}
+                                </span>
+                                {% endfor %}
+                            {% else %}
+                                <small style="color:#95a5a6;">Non renseigné</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge-status {{ 'status-actif' if f.actif else 'status-inactif' }}">
+                                {{ 'ACTIF' if f.actif else 'INACTIF' }}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex;">
+                                <a href="/admin/fixer/{{ f.id }}" class="btn-action" style="background:#2C3E50;" title="Voir"><i data-lucide="eye"></i></a>
+                                <a href="/admin/fixer/{{ f.id }}/edit" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-
-        <!-- FIX 10 : Filtres actifs -->
-        <form class="filter-bar" method="GET" action="/admin/fixers">
-            <input type="text" name="search" placeholder="Nom ou Société" style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
-            <button type="submit" style="padding:10px 20px; background:#2C3E50; color:white; border:none; border-radius:8px; cursor:pointer;">Filtrer</button>
-        </form>
-
-        <table>
-            <thead><tr><th>Nom</th><th>Société</th><th>Pays</th><th>Actions</th></tr></thead>
-            <tbody>
-                {% for f in fixers %}
-                <tr>
-                    <td><strong>{{ f.nom }} {{ f.prenom }}</strong></td>
-                    <td>{{ f.societe }}</td>
-                    <td>{{ f.pays }}</td>
-                    <td>
-                        <a href="/admin/fixer/{{ f.id }}" class="btn-small" style="background:#2C3E50;">Voir</a> <!-- FIX 6 : Route corrigée -->
-                        <a href="/admin/fixer/{{ f.id }}/edit" class="btn-small" style="background:#3498db;">Modif</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    <script>lucide.createIcons();</script>
+
+    <!-- MODAL NOUVEAU CORRESPONDANT (RESTAURÉ) -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h2 style="font-weight: 800; letter-spacing: -1px; color:#2C3E50;">➕ NOUVEAU CORRESPONDANT</h2>
+                <button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button>
+            </div>
+            <form method="POST" action="/admin/fixer/new">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div class="form-group"><label>Prénom *</label><input type="text" name="prenom" required></div>
+                    <div class="form-group"><label>Nom *</label><input type="text" name="nom" required></div>
+                </div>
+                <div class="form-group"><label>Email de contact *</label><input type="email" name="email" required></div>
+                <div class="form-group"><label>Téléphone</label><input type="tel" name="telephone"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div class="form-group"><label>Pays *</label><input type="text" name="pays" required></div>
+                    <div class="form-group"><label>Région</label><input type="text" name="region"></div>
+                </div>
+                <div class="form-group">
+                    <label>Langue d'interface préférée *</label>
+                    <select name="langue_preferee" required>
+                        <option value="FR">🇫🇷 Français</option>
+                        <option value="GB">🇬🇧 English</option>
+                        <option value="ITAL">🇮🇹 Italiano</option>
+                        <option value="ESP">🇪🇸 Español</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 30px;">
+                    <button type="submit" class="nav-link" style="background:#2C3E50; color:white; flex:1; justify-content:center;">CRÉER LE PROFIL</button>
+                    <button type="button" onclick="closeModal()" class="nav-link" style="background:#eee; flex:1; justify-content:center;">ANNULER</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ASSISTANT IA LATÉRAL -->
+    <button onclick="toggleAI()" class="ai-floating-btn"><i data-lucide="brain-circuit" style="width:35px; height:35px;"></i></button>
+    <div id="aiPanel">
+        <div style="background:#2C3E50; padding:25px; color:white; display:flex; justify-content:space-between; align-items:center;">
+            <h2 style="font-weight:800; margin:0;">ASSISTANT IA PRODUCTION</h2>
+            <button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+        </div>
+        <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function openModal() { document.getElementById('modal').classList.add('active'); }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+        function toggleAI() { const p = document.getElementById('aiPanel'); p.style.left = (p.style.left==='0px') ? '-82%' : '0px'; }
+        window.onclick = (e) => { if(e.target.id === 'modal') closeModal(); }
+    </script>
 </body>
 </html>
