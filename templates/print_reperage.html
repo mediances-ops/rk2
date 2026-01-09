@@ -2,62 +2,142 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>DOSSIER_PRODUCTION_{{ rep.region }}</title>
+    <title>DOC-OS | RAPPORT_HAUTE_SUBSTANCE_{{ rep.region }}</title>
     <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #2C3E50; line-height: 1.4; padding: 40px; }
-        .header { border-bottom: 5px solid #E67E22; padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; }
+        /* ============================================================
+           CONFIGURATION IMPRESSION HAUTE SUBSTANCE - ZÉRO SIMPLIFICATION
+           ============================================================ */
+        :root {
+            --primary: #2C3E50;
+            --accent: #E67E22;
+            --gray: #7f8c8d;
+            --light: #f1f5f9;
+        }
+
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: var(--primary); line-height: 1.5; padding: 40px; background: white; }
+        
+        /* HEADER D'IMPRESSION */
+        .print-header { 
+            border-bottom: 5px solid var(--accent); 
+            padding-bottom: 20px; 
+            margin-bottom: 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-end;
+        }
+        .print-header h1 { margin: 0; font-size: 32pt; letter-spacing: -2px; text-transform: uppercase; }
+        .print-header .meta { text-align: right; font-weight: 700; color: var(--gray); }
+
+        /* SECTIONS DE LA BIBLE */
         .section { margin-bottom: 40px; page-break-inside: avoid; }
-        .section-title { background: #2C3E50; color: white; padding: 10px 20px; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .box { border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #fcfcfc; }
-        .label { font-weight: 800; color: #E67E22; font-size: 8pt; text-transform: uppercase; }
-        .value { font-size: 10pt; margin-bottom: 10px; }
-        @media print { .no-print { display: none; } body { padding: 0; } }
+        .section-title { 
+            background: var(--primary); 
+            color: white; 
+            padding: 12px 20px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            margin-bottom: 20px; 
+            border-radius: 4px;
+            font-size: 14pt;
+        }
+
+        /* GRILLES DE DONNÉES */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .box { border: 1.5px solid #e2e8f0; padding: 20px; border-radius: 12px; background: #fafbfc; height: 100%; }
+        .label { font-weight: 800; color: var(--accent); font-size: 8.5pt; text-transform: uppercase; margin-bottom: 8px; display: block; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+        .value { font-size: 11pt; color: #34495e; white-space: pre-wrap; word-wrap: break-word; }
+        .full-width { grid-column: span 2; }
+
+        /* GALERIE PHOTOS */
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .photo-item { text-align: center; border: 1px solid #eee; padding: 5px; border-radius: 8px; }
+        .photo-item img { width: 100%; height: 180px; object-fit: cover; border-radius: 5px; }
+        .photo-item p { font-size: 8pt; color: var(--gray); margin-top: 5px; }
+
+        /* LOGO FILIGRANE */
+        .rk-watermark { position: absolute; top: 40px; right: 40px; height: 60px; opacity: 0.8; }
+
+        /* CONTRÔLES NAV */
+        .no-print { position: fixed; top: 20px; right: 20px; z-index: 1000; }
+        .btn-print { padding: 15px 30px; background: var(--accent); color: white; border: none; cursor: pointer; font-weight: 800; border-radius: 50px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        @media print {
+            @page { size: A4; margin: 15mm; }
+            .no-print { display: none !important; }
+            body { padding: 0; }
+            .box { background: white !important; }
+        }
     </style>
 </head>
 <body>
-    <div class="no-print" style="text-align:right;"><button onclick="window.print()" style="padding:15px 30px; background:#E67E22; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">🖨️ GÉNÉRER DOSSIER PDF</button></div>
 
-    <div class="header">
-        <div><h1>{{ rep.region }}</h1><p>Dossier Haute Substance #{{ rep.id }}</p></div>
-        <div style="text-align:right;"><p><strong>Fixer:</strong> {{ rep.fixer_nom }}</p><p><strong>Pays:</strong> {{ rep.pays }}</p></div>
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-print">🖨️ GÉNÉRER LE DOSSIER PDF</button>
+    </div>
+
+    <!-- LOGO RK FILIGRANE -->
+    <img src="https://destinationsetcuisines.com/doc/logoRK.png" class="rk-watermark" alt="RK">
+
+    <div class="print-header">
+        <div>
+            <h1>{{ rep.region }}</h1>
+            <p><strong>DOSSIER DE PRODUCTION HAUTE SUBSTANCE</strong> | #{{ rep.id }}</p>
+        </div>
+        <div class="meta">
+            <p>STATUT : {{ rep.statut.upper() }}</p>
+            <p>SYNC : {{ rep.progression_pourcent }}%</p>
+            <p>DATE : {{ rep.updated_at.strftime('%d/%m/%Y') }}</p>
+        </div>
     </div>
 
     <!-- 1. CORRESPONDANT LOCAL -->
     <div class="section">
         <div class="section-title">1. Correspondant Local</div>
         <div class="grid">
-            <div class="box"><div class="label">Identité</div><div class="value">{{ rep.fixer_nom }} {{ rep.fixer_prenom }}</div></div>
-            <div class="box"><div class="label">Localisation</div><div class="value">{{ rep.pays }} / {{ territoire.ville }}</div></div>
+            <div class="box">
+                <span class="label">Identité & Contact</span>
+                <div class="value"><strong>{{ rep.fixer_nom }} {{ rep.fixer_prenom }}</strong><br>{{ fixer.email }}<br>{{ fixer.telephone }}</div>
+            </div>
+            <div class="box">
+                <span class="label">Localisation</span>
+                <div class="value">Pays : {{ rep.pays }}<br>Ville : {{ territoire.ville or 'Non renseignée' }}</div>
+            </div>
         </div>
     </div>
 
-    <!-- 2. IDENTITÉ TERRITOIRE -->
+    <!-- 2. IDENTITÉ DU TERRITOIRE -->
     <div class="section">
         <div class="section-title">2. Identité du Territoire</div>
         <div class="grid">
-            {% for k in ['population', 'langues', 'climat', 'histoire', 'traditions', 'acces', 'hebergement'] %}
-            <div class="box"><div class="label">{{ k }}</div><div class="value">{{ territoire[k]|linkify|safe }}</div></div>
-            {% endfor %}
+            <div class="box"><span class="label">Population</span><div class="value">{{ territoire.population }}</div></div>
+            <div class="box"><span class="label">Langues</span><div class="value">{{ territoire.langues }}</div></div>
+            <div class="box full-width"><span class="label">Histoire & Contexte Culturel</span><div class="value">{{ territoire.histoire|linkify|safe }}</div></div>
+            <div class="box full-width"><span class="label">Traditions Culinaires & Artisanales</span><div class="value">{{ territoire.traditions|linkify|safe }}</div></div>
+            <div class="box"><span class="label">Accès Logistique</span><div class="value">{{ territoire.acces }}</div></div>
+            <div class="box"><span class="label">Hébergement Équipe</span><div class="value">{{ territoire.hebergement }}</div></div>
         </div>
     </div>
 
-    <!-- 3, 4, 5. TRIPTYQUE GARDIEN + LIEU (AUCUNE SIMPLIFICATION) -->
+    <!-- 3, 4, 5. TRIPTYQUE GARDIEN + LIEU (COUPLAGE LOGIQUE) -->
     {% for pair in pairs %}
     <div class="section">
-        <div class="section-title">{{ 2 + pair.index }}. Gardien {{ pair.index }} & Lieu Associé</div>
+        <div class="section-title">{{ 2 + pair.index }}. Gardien {{ pair.index }} & Lieu de {{ ['Vie', 'Travail', 'Célébration'][pair.index-1] }}</div>
         <div class="grid">
+            <!-- COLONNE GARDIEN -->
             <div class="box">
-                <div class="label">GARDIEN {{ pair.index }}</div>
-                <p><strong>Nom:</strong> {{ pair.gardien.nom }} {{ pair.gardien.prenom }} ({{ pair.gardien.age }} ans)</p>
-                <p><strong>Savoir:</strong> {{ pair.gardien.savoir }}</p>
-                <p><strong>Histoire:</strong> {{ pair.gardien.histoire }}</p>
+                <span class="label">LE GARDIEN : {{ pair.gardien.prenom }} {{ pair.gardien.nom }}</span>
+                <p><strong>Âge :</strong> {{ pair.gardien.age }} ans | <strong>Rôle :</strong> {{ pair.gardien.fonction }}</p>
+                <p><strong>Savoir Transmis :</strong><br>{{ pair.gardien.savoir }}</p>
+                <p><strong>Histoire Personnelle :</strong><br>{{ pair.gardien.histoire }}</p>
+                <p><strong>Évaluation Cinégénie :</strong><br>{{ pair.gardien.evaluation }}</p>
             </div>
+            <!-- COLONNE LIEU -->
             <div class="box">
-                <div class="label">LIEU {{ pair.index }}</div>
-                <p><strong>Nom:</strong> {{ pair.lieu.nom }} ({{ pair.lieu.type }})</p>
-                <p><strong>Description:</strong> {{ pair.lieu.description }}</p>
-                <p><strong>Cinégénie:</strong> {{ pair.lieu.cinegenie }}</p>
+                <span class="label">LE LIEU : {{ pair.lieu.nom }}</span>
+                <p><strong>Type :</strong> {{ pair.lieu.type }}</p>
+                <p><strong>Description Visuelle :</strong><br>{{ pair.lieu.description }}</p>
+                <p><strong>Cinégénie & Axes Caméra :</strong><br>{{ pair.lieu.cinegenie }}<br>{{ pair.lieu.axes }}</p>
+                <p><strong>Logistique :</strong> Accès {{ pair.lieu.accessibilite }} | Élec: {{ pair.lieu.electricite }}</p>
             </div>
         </div>
     </div>
@@ -66,17 +146,36 @@
     <!-- 6. LA FETE -->
     <div class="section">
         <div class="section-title">6. La Fête / Événement Central</div>
-        <div class="box"><div class="value">{{ episode.fete }}</div></div>
+        <div class="box full-width">
+            <span class="label">Description de l'événement</span>
+            <div class="value">{{ episode.fete|linkify|safe }}</div>
+        </div>
     </div>
 
-    <!-- 7. SUBSTANCE ÉPISODE -->
+    <!-- 7. SUBSTANCE DE L'ÉPISODE -->
     <div class="section">
         <div class="section-title">7. Substance de l'Épisode</div>
         <div class="grid">
-            {% for k in ['angle', 'arc', 'moments', 'contraintes', 'sensibles', 'budget'] %}
-            <div class="box"><div class="label">{{ k }}</div><div class="value">{{ episode[k]|linkify|safe }}</div></div>
+            <div class="box full-width"><span class="label">Angle Narratif (Particularité)</span><div class="value">{{ episode.angle|linkify|safe }}</div></div>
+            <div class="box"><span class="label">Arc Dramatique (Must-Film)</span><div class="value">{{ episode.arc|linkify|safe }}</div></div>
+            <div class="box"><span class="label">Moments-Clés</span><div class="value">{{ episode.moments|linkify|safe }}</div></div>
+            <div class="box"><span class="label">Éléments Sensibles</span><div class="value">{{ episode.sensibles|linkify|safe }}</div></div>
+            <div class="box"><span class="label">Budget Local Estimé</span><div class="value">{{ episode.budget }}</div></div>
+        </div>
+    </div>
+
+    <!-- GALERIE FINALE -->
+    <div class="section">
+        <div class="section-title">Annexes : Galerie Photos Terrain</div>
+        <div class="photo-grid">
+            {% for m in rep.medias %}
+            <div class="photo-item">
+                <img src="/uploads/{{ rep.id }}/{{ m.nom_fichier }}">
+                <p>{{ m.nom_original }}</p>
+            </div>
             {% endfor %}
         </div>
     </div>
+
 </body>
 </html>
