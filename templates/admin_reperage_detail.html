@@ -3,95 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ reperage.region }} | Analyse de Substance</title>
+    <title>{{ reperage.region or 'Repérage' }} - Les Gardiens de la Tradition</title>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* DESIGN V7 HAUTE SUBSTANCE */
-        :root { --primary: #2C3E50; --secondary: #E67E22; --bg: #f3f4f6; }
+        /* DESIGN ORIGINAL RK RÉTABLI */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--primary); }
-        .container { max-width: 1100px; margin: 0 auto; padding: 30px; }
-        .page-header { background: linear-gradient(rgba(44,62,80,0.85), rgba(44,62,80,0.85)), url('{{ reperage.image_region or "https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg" }}'); background-size:cover; background-position:center; border-radius: 20px; padding: 50px; margin-bottom: 40px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
-        .btn { padding: 14px 25px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; transition: 0.3s; color: white; }
-        .section { background: white; border-radius: 20px; padding: 40px; margin-bottom: 35px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .section-title { font-size: 1.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 30px; border-bottom: 3px solid var(--bg); padding-bottom: 15px; }
-        .data-row { display: grid; grid-template-columns: 250px 1fr; gap: 30px; padding: 15px 0; border-bottom: 1px solid #f1f5f9; }
-        .data-label { font-size: 0.85rem; font-weight: 800; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; }
-        .data-value { font-size: 1.05rem; font-weight: 600; }
-        .sub-card { background: #f8fafc; border-radius: 15px; padding: 30px; margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
+        .container { max-width: 1400px; margin: 0 auto; }
+
+        /* ===== EN-TÊTE ===== */
+        .page-header {
+            background: linear-gradient(135deg, #2C3E50 0%, #34495e 100%);
+            border-radius: 16px; padding: 40px; margin-bottom: 30px;
+            box-shadow: 0 8px 16px rgba(44, 62, 80, 0.2); color: white;
+        }
+        .page-header h1 { color: white; font-size: 2.5rem; font-weight: 700; margin-bottom: 15px; letter-spacing: -0.5px; text-shadow: 2px 2px 8px rgba(0,0,0,0.8); }
+        .header-meta { display: flex; gap: 30px; flex-wrap: wrap; align-items: center; }
+        .meta-item { display: flex; align-items: center; gap: 8px; font-size: 1rem; color: rgba(255,255,255,0.9); }
+        .meta-item strong { color: white; font-weight: 600; }
+        .status-badge { padding: 8px 18px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-brouillon { background: #fef3c7; color: #92400e; }
+        .status-soumis { background: #dbeafe; color: #1e40af; }
+        .status-validé { background: #d1fae5; color: #065f46; }
+
+        /* ===== NAVIGATION ===== */
+        .nav-actions { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 30px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 0.95rem; cursor: pointer; transition: all 0.2s ease; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, #E67E22 0%, #D35400 100%); color: white; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3); }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-warning { background: #E67E22; color: white; }
+        .btn-secondary { background: #2C3E50; color: white; }
+        .btn-info { background: #3b82f6; color: white; }
+        
+        #btn-toggle-chat { position: relative; }
+        .chat-notif-badge { position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 12px; padding: 2px 8px; font-size: 0.75rem; font-weight: bold; min-width: 20px; text-align: center; box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4); animation: pulse 2s infinite; }
+        
+        /* ===== SECTIONS SUBSTANCE ===== */
+        .section { background: white; border-radius: 12px; padding: 35px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 3px solid #f1f5f9; }
+        .section-title { font-size: 1.5rem; font-weight: 700; color: #1a202c; text-transform: uppercase; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+        .info-box { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 18px; }
+        .info-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+        .info-value { font-size: 1.05rem; color: #1a202c; font-weight: 600; }
+        .text-block { margin-top: 20px; }
+        .text-block-content { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; padding: 20px; white-space: pre-wrap; word-wrap: break-word; }
+
+        /* CARTES GARDIENS & LIEUX */
+        .card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 20px; }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
+
+        /* CHAT PANEL */
+        .admin-chat-panel { position: fixed; top: 0; right: -450px; width: 450px; height: 100vh; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 9999; display: flex; flex-direction: column; }
+        .admin-chat-panel.active { right: 0; }
+        .chat-header { background: #2C3E50; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f9fafb; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubble { padding: 12px 16px; border-radius: 15px; max-width: 80%; font-size: 0.95rem; }
+        .chat-bubble.production { background: #E67E22; color: white; align-self: flex-end; }
+        .chat-bubble.fixer { background: white; border: 1px solid #ddd; align-self: flex-start; }
+
+        /* MODALS */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 10000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 16px; max-width: 900px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 30px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <header class="page-header">
-            <h1 style="font-size: 3.5rem; font-weight: 800; letter-spacing:-2px;">{{ reperage.region }}</h1>
-            <div style="display:flex; gap:20px; margin-top:15px; font-weight:600;">
-                <span><i data-lucide="map"></i> {{ reperage.pays }}</span>
-                <span><i data-lucide="user"></i> {{ reperage.fixer_nom }}</span>
-                <!-- FIX DATE CRASH : Utilisation de strftime -->
-                <span><i data-lucide="calendar"></i> {{ reperage.created_at.strftime('%d/%m/%Y') }}</span>
+        <!-- EN-TÊTE -->
+        <header class="page-header" {% if reperage.image_region %}style="background-image: url('{{ reperage.image_region }}'); background-size: cover; background-position: center;"{% endif %}>
+            <div class="header-content">
+                <h1>{{ reperage.region or 'Région non renseignée' }}</h1>
+                <div class="header-meta">
+                    <div class="meta-item"><span>🌍</span> <strong>Pays:</strong> {{ reperage.pays or 'Non renseigné' }}</div>
+                    <div class="meta-item"><span>👤</span> <strong>Fixer:</strong> {{ reperage.fixer_nom or 'Non renseigné' }}</div>
+                    <div class="meta-item"><span>📋</span> <strong>ID #{{ reperage.id }}</strong></div>
+                    <span class="status-badge status-{{ reperage.statut }}">{{ 'EN COURS' if reperage.statut == 'brouillon' else reperage.statut.upper() }}</span>
+                </div>
             </div>
         </header>
 
-        <div style="display:flex; gap:12px; margin-bottom:40px;">
-            <a href="/admin" class="btn" style="background:#34495e;"><i data-lucide="arrow-left"></i> Dashboard</a>
-            <a href="/admin/reperage/{{ reperage.id }}/print" target="_blank" class="btn" style="background:var(--secondary);"><i data-lucide="printer"></i> Télécharger PDF</a>
-            <a href="/admin/reperage/{{ reperage.id }}/photos" class="btn" style="background:#8e44ad;"><i data-lucide="package"></i> Photos (ZIP)</a>
+        <!-- NAVIGATION ACTIONS -->
+        <div class="nav-actions">
+            <a href="/admin" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Dashboard</a>
+            <button onclick="openInfoRegionModal()" class="btn btn-info"><i data-lucide="map-pin"></i> Info Région</button>
+            <button onclick="openCorrespondantModal()" class="btn btn-info" style="background:#8b5cf6;"><i data-lucide="user"></i> Fixer</button>
+            <button onclick="toggleAdminChat()" class="btn btn-warning" id="btn-toggle-chat">
+                <i data-lucide="message-circle"></i> Chat
+                <span class="chat-notif-badge" id="chat-notif-badge" style="display: none;">0</span>
+            </button>
+            <!-- SOUDURE : Pointage vers /print pour impression propre -->
+            <a href="/admin/reperage/{{ reperage.id }}/print" target="_blank" class="btn btn-primary"><i data-lucide="printer"></i> Imprimer Dossier</a>
+            <a href="/admin/reperage/{{ reperage.id }}/photos" class="btn btn-primary" style="background:#8e44ad;"><i data-lucide="package"></i> Photos (ZIP)</a>
+            
+            {% if reperage.statut == 'soumis' %}
+            <button onclick="validerReperage()" class="btn btn-success"><i data-lucide="check-circle"></i> Valider</button>
+            {% endif %}
         </div>
 
-        <!-- 1. TERRITOIRE -->
+        <!-- 1. IDENTITÉ DU TERRITOIRE -->
         <div class="section">
-            <div class="section-title">1. Identité du Territoire</div>
-            {% for k, v in territoire.items() %}
-            <div class="data-row"><span class="data-label">{{ k.replace('_',' ') }}</span><div class="data-value">{{ v|linkify|safe }}</div></div>
-            {% endfor %}
+            <div class="section-header"><i data-lucide="globe"></i><h2 class="section-title">1. Identité du Territoire</h2></div>
+            <div class="info-grid">
+                {% for k, v in territoire.items() %}
+                <div class="info-box">
+                    <div class="info-label">{{ k.replace('_', ' ') }}</div>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
-        <!-- 2. ÉPISODE -->
+        <!-- 2. SUBSTANCE DE L'ÉPISODE -->
         <div class="section">
-            <div class="section-title">2. Substance de l'Épisode</div>
-            {% for k, v in episode.items() %}
-            <div class="data-row"><span class="data-label">{{ k.replace('_',' ') }}</span><div class="data-value">{{ v|linkify|safe }}</div></div>
-            {% endfor %}
+            <div class="section-header"><i data-lucide="clapperboard"></i><h2 class="section-title">2. Substance de l'Épisode</h2></div>
+            <div class="info-grid">
+                {% for k, v in episode.items() %}
+                <div class="info-box">
+                    <div class="info-label">{{ k.replace('_', ' ') }}</div>
+                    <div class="info-value">{{ v|linkify|safe if v else '-' }}</div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
-        <!-- 3. GARDIENS -->
+        <!-- 3. LES GARDIENS (TRIPTYQUE) -->
         <div class="section">
-            <div class="section-title">3. Profils des Gardiens</div>
+            <div class="section-header"><i data-lucide="users"></i><h2 class="section-title">3. Profils des Gardiens</h2></div>
             {% for g in reperage.gardiens %}
-            <div class="sub-card">
-                <h3 style="margin-bottom:20px;">GARDIEN #{{ g.ordre }} : {{ g.prenom }} {{ g.nom }}</h3>
-                <div class="data-row"><span class="data-label">Psychologie</span><div class="data-value">{{ g.histoire_personnelle }}</div></div>
-                <div class="data-row"><span class="data-label">Savoir</span><div class="data-value">{{ g.savoir_transmis }}</div></div>
-                <div class="data-row"><span class="data-label">Cinégénie</span><div class="data-value">{{ g.evaluation_cinegenie }}</div></div>
+            <div class="card">
+                <div class="card-header"><span style="font-size: 1.5rem;">🎭</span> <h3 class="card-title">Gardien {{ g.ordre }} : {{ g.prenom }} {{ g.nom }}</h3></div>
+                <div class="info-grid">
+                    <div class="info-box"><div class="info-label">Âge / Fonction</div><div class="info-value">{{ g.age or '-' }} ans | {{ g.fonction or '-' }}</div></div>
+                    <div class="info-box"><div class="info-label">Langues</div><div class="info-value">{{ g.langues_parlees or '-' }}</div></div>
+                </div>
+                <div class="text-block"><strong>Psychologie & Histoire :</strong><div class="text-block-content">{{ g.histoire_personnelle }}</div></div>
+                <div class="text-block"><strong>Savoir-faire :</strong><div class="text-block-content">{{ g.savoir_transmis }}</div></div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- 4. LIEUX -->
+        <!-- 4. LES LIEUX (TRIPTYQUE) -->
         <div class="section">
-            <div class="section-title">4. Lieux de Tournage</div>
+            <div class="section-header"><i data-lucide="map-pin"></i><h2 class="section-title">4. Analyse des Lieux</h2></div>
             {% for l in reperage.lieux %}
-            <div class="sub-card">
-                <h3 style="margin-bottom:20px;">LIEU #{{ l.numero_lieu }} : {{ l.nom }}</h3>
-                <div class="data-row"><span class="data-label">Description</span><div class="data-value">{{ l.description_visuelle }}</div></div>
-                <div class="data-row"><span class="data-label">Technique</span><div class="data-value">Accès: {{ l.accessibilite }} | Elec: {{ l.electricite }}</div></div>
+            <div class="card">
+                <div class="card-header"><span style="font-size: 1.5rem;">🏛️</span> <h3 class="card-title">Lieu {{ l.numero_lieu }} : {{ l.nom }}</h3></div>
+                <div class="info-grid">
+                    <div class="info-box"><div class="info-label">Type</div><div class="info-value">{{ l.type_environnement or '-' }}</div></div>
+                    <div class="info-box"><div class="info-label">Logistique</div><div class="info-value">Accès: {{ l.accessibilite or '-' }} | Elec: {{ l.electricite or '-' }}</div></div>
+                </div>
+                <div class="text-block"><strong>Analyse Artistique & Cinégénie :</strong><div class="text-block-content">{{ l.description_visuelle }}<br><br>{{ l.cinegenie }}</div></div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- 5. GALERIE -->
+        <!-- 5. MÉDIAS -->
         <div class="section">
-            <div class="section-title">5. Galerie Photos</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
+            <div class="section-header"><i data-lucide="camera"></i><h2 class="section-title">5. Galerie Photos Terrain</h2></div>
+            <div class="info-grid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));">
                 {% for m in reperage.medias %}
-                <div style="border-radius:12px; overflow:hidden; border:1px solid #ddd;">
+                <div style="border-radius:12px; overflow:hidden; border:1px solid #ddd; background:white; text-align:center;">
                     <img src="/uploads/{{ reperage.id }}/{{ m.nom_fichier }}" style="width:100%; height:150px; object-fit:cover;">
+                    <p style="font-size:0.7rem; padding:5px;">{{ m.nom_original }}</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
     </div>
-    <script>lucide.createIcons();</script>
+
+    <!-- MODAL INFOS RÉGION -->
+    <div class="modal-overlay" id="modalInfoRegion">
+        <div class="modal-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h2>📍 Informations Région</h2><button onclick="closeInfoRegionModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            <form onsubmit="sauvegarderInfoRegion(event)">
+                <div style="margin-bottom:15px;"><label>Région</label><input type="text" id="info_region" value="{{ reperage.region or '' }}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></div>
+                <div style="margin-bottom:15px;"><label>Pays</label><input type="text" id="info_pays" value="{{ reperage.pays or '' }}" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;"></div>
+                <div style="margin-bottom:15px;"><label>Notes Administratives</label><textarea id="info_notes_admin" rows="6" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">{{ reperage.notes_admin or '' }}</textarea></div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">ENREGISTRER</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FIXER -->
+    <div class="modal-overlay" id="modalCorrespondant">
+        <div class="modal-box" style="max-width:500px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;"><h2>👤 Correspondant</h2><button onclick="closeCorrespondantModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            {% if fixer %}
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:100px; height:100px; border-radius:50%; background:#2C3E50; color:white; display:inline-flex; align-items:center; justify-content:center; font-size:2rem; font-weight:700;">{{ fixer.prenom[0] }}{{ fixer.nom[0] }}</div>
+                <h3 style="margin-top:15px;">{{ fixer.prenom }} {{ fixer.nom }}</h3>
+                <p>{{ fixer.email }}</p><p>{{ fixer.telephone }}</p>
+            </div>
+            <a href="/admin/fixer/{{ fixer.id }}" class="btn btn-secondary" style="width:100%; justify-content:center;">Fiche Complète</a>
+            {% else %}<p>Aucun fixer assigné.</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- CHAT ADMIN -->
+    <div class="admin-chat-panel" id="admin-chat-panel">
+        <div class="chat-header"><h3>Dialogue Dossier #{{ reperage.id }}</h3><button onclick="toggleAdminChat()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button></div>
+        <div class="chat-messages" id="adminChatMessages"></div>
+        <div class="chat-input-container">
+            <textarea id="admin-chat-input" placeholder="Consigne..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px; font-family:inherit;"></textarea>
+            <button onclick="sendAdminMessage()" class="btn btn-warning" style="width:100%; justify-content:center;"><i data-lucide="send"></i> Envoyer</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const repId = {{ reperage.id }};
+        
+        function toggleAdminChat() { document.getElementById('admin-chat-panel').classList.toggle('active'); if(document.getElementById('admin-chat-panel').classList.contains('active')) loadAdminMessages(); }
+        async function loadAdminMessages() {
+            const res = await fetch(`/api/reperages/${repId}/messages`);
+            const msgs = await res.json();
+            document.getElementById('adminChatMessages').innerHTML = msgs.map(m => `<div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>`).join('');
+            const container = document.getElementById('adminChatMessages'); container.scrollTop = container.scrollHeight;
+        }
+        async function sendAdminMessage() {
+            const input = document.getElementById('admin-chat-input');
+            if(!input.value.trim()) return;
+            await fetch(`/api/reperages/${repId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
+            input.value = ''; loadAdminMessages();
+        }
+
+        function openInfoRegionModal() { document.getElementById('modalInfoRegion').classList.add('active'); }
+        function closeInfoRegionModal() { document.getElementById('modalInfoRegion').classList.remove('active'); }
+        function openCorrespondantModal() { document.getElementById('modalCorrespondant').classList.add('active'); }
+        function closeCorrespondantModal() { document.getElementById('modalCorrespondant').classList.remove('active'); }
+
+        async function sauvegarderInfoRegion(e) {
+            e.preventDefault();
+            const data = { region: document.getElementById('info_region').value, pays: document.getElementById('info_pays').value, notes_admin: document.getElementById('info_notes_admin').value };
+            const res = await fetch(`/admin/reperage/${repId}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            if(res.ok) location.reload();
+        }
+    </script>
 </body>
 </html>
