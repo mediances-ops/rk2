@@ -5,16 +5,23 @@ const API_URL = '/api';
 let currentReperageId = window.REPERAGE_ID || null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🎬 Launching DOC-OS V.62 Radical - Full Sync Mode');
+
     if (currentReperageId) {
         await loadReperage(currentReperageId);
         await loadMedias(); 
     }
-    // INITIALISATION PRIORITAIRE DES BOUTONS
+    
+    // INITIALISATION PRIORITAIRE DES BOUTONS (SOUDURE ANTI-BLOCK)
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
     document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
 
     initTabs(); initFileUpload(); initChat();
-    document.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', calculateProgress));
+    
+    // Live Progress on every keystroke
+    document.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('input', calculateProgress);
+    });
 });
 
 function calculateProgress() {
@@ -26,7 +33,7 @@ function calculateProgress() {
             if (input.value && input.value.trim().length > 2) filled++;
         }
     });
-    const percent = Math.min(100, filled);
+    const percent = Math.min(100, filled); // Base 100 fields
     document.getElementById('progress-bar').style.width = percent + '%';
     document.getElementById('progress-percentage').textContent = percent + '%';
     document.getElementById('progress-filled').textContent = filled;
@@ -37,7 +44,7 @@ async function loadReperage(id) {
     try {
         const res = await fetch(`${API_URL}/reperages/${id}`);
         const data = await res.json();
-        // MAPPAGE DIRECT NAME <-> COLUMN
+        // SOUDURE 1 : MAPPAGE DIRECT NAME <-> COLUMN (RÉPARE F5 LOSS)
         document.querySelectorAll('input[name], textarea[name]').forEach(input => {
             if (data[input.name] !== undefined && data[input.name] !== null) {
                 input.value = data[input.name];
@@ -45,11 +52,12 @@ async function loadReperage(id) {
         });
         if (data.statut === 'soumis') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Load error", e); }
+    } catch (e) { console.error("Data mapping failed", e); }
 }
 
 function lockInterface() {
-    document.getElementById('lock-banner').style.display = 'block';
+    const banner = document.getElementById('lock-banner');
+    if(banner) banner.style.display = 'block';
     document.querySelectorAll('input, textarea, button:not(.chat-toggle-btn):not(#chat-close-btn)').forEach(el => el.disabled = true);
     document.body.style.cursor = 'not-allowed';
 }
@@ -58,34 +66,49 @@ async function saveReperage(notif) {
     const p = calculateProgress();
     const data = { progression: p };
     document.querySelectorAll('input[name], textarea[name]').forEach(el => data[el.name] = el.value);
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (res.ok && notif) alert("✅ SUBSTANCE & PROGRESS SYNCHRONIZED (" + p + "%)");
+
+    try {
+        const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok && notif) alert("✅ SUBSTANCE & PROGRESS SYNCHRONIZED (" + p + "%)");
+    } catch (e) { alert("❌ Synchronization Error."); }
 }
 
 async function submitToProduction() {
     const required = document.querySelectorAll('[required]');
     let missing = [];
     required.forEach(el => { if(!el.value.trim()) missing.push(el.previousElementSibling.textContent); });
-    if (missing.length > 0) { alert("⚠️ MISSING SUBSTANCE :\n" + missing.join("\n")); return; }
+    
+    if (missing.length > 0) {
+        alert("⚠️ MISSING SUBSTANCE :\n" + missing.join("\n"));
+        return;
+    }
 
-    if (confirm("SUBMIT FINAL DOSSIER? Data will be locked.")) {
+    if (confirm("LOCK AND SUBMIT FINAL DOSSIER?")) {
         await saveReperage(false);
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
-        if (res.ok) { alert("🚀 DOSSIER SUBMITTED TO PRODUCTION"); location.reload(); }
+        if (res.ok) {
+            alert("🚀 DOSSIER SUBMITTED TO PRODUCTION");
+            location.reload();
+        }
     }
 }
 
-// CHAT STUDIO TRANSPARENT
+// CHAT STUDIO TRANSPARENT ENGAGEANT
 function initChat() {
     const toggle = document.getElementById('chat-toggle-btn');
     const panel = document.getElementById('chat-panel');
     if (!toggle) return;
-    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) loadMessages(); };
+
+    toggle.onclick = () => {
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) loadMessages();
+    };
     document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').classList.remove('active');
+
     document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
         if (!input.value.trim()) return;
@@ -113,5 +136,5 @@ async function loadMessages() {
 }
 
 function initTabs() { document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active'); }; }); }
-function initFileUpload() { const area = document.getElementById('drop-area'); area.onclick = () => document.getElementById('file-input').click(); document.getElementById('file-input').onchange = async (e) => { for (let file of e.target.files) { const fd = new FormData(); fd.append('file', file); await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd }); } await loadMedias(); }; }
-async function loadMedias() { const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`); const ms = await res.json(); document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;"></div>`).join(''); }
+function initFileUpload() { const area = document.getElementById('drop-area'); if (!area) return; area.onclick = () => document.getElementById('file-input').click(); document.getElementById('file-input').onchange = async (e) => { for (let file of e.target.files) { const fd = new FormData(); fd.append('file', file); await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd }); } await loadMedias(); }; }
+async function loadMedias() { const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`); const ms = await res.json(); document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:140px;object-fit:cover;border-radius:10px;"></div>`).join(''); }
