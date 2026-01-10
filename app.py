@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.52 SUPRÊME RADICAL
+# DOC-OS VERSION : V.56 SUPRÊME RADICAL
 import os, json, secrets, requests, io, zipfile
 from flask import Flask, request, jsonify, render_template, redirect, abort, send_file, send_from_directory
 from flask_cors import CORS
@@ -16,7 +16,7 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 engine = init_db(DB_URL)
 
-# MIGRATION VOLANTE RADICALE (POSTGRESQL RAILWAY)
+# MIGRATION VOLANTE 100 COLONNES
 with engine.connect() as conn:
     from models import Reperage as R
     for col in R.__table__.columns:
@@ -27,21 +27,8 @@ with engine.connect() as conn:
 @app.route('/')
 def index_root(): return redirect('/admin')
 
-@app.route('/admin')
-def admin_dashboard():
-    session = get_session(engine)
-    reps = session.query(Reperage).order_by(Reperage.id.desc()).all()
-    serialized = []
-    for r in reps:
-        f = session.query(Fixer).get(r.fixer_id)
-        unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-        d = r.to_dict(); d['unread_count'] = unread
-        serialized.append({'reperage': d, 'fixer': f.to_dict() if f else None})
-    stats = {'total': len(reps), 'brouillons': len([x for x in reps if x.statut == 'brouillon']), 'soumis': len([x for x in reps if x.statut == 'soumis']), 'valides': len([x for x in reps if x.statut == 'validé'])}
-    return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[])
-
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
-def api_sync_radical(id):
+def api_sync_v56(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id)
@@ -57,7 +44,7 @@ def api_sync_radical(id):
     finally: session.close()
 
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def api_submit_radical(id):
+def api_submit_v56(id):
     session = get_session(engine)
     try:
         rep = session.get(Reperage, id); rep.statut = 'soumis'; session.commit()
@@ -87,6 +74,13 @@ def api_medias(id):
     if request.method == 'GET': return jsonify([m.to_dict() for m in session.query(Media).filter_by(reperage_id=id).all()])
     file = request.files['file']; filename = secrets.token_hex(8) + "_" + file.filename; path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True); file.save(os.path.join(path, filename))
     m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo'); session.add(m); session.commit(); return jsonify(m.to_dict())
+
+@app.route('/admin')
+def admin_dashboard():
+    session = get_session(engine); reps = session.query(Reperage).order_by(Reperage.id.desc()).all(); serialized = []
+    for r in reps:
+        f = session.query(Fixer).get(r.fixer_id); unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count(); d = r.to_dict(); d['unread_count'] = unread; serialized.append({'reperage': d, 'fixer': f.to_dict() if f else None})
+    return render_template('admin_dashboard.html', reperages=serialized, stats={'total': len(reps), 'brouillons': len([x for x in reps if x.statut == 'brouillon']), 'soumis': len([x for x in reps if x.statut == 'soumis']), 'valides': len([x for x in reps if x.statut == 'validé'])}, fixers=session.query(Fixer).all(), pays_list=[])
 
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename): return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
