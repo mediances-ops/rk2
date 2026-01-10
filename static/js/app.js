@@ -1,5 +1,5 @@
 /**
- * DOC-OS V.58 - CERVEAU DE SYNCHRONISATION RK
+ * DOC-OS V.60 SUPRÊME MISSION CONTROL
  */
 const API_URL = '/api';
 let currentReperageId = window.REPERAGE_ID || null;
@@ -9,32 +9,76 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadReperage(currentReperageId);
         await loadMedias(); 
     }
+
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
     document.getElementById('btn-submit')?.addEventListener('click', async () => {
-        if(confirm("Submit final dossier?")) { await saveReperage(false); await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, {method:'POST'}); location.reload(); }
+        if (confirm("Lock and Submit?")) {
+            await saveReperage(false);
+            await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
+            alert("🚀 Dossier Submitted."); location.reload();
+        }
     });
+
     initTabs(); initFileUpload(); initChat();
+    document.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', calculateProgress));
 });
 
+function calculateProgress() {
+    const fields = document.querySelectorAll('input[name], textarea[name]');
+    let total = 100; let filled = 0;
+    fields.forEach(input => {
+        const excluded = ['fixer_nom', 'fixer_email', 'fixer_telephone', 'pays', 'region'];
+        if (!excluded.includes(input.name)) {
+            if (input.value && input.value.trim().length > 2) filled++;
+        }
+    });
+    const percent = Math.min(100, filled);
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-percentage').textContent = percent + '%';
+    document.getElementById('progress-filled').textContent = filled;
+    return percent;
+}
+
 async function loadReperage(id) {
-    const res = await fetch(`${API_URL}/reperages/${id}`);
-    const data = await res.json();
-    document.querySelectorAll('input[name], textarea[name]').forEach(i => { if(data[i.name]) i.value = data[i.name]; });
+    try {
+        const res = await fetch(`${API_URL}/reperages/${id}`);
+        const data = await res.json();
+        document.querySelectorAll('input[name], textarea[name]').forEach(input => {
+            if (data[input.name] !== undefined) input.value = data[input.name];
+        });
+        calculateProgress();
+    } catch (e) { console.error("Load fail", e); }
 }
 
 async function saveReperage(notif) {
-    const data = {};
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => { data[el.name] = el.value; });
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-    if (res.ok && notif) alert("✅ Draft Synchronized.");
+    const p = calculateProgress();
+    const data = { progression: p };
+    document.querySelectorAll('input[name], textarea[name]').forEach(el => data[el.name] = el.value);
+
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    if (res.ok && notif) alert("✅ Draft Synchronized (" + p + "%)");
 }
 
 function initChat() {
-    document.getElementById('chat-toggle-btn').onclick = () => { document.getElementById('chat-panel').classList.toggle('active'); loadMessages(); };
-    document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').classList.remove('active');
+    const toggle = document.getElementById('chat-toggle-btn');
+    const panel = document.getElementById('chat-panel');
+    if (!toggle) return;
+
+    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) loadMessages(); };
+    document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
+
     document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondent', contenu: input.value }) });
+        if (!input.value.trim()) return;
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondent', contenu: input.value })
+        });
         input.value = ''; loadMessages();
     };
 }
@@ -51,5 +95,5 @@ async function loadMessages() {
 }
 
 function initTabs() { document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active'); }; }); }
-function initFileUpload() { const area = document.getElementById('drop-area'); area.onclick = () => document.getElementById('file-input').click(); document.getElementById('file-input').onchange = async (e) => { for (let file of e.target.files) { const fd = new FormData(); fd.append('file', file); await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd }); } await loadMedias(); }; }
-async function loadMedias() { const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`); const ms = await res.json(); document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;"></div>`).join(''); }
+function initFileUpload() { const area = document.getElementById('drop-area'); if (!area) return; area.onclick = () => document.getElementById('file-input').click(); document.getElementById('file-input').onchange = async (e) => { for (let file of e.target.files) { const fd = new FormData(); fd.append('file', file); await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd }); } await loadMedias(); }; }
+async function loadMedias() { const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`); const ms = await res.json(); document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:140px;object-fit:cover;border-radius:10px;"></div>`).join(''); }
