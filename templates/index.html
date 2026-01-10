@@ -1,4 +1,4 @@
-<!-- DOC-OS VERSION : V.62 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.64 SUPRÊME -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +21,10 @@
         .chat-panel { position: fixed; right: -420px; top: 0; width: 400px; height: 100vh; background: white; transition: 0.5s; box-shadow: -15px 0 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; z-index: 9999; }
         .chat-panel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; border-radius: 50%; background: #E67E22; color: white; border: none; cursor: pointer; z-index: 9998; box-shadow: 0 10px 25px rgba(230,126,34,0.4); display: flex; align-items: center; justify-content: center; }
+        .bubble { padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; max-width: 85%; }
+        .msg-production .bubble { background: rgba(44, 62, 80, 0.8); backdrop-filter: blur(8px); color: white; align-self: flex-start; }
+        .msg-fixer .bubble { background: rgba(230, 126, 34, 0.8); backdrop-filter: blur(8px); color: white; align-self: flex-end; }
+        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; border-radius: 50%; background: #E67E22; color: white; border: none; cursor: pointer; z-index: 9998; box-shadow: 0 10px 25px rgba(230,126,34,0.4); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         .version-tag { position: fixed; bottom: 10px; left: 10px; font-size: 0.65rem; color: #bdc3c7; z-index: 100; font-weight: 800; }
         .gps-link { font-size: 0.75rem; color: var(--secondary); font-weight: 800; text-decoration: none; margin-left: 10px; border-bottom: 1px solid var(--secondary); }
     </style>
@@ -43,7 +46,6 @@
             <div style="background: #edf2f7; height: 18px; border-radius: 9px; overflow: hidden;"><div id="progress-bar" class="progress-bar" style="height:100%; background: var(--secondary); transition: 0.5s;"></div></div>
             <div class="progress-stats" style="margin-top: 15px; font-weight: 800; color: #95a5a6; text-transform: uppercase;"><span id="progress-filled">0</span> fields filled on 100</div>
         </div>
-        
         <div class="tabs-nav">
             <button class="tab-btn active" data-tab="territoire">TERRITORY</button>
             <button class="tab-btn" data-tab="particularites">PARTICULARITIES</button>
@@ -51,7 +53,6 @@
             <button class="tab-btn" data-tab="lieux">LOCATIONS (3)</button>
             <button class="tab-btn" data-tab="fete">FESTIVITY</button>
         </div>
-
         <div class="tabs-container">
             <div class="tab-content active" id="territoire">
                 <div class="fields-grid">
@@ -94,6 +95,7 @@
                         <div class="field-group"><label>Intermediate Contact*</label><input type="text" name="gardien{{i}}_intermediaire" required></div>
                     </div>
                 </div>
+                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
                 {% endfor %}
             </div>
             <div class="tab-content" id="lieux">
@@ -121,6 +123,7 @@
                         <div class="field-group"><label>Permits Required</label><input type="text" name="lieu{{i}}_permis"></div>
                     </div>
                 </div>
+                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
                 {% endfor %}
             </div>
             <div class="tab-content" id="fete">
@@ -154,9 +157,9 @@
     <div id="chat-panel" class="chat-panel">
         <div class="chat-header"><h3 style="font-weight: 900; margin: 0;">PRODUCTION CHAT</h3><button id="chat-close-btn" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button></div>
         <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-container"><textarea id="chat-input" class="chat-input" placeholder="Message..."></textarea><button id="chat-send-btn" class="chat-send-btn"><i data-lucide="send"></i></button></div>
+        <div class="chat-input-container"><textarea id="chat-input" class="chat-input" placeholder="Message..."></textarea><button id="chat-send-btn" class="chat-send-btn" style="background: var(--secondary); color: white; border: none; border-radius: 8px; width: 45px; height: 45px; cursor: pointer;"><i data-lucide="send"></i></button></div>
     </div>
-    <div class="version-tag">DOC-OS V.62 MISSION CONTROL</div>
+    <div class="version-tag">DOC-OS V.64 SUPRÊME MISSION CONTROL</div>
     <script>window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }}; window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};</script>
     <script src="/static/js/app.js"></script>
     <script>lucide.createIcons();</script>
