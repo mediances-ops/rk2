@@ -1,18 +1,23 @@
 /**
- * DOC-OS V.62 SUPRÊME MISSION CONTROL - SYNC 100 & CHAT
+ * DOC-OS V.64 SUPRÊME MISSION CONTROL - SYNC 100 & CHAT
  */
 const API_URL = '/api';
 let currentReperageId = window.REPERAGE_ID || null;
 
 document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🎬 Launching DOC-OS V.64 Supreme - Recovery Mode');
+
+    // 1. LISTENERS PRIORITAIRES (SOUDURE ANTI-BLOCK)
+    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
+    document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
+    initTabs(); initChat(); initFileUpload();
+
+    // 2. CHARGEMENT DATA
     if (currentReperageId) {
         await loadReperage(currentReperageId);
         await loadMedias(); 
     }
-    // LISTENERS PRIORITAIRES
-    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
-    document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
-    initTabs(); initChat(); initFileUpload();
+
     document.querySelectorAll('input, textarea').forEach(el => el.addEventListener('input', calculateProgress));
 });
 
@@ -36,13 +41,15 @@ async function loadReperage(id) {
     try {
         const res = await fetch(`${API_URL}/reperages/${id}`);
         const data = await res.json();
-        // MAPPAGE DIRECT
+        // SOUDURE 1 : MAPPAGE DIRECT NAME <-> COLUMN
         document.querySelectorAll('input[name], textarea[name]').forEach(input => {
-            if (data[input.name] !== undefined) input.value = data[input.name];
+            if (data[input.name] !== undefined && data[input.name] !== null) {
+                input.value = data[input.name];
+            }
         });
         if (data.statut === 'soumis') lockInterface();
         calculateProgress();
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Load fail", e); }
 }
 
 function lockInterface() {
@@ -54,8 +61,15 @@ async function saveReperage(notif) {
     const p = calculateProgress();
     const data = { progression: p };
     document.querySelectorAll('input[name], textarea[name]').forEach(el => data[el.name] = el.value);
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if (res.ok && notif) alert("✅ SUBSTANCE SYNCHRONIZED (" + p + "%)");
+
+    try {
+        const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok && notif) alert("✅ SUBSTANCE & PROGRESS SYNCHRONIZED (" + p + "%)");
+    } catch (e) { alert("❌ Sync Error."); }
 }
 
 async function submitToProduction() {
@@ -63,10 +77,11 @@ async function submitToProduction() {
     let missing = [];
     required.forEach(el => { if(!el.value.trim()) missing.push(el.name); });
     if (missing.length > 0) { alert("⚠️ MISSING FIELDS :\n" + missing.join(", ")); return; }
-    if (confirm("LOCK AND SUBMIT?")) {
+
+    if (confirm("SUBMIT FINAL DOSSIER?")) {
         await saveReperage(false);
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
-        if (res.ok) { alert("🚀 SUBMITTED."); location.reload(); }
+        if (res.ok) { alert("🚀 DOSSIER SUBMITTED."); location.reload(); }
     }
 }
 
@@ -74,12 +89,21 @@ function initChat() {
     const toggle = document.getElementById('chat-toggle-btn');
     const panel = document.getElementById('chat-panel');
     if (!toggle) return;
-    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) loadMessages(); };
+
+    toggle.onclick = () => {
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) loadMessages();
+    };
     document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').classList.remove('active');
+
     document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
         if (!input.value.trim()) return;
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondent', contenu: input.value }) });
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Correspondent', contenu: input.value })
+        });
         input.value = ''; loadMessages();
     };
 }
@@ -88,7 +112,10 @@ async function loadMessages() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
     const msgs = await res.json();
     const container = document.getElementById('chat-messages');
-    container.innerHTML = msgs.map(m => `<div class="msg-wrapper ${m.auteur_type === 'fixer' ? 'msg-fixer' : 'msg-production'}"><div class="bubble" style="background: ${m.auteur_type === 'fixer' ? 'rgba(230,126,34,0.7)' : 'rgba(44,62,80,0.7)'}; backdrop-filter: blur(8px); color: white; padding:12px; border-radius:15px; margin-bottom:5px;">${m.contenu}</div><div style="font-size:0.7rem; font-weight:800; color:#95a5a6;">${m.auteur_nom}</div></div>`).join('');
+    container.innerHTML = msgs.map(m => {
+        const isFixer = m.auteur_type === 'fixer';
+        return `<div class="msg-wrapper ${isFixer ? 'msg-fixer' : 'msg-production'}"><div class="bubble" style="background: ${isFixer ? 'rgba(230,126,34,0.7)' : 'rgba(44,62,80,0.7)'}; backdrop-filter: blur(8px); color: white; padding:12px; border-radius:15px; margin-bottom:5px;">${m.contenu}</div><div style="font-size:0.7rem; font-weight:800; color:#95a5a6;">${m.auteur_nom}</div></div>`;
+    }).join('');
     container.scrollTop = 99999;
 }
 
