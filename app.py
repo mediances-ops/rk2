@@ -1,7 +1,7 @@
 # DOC-OS VERSION : V.61 SUPRÊME MISSION CONTROL
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, redirect, abort, send_file, send_from_directory
+from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text, or_
 from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardien, Lieu
@@ -9,7 +9,6 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURATION
 raw_db_url = os.environ.get('DATABASE_URL')
 DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
@@ -18,7 +17,6 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 engine = init_db(DB_URL)
 
-# MIGRATION VOLANTE 100 COLONNES
 with engine.connect() as conn:
     from models import Reperage as R
     for col in R.__table__.columns:
@@ -32,10 +30,6 @@ def linkify_text(text):
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
 
-# =================================================================
-# I. ADMINISTRATION HUB
-# =================================================================
-
 @app.route('/')
 def index_root(): return redirect('/admin')
 
@@ -47,7 +41,6 @@ def admin_dashboard():
         p_filter = request.args.get('pays'); s_filter = request.args.get('statut')
         if p_filter: query = query.filter(Reperage.pays == p_filter)
         if s_filter: query = query.filter(Reperage.statut == s_filter)
-        
         reps = query.order_by(Reperage.id.desc()).all(); serialized = []
         for r in reps:
             f = session.query(Fixer).get(r.fixer_id)
@@ -55,15 +48,8 @@ def admin_dashboard():
             last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.id.desc()).first()
             d = r.to_dict(); d['unread_count'] = unread; d['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
             serialized.append({'reperage': d, 'fixer': f.to_dict() if f else None})
-            
-        pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
-        stats = {
-            'total': session.query(Reperage).count(),
-            'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
-            'soumis': session.query(Reperage).filter_by(statut='soumis').count(),
-            'valides': session.query(Reperage).filter_by(statut='validé').count()
-        }
-        return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=pays_list)
+        stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
+        return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
     finally: session.close()
 
 @app.route('/admin/fixers')
@@ -91,10 +77,6 @@ def admin_delete_cmd(id):
     if rep: session.delete(rep); session.commit()
     return jsonify({'status': 'success'})
 
-# =================================================================
-# II. MOTEURS DE SORTIE & SYNC
-# =================================================================
-
 @app.route('/admin/reperage/<int:id>/print')
 def admin_print_cmd(id):
     session = get_session(engine); rep = session.get(Reperage, id); fixer = session.query(Fixer).get(rep.fixer_id)
@@ -108,7 +90,7 @@ def admin_zip_cmd(id):
     with zipfile.ZipFile(memory_file, 'w') as zf:
         for root, _, files in os.walk(path):
             for file in files: zf.write(os.path.join(root, file), file)
-    memory_file.seek(0); return send_file(memory_file, download_name=f"Substance_Photos_{id}.zip", as_attachment=True)
+    memory_file.seek(0); return send_file(memory_file, download_name=f"Photos_Rep_{id}.zip", as_attachment=True)
 
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
 def api_sync_radical(id):
@@ -123,9 +105,14 @@ def api_sync_radical(id):
         session.commit(); return jsonify({'status': 'success', 'synced_id': rep.id})
     finally: session.close()
 
-# =================================================================
-# III. SERVICES (CHAT, MÉDIAS, FORM)
-# =================================================================
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def api_submit_radical(id):
+    session = get_session(engine)
+    try:
+        rep = session.get(Reperage, id); rep.statut = 'soumis'; session.commit()
+        if DOCUGEN_URL: requests.post(DOCUGEN_URL, json=rep.to_dict(), headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=10)
+        return jsonify({'status': 'success'})
+    finally: session.close()
 
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
 def api_chat(id):
@@ -133,8 +120,7 @@ def api_chat(id):
     if request.method == 'GET':
         msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
         return jsonify([m.to_dict() for m in msgs])
-    data = request.json
-    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify(m.to_dict()), 201
 
 @app.route('/api/reperages/<int:id>/medias', methods=['POST'])
