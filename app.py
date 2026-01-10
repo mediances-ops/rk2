@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.61 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.62 SUPRÊME MISSION CONTROL
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory
@@ -9,6 +9,7 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
+# CONFIGURATION
 raw_db_url = os.environ.get('DATABASE_URL')
 DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
@@ -17,6 +18,7 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 engine = init_db(DB_URL)
 
+# SOUDURE POSTGRES : MIGRATION DES 100 COLONNES
 with engine.connect() as conn:
     from models import Reperage as R
     for col in R.__table__.columns:
@@ -29,6 +31,10 @@ def linkify_text(text):
     if not text: return ""
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>', text)
+
+# =================================================================
+# I. ADMINISTRATION HUB (7 COMMANDES)
+# =================================================================
 
 @app.route('/')
 def index_root(): return redirect('/admin')
@@ -67,6 +73,7 @@ def admin_create_rep():
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 def admin_update_cmd(id):
     session = get_session(engine); data = request.json; rep = session.get(Reperage, id)
+    if not rep: abort(404)
     for f in ['region', 'pays', 'statut', 'notes_admin']:
         if f in data: setattr(rep, f, data[f])
     session.commit(); return jsonify({'status': 'success'})
@@ -91,6 +98,10 @@ def admin_zip_cmd(id):
         for root, _, files in os.walk(path):
             for file in files: zf.write(os.path.join(root, file), file)
     memory_file.seek(0); return send_file(memory_file, download_name=f"Photos_Rep_{id}.zip", as_attachment=True)
+
+# =================================================================
+# II. API SOUDURE & SYNC (100 COLONNES)
+# =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
 def api_sync_radical(id):
