@@ -12,7 +12,7 @@
         .tab-content { display: none; padding: 50px 40px; background: white; border-radius: 0 0 20px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; border-top: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
         .sub-section { border-left: 5px solid var(--secondary); padding: 25px; background: #fafafa; margin-bottom: 40px; border-radius: 0 12px 12px 0; }
-        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px; }
+        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 45px; }
         .header-fixer-banner { height: 480px; background-size: cover !important; background-position: center !important; position: relative; }
         .header-fixer-overlay { background: none !important; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
         .header-fixer-title { font-size: 4.5rem !important; font-weight: 900; color: white; text-shadow: 0 8px 25px rgba(0,0,0,0.9); margin: 0; }
@@ -21,9 +21,9 @@
         .chat-panel { position: fixed; right: -420px; top: 0; width: 400px; height: 100vh; background: white; transition: 0.5s; box-shadow: -15px 0 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; z-index: 9999; }
         .chat-panel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer; z-index: 9998; box-shadow: 0 10px 25px rgba(230,126,34,0.4); display: flex; align-items: center; justify-content: center; }
-        .gps-link { font-size: 0.75rem; color: var(--secondary); font-weight: 800; text-decoration: none; margin-left: 10px; border-bottom: 1px solid var(--secondary); }
+        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; border-radius: 50%; background: #E67E22; color: white; border: none; cursor: pointer; z-index: 9998; box-shadow: 0 10px 25px rgba(230,126,34,0.4); display: flex; align-items: center; justify-content: center; }
         .version-tag { position: fixed; bottom: 10px; left: 10px; font-size: 0.65rem; color: #bdc3c7; z-index: 100; font-weight: 800; }
+        .gps-link { font-size: 0.75rem; color: var(--secondary); font-weight: 800; text-decoration: none; margin-left: 10px; border-bottom: 1px solid var(--secondary); }
     </style>
 </head>
 <body>
@@ -94,7 +94,6 @@
                         <div class="field-group"><label>Intermediate Contact*</label><input type="text" name="gardien{{i}}_intermediaire" required></div>
                     </div>
                 </div>
-                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
                 {% endfor %}
             </div>
             <div class="tab-content" id="lieux">
@@ -122,7 +121,6 @@
                         <div class="field-group"><label>Permits Required</label><input type="text" name="lieu{{i}}_permis"></div>
                     </div>
                 </div>
-                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
                 {% endfor %}
             </div>
             <div class="tab-content" id="fete">
@@ -158,7 +156,7 @@
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-container"><textarea id="chat-input" class="chat-input" placeholder="Message..."></textarea><button id="chat-send-btn" class="chat-send-btn"><i data-lucide="send"></i></button></div>
     </div>
-    <div class="version-tag">DOC-OS V.62 SUPRÊME RADICAL</div>
+    <div class="version-tag">DOC-OS V.62 MISSION CONTROL</div>
     <script>window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }}; window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};</script>
     <script src="/static/js/app.js"></script>
     <script>lucide.createIcons();</script>
