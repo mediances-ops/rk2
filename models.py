@@ -1,8 +1,7 @@
-# DOC-OS VERSION : V.52 SUPRÊME RADICAL
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float
+# DOC-OS VERSION : V.56 SUPRÊME RADICAL
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy import create_engine
 from datetime import datetime
 import os
 
@@ -11,26 +10,13 @@ Base = declarative_base()
 class Fixer(Base):
     __tablename__ = 'fixers'
     id = Column(Integer, primary_key=True)
-    nom = Column(String(100))
-    prenom = Column(String(100))
-    email = Column(String(200), unique=True)
-    telephone = Column(String(50))
-    societe = Column(String(200))
-    fonction = Column(String(100))
-    site_web = Column(String(255))
-    numero_siret = Column(String(50))
-    adresse_1 = Column(String(255))
-    ville = Column(String(100))
-    pays = Column(String(100))
-    bio = Column(Text)
-    specialites = Column(Text)
-    langues_parlees = Column(String(255))
-    token_unique = Column(String(12), unique=True)
-    actif = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.now)
-
-    def to_dict(self):
-        return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
+    nom = Column(String(100)); prenom = Column(String(100)); email = Column(String(200), unique=True)
+    telephone = Column(String(50)); societe = Column(String(200)); fonction = Column(String(100))
+    site_web = Column(String(255)); numero_siret = Column(String(50)); adresse_1 = Column(String(255))
+    ville = Column(String(100)); pays = Column(String(100)); bio = Column(Text); specialites = Column(Text)
+    langues_parlees = Column(String(255)); token_unique = Column(String(12), unique=True)
+    actif = Column(Boolean, default=True); created_at = Column(DateTime, default=datetime.now)
+    def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
 
 class Reperage(Base):
     __tablename__ = 'reperages'
@@ -41,41 +27,38 @@ class Reperage(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     
-    # METADATA
+    # IDENTITY & METADATA
     fixer_id = Column(Integer, ForeignKey('fixers.id'))
-    fixer_nom = Column(String(255))
-    pays = Column(String(100))
-    region = Column(String(255))
-    image_region = Column(String(500))
-    notes_admin = Column(Text)
+    fixer_nom = Column(String(255)); pays = Column(String(100)); region = Column(String(255))
+    image_region = Column(String(500)); notes_admin = Column(Text)
 
-    # 1. TERRITORY (8 fields)
+    # 1. TERRITORY
     ville = Column(String(255)); population = Column(String(255)); langues = Column(String(255))
     climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text)
     acces = Column(Text); hebergement = Column(Text)
 
-    # 2. PARTICULARITIES (7 fields - angle removed)
+    # 2. PARTICULARITIES
     fete_nom = Column(String(255)); contraintes = Column(Text); arc = Column(Text)
     moments = Column(Text); sensibles = Column(Text); budget = Column(String(100)); notes = Column(Text)
 
-    # 3. GUARDIANS (3x10 = 30 fields)
-    g1_nom_prenom = Column(String(255)); g1_age = Column(Integer); g1_fonction = Column(String(255)); g1_savoir = Column(Text); g1_histoire = Column(Text); g1_psychologie = Column(Text); g1_evaluation = Column(Text); g1_langues = Column(String(255)); g1_contact = Column(Text); g1_intermediaire = Column(Text)
-    g2_nom_prenom = Column(String(255)); g2_age = Column(Integer); g2_fonction = Column(String(255)); g2_savoir = Column(Text); g2_histoire = Column(Text); g2_psychologie = Column(Text); g2_evaluation = Column(Text); g2_langues = Column(String(255)); g2_contact = Column(Text); g2_intermediaire = Column(Text)
-    g3_nom_prenom = Column(String(255)); g3_age = Column(Integer); g3_fonction = Column(String(255)); g3_savoir = Column(Text); g3_histoire = Column(Text); g3_psychologie = Column(Text); g3_evaluation = Column(Text); g3_langues = Column(String(255)); g3_contact = Column(Text); g3_intermediaire = Column(Text)
+    # 3. GUARDIANS (3x10)
+    gardien1_nom_prenom = Column(String(255)); gardien1_age = Column(Integer); gardien1_fonction = Column(String(255)); gardien1_savoir = Column(Text); gardien1_histoire = Column(Text); gardien1_psychologie = Column(Text); gardien1_evaluation = Column(Text); gardien1_langues = Column(String(255)); gardien1_contact = Column(Text); gardien1_intermediaire = Column(Text)
+    gardien2_nom_prenom = Column(String(255)); gardien2_age = Column(Integer); gardien2_fonction = Column(String(255)); gardien2_savoir = Column(Text); gardien2_histoire = Column(Text); gardien2_psychologie = Column(Text); gardien2_evaluation = Column(Text); gardien2_langues = Column(String(255)); gardien2_contact = Column(Text); gardien2_intermediaire = Column(Text)
+    gardien3_nom_prenom = Column(String(255)); gardien3_age = Column(Integer); gardien3_fonction = Column(String(255)); gardien3_savoir = Column(Text); gardien3_histoire = Column(Text); gardien3_psychologie = Column(Text); gardien3_evaluation = Column(Text); gardien3_langues = Column(String(255)); gardien3_contact = Column(Text); gardien3_intermediaire = Column(Text)
 
-    # 4. LOCATIONS (3x15 = 45 fields)
-    l1_nom = Column(String(255)); l1_type = Column(String(255)); l1_description = Column(Text); l1_cinegenie = Column(Text); l1_axes = Column(Text); l1_points_vue = Column(Text); l1_moments = Column(Text); l1_son = Column(Text); l1_adequation = Column(Text); l1_acces = Column(Text); l1_securite = Column(Text); l1_elec = Column(Text); l1_espace = Column(Text); l1_meteo = Column(Text); l1_permis = Column(Text)
-    l2_nom = Column(String(255)); l2_type = Column(String(255)); l2_description = Column(Text); l2_cinegenie = Column(Text); l2_axes = Column(Text); l2_points_vue = Column(Text); l2_moments = Column(Text); l2_son = Column(Text); l2_adequation = Column(Text); l2_acces = Column(Text); l2_securite = Column(Text); l2_elec = Column(Text); l2_espace = Column(Text); l2_meteo = Column(Text); l2_permis = Column(Text)
-    l3_nom = Column(String(255)); l3_type = Column(String(255)); l3_description = Column(Text); l3_cinegenie = Column(Text); l3_axes = Column(Text); l3_points_vue = Column(Text); l3_moments = Column(Text); l3_son = Column(Text); l3_adequation = Column(Text); l3_acces = Column(Text); l3_securite = Column(Text); l3_elec = Column(Text); l3_espace = Column(Text); l3_meteo = Column(Text); l3_permis = Column(Text)
+    # 4. LOCATIONS (3x15 - including GPS)
+    lieu1_nom = Column(String(255)); lieu1_type = Column(String(255)); lieu1_description = Column(Text); lieu1_cinegenie = Column(Text); lieu1_axes = Column(Text); lieu1_points_vue = Column(Text); lieu1_moments = Column(Text); lieu1_son = Column(Text); lieu1_gps = Column(String(255)); lieu1_acces = Column(Text); lieu1_securite = Column(Text); lieu1_elec = Column(Text); lieu1_espace = Column(Text); lieu1_meteo = Column(Text); lieu1_permis = Column(Text)
+    lieu2_nom = Column(String(255)); lieu2_type = Column(String(255)); lieu2_description = Column(Text); lieu2_cinegenie = Column(Text); lieu2_axes = Column(Text); lieu2_points_vue = Column(Text); lieu2_moments = Column(Text); lieu2_son = Column(Text); lieu2_gps = Column(String(255)); lieu2_acces = Column(Text); lieu2_securite = Column(Text); lieu2_elec = Column(Text); lieu2_espace = Column(Text); lieu2_meteo = Column(Text); lieu2_permis = Column(Text)
+    lieu3_nom = Column(String(255)); lieu3_type = Column(String(255)); lieu3_description = Column(Text); lieu3_cinegenie = Column(Text); lieu3_axes = Column(Text); lieu3_points_vue = Column(Text); lieu3_moments = Column(Text); lieu3_son = Column(Text); lieu3_gps = Column(String(255)); lieu3_acces = Column(Text); lieu3_securite = Column(Text); lieu3_elec = Column(Text); lieu3_espace = Column(Text); lieu3_meteo = Column(Text); lieu3_permis = Column(Text)
 
-    # 5. FESTIVITY (5 fields)
-    fete_lieu_date = Column(String(255)); fete_pourquoi = Column(Text); fete_origines = Column(Text); fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
+    # 5. FESTIVITY (including fete_gps)
+    fete_lieu_date = Column(String(255)); fete_gps = Column(String(255)); fete_origines = Column(Text)
+    fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
 
     medias = relationship("Media", backref="reperage", cascade="all, delete-orphan")
     messages = relationship("Message", backref="reperage", cascade="all, delete-orphan")
 
-    def to_dict(self):
-        return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
+    def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
 
 class Media(Base):
     __tablename__ = 'medias'
