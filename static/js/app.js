@@ -1,5 +1,5 @@
 /**
- * DOC-OS V.52 SUPRÊME RADICAL - NO JSON RESERVOIRS / NO i18n
+ * DOC-OS V.52 SUPRÊME RADICAL - SYNC 100 & CHAT ENGAGEANT
  */
 const API_URL = '/api';
 let currentReperageId = window.REPERAGE_ID || null;
@@ -15,16 +15,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Handlers
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
     document.getElementById('btn-submit')?.addEventListener('click', async () => {
-        await saveReperage(false);
-        await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
-        alert("🚀 Dossier Submitted to Production!");
+        if (confirm("Lock and Submit to Production?")) {
+            await saveReperage(false);
+            const res = await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
+            if (res.ok) alert("🚀 DOSSIER SUBMITTED TO PRODUCTION - DATA LOCKED");
+        }
     });
 
     initTabs();
     initFileUpload();
     initChat();
     
-    // Live Progress
     document.querySelectorAll('input, textarea').forEach(el => {
         el.addEventListener('input', calculateProgress);
     });
@@ -48,39 +49,67 @@ function calculateProgress() {
 }
 
 async function loadReperage(id) {
-    const res = await fetch(`${API_URL}/reperages/${id}`);
-    const data = await res.json();
-    // Fill all inputs by name (Direct mapping)
-    document.querySelectorAll('input[name], textarea[name]').forEach(input => {
-        if (data[input.name]) input.value = data[input.name];
-    });
-    calculateProgress();
+    try {
+        const res = await fetch(`${API_URL}/reperages/${id}`);
+        const data = await res.json();
+        document.querySelectorAll('input[name], textarea[name]').forEach(input => {
+            if (data[input.name] !== undefined) input.value = data[input.name];
+        });
+        calculateProgress();
+    } catch (e) { console.error("Load fail", e); }
 }
 
 async function saveReperage(notif) {
     const p = calculateProgress();
-    // Collect all named fields into a flat object
     const data = { progression: p };
     document.querySelectorAll('input[name], textarea[name]').forEach(el => {
         data[el.name] = el.value;
     });
 
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    if (res.ok && notif) alert("💾 Progress Synchronized (" + p + "%)");
+    try {
+        const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok && notif) alert("✅ SUBSTANCE & PROGRESS SYNCHRONIZED (" + p + "%)");
+    } catch (e) { alert("❌ Network Error."); }
 }
 
-function initTabs() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.onclick = () => {
-            document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(btn.dataset.tab).classList.add('active');
-        };
-    });
+// CHAT ENGAGEANT SOUDURE
+function initChat() {
+    const toggle = document.getElementById('chat-toggle-btn');
+    const panel = document.getElementById('chat-panel');
+    if (!toggle) return;
+
+    toggle.onclick = () => {
+        panel.classList.toggle('active');
+        if (panel.classList.contains('active')) loadMessages();
+    };
+    document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
+
+    document.getElementById('chat-send-btn').onclick = async () => {
+        const input = document.getElementById('chat-input');
+        if (!input.value.trim()) return;
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: window.FIXER_DATA.prenom || 'Fixer', contenu: input.value })
+        });
+        input.value = ''; loadMessages();
+    };
+}
+
+async function loadMessages() {
+    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
+    const msgs = await res.json();
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = msgs.map(m => {
+        const isFixer = m.auteur_type === 'fixer';
+        const time = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        return `<div class="msg-wrapper ${isFixer ? 'msg-fixer' : 'msg-production'}"><div class="bubble">${m.contenu}</div><div class="msg-meta">${m.auteur_nom} • ${time}</div></div>`;
+    }).join('');
+    container.scrollTop = container.scrollHeight;
 }
 
 function initFileUpload() {
@@ -92,33 +121,22 @@ function initFileUpload() {
             const fd = new FormData(); fd.append('file', file);
             await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
         }
-        loadMedias();
+        await loadMedias();
     };
 }
 
 async function loadMedias() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
     const ms = await res.json();
-    document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100px;height:100px;object-fit:cover;border-radius:10px;"></div>`).join('');
+    document.getElementById('files-list').innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;"></div>`).join('');
 }
 
-function initChat() {
-    document.getElementById('chat-toggle-btn').onclick = () => { document.getElementById('chat-panel').classList.add('active'); loadMessages(); };
-    document.getElementById('chat-close-btn').onclick = () => document.getElementById('chat-panel').classList.remove('active');
-    document.getElementById('chat-send-btn').onclick = async () => {
-        const input = document.getElementById('chat-input');
-        if (!input.value) return;
-        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ auteur_type: 'fixer', auteur_nom: 'Fixer', contenu: input.value })
-        });
-        input.value = ''; loadMessages();
-    };
-}
-
-async function loadMessages() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
-    const msgs = await res.json();
-    document.getElementById('chat-messages').innerHTML = msgs.map(m => `<div class="msg-wrapper ${m.auteur_type === 'fixer' ? 'msg-fixer' : 'msg-production'}"><div class="bubble">${m.contenu}</div></div>`).join('');
+function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.add('active');
+        };
+    });
 }
