@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.60 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.61 SUPRÊME MISSION CONTROL
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -11,8 +11,9 @@ class Fixer(Base):
     __tablename__ = 'fixers'
     id = Column(Integer, primary_key=True)
     nom = Column(String(100)); prenom = Column(String(100)); email = Column(String(200), unique=True)
-    telephone = Column(String(50)); societe = Column(String(200)); fonction = Column(String(100))
-    site_web = Column(String(255)); numero_siret = Column(String(50)); adresse_1 = Column(String(255))
+    telephone = Column(String(50)); telephone_2 = Column(String(50)); societe = Column(String(200))
+    fonction = Column(String(100)); site_web = Column(String(255)); numero_siret = Column(String(50))
+    adresse_1 = Column(String(255)); adresse_2 = Column(String(255)); code_postal = Column(String(20))
     ville = Column(String(100)); pays = Column(String(100)); bio = Column(Text); specialites = Column(Text)
     langues_parlees = Column(String(255)); token_unique = Column(String(12), unique=True); lien_personnel = Column(String(500))
     actif = Column(Boolean, default=True); notes_internes = Column(Text); created_at = Column(DateTime, default=datetime.now)
@@ -41,10 +42,24 @@ class Reperage(Base):
     # FESTIVITY
     fete_lieu_date = Column(String(255)); fete_gps = Column(String(255)); fete_origines = Column(Text); fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
 
-    medias = relationship("Media", backref="reperage", cascade="all, delete-orphan")
-    messages = relationship("Message", backref="reperage", cascade="all, delete-orphan")
+    gardiens = relationship("Gardien", back_populates="reperage", cascade="all, delete-orphan")
+    lieux = relationship("Lieu", back_populates="reperage", cascade="all, delete-orphan")
+    medias = relationship("Media", back_populates="reperage", cascade="all, delete-orphan")
+    messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
+
+class Gardien(Base):
+    __tablename__ = 'gardiens'
+    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); ordre = Column(Integer); nom_prenom = Column(String(255)); age = Column(Integer); fonction = Column(String(255)); savoir = Column(Text); histoire = Column(Text); psychologie = Column(Text); evaluation = Column(Text); langues = Column(String(255)); contact = Column(Text); intermediaire = Column(Text)
+    reperage = relationship("Reperage", back_populates="gardiens")
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+class Lieu(Base):
+    __tablename__ = 'lieux'
+    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); numero_lieu = Column(Integer); nom = Column(String(255)); type = Column(String(255)); description = Column(Text); cinegenie = Column(Text); axes = Column(Text); points_vue = Column(Text); moments = Column(Text); son = Column(Text); gps = Column(String(255)); acces = Column(Text); securite = Column(Text); elec = Column(Text); espace = Column(Text); meteo = Column(Text); permis = Column(Text)
+    reperage = relationship("Reperage", back_populates="lieux")
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Media(Base):
     __tablename__ = 'medias'
