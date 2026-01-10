@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.62 SUPRÊME
+# DOC-OS VERSION : V.63 SUPRÊME MISSION CONTROL
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, Float, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -18,7 +18,6 @@ class Fixer(Base):
     langues_parlees = Column(String(255)); langue_preferee = Column(String(10), default='EN')
     token_unique = Column(String(12), unique=True); lien_personnel = Column(String(500))
     actif = Column(Boolean, default=True); notes_internes = Column(Text); created_at = Column(DateTime, default=datetime.now)
-    
     reperages = relationship("Reperage", back_populates="fixer_rel")
 
     def to_dict(self):
@@ -31,15 +30,11 @@ class Reperage(Base):
     id = Column(Integer, primary_key=True); token = Column(String(32), unique=True)
     statut = Column(String(20), default='brouillon'); progression_pourcent = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now); updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    
-    fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255))
-    pays = Column(String(100)); region = Column(String(255)); image_region = Column(String(500)); notes_admin = Column(Text)
+    fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255)); pays = Column(String(100)); region = Column(String(255)); image_region = Column(String(500)); notes_admin = Column(Text)
 
-    # --- MATRICE DES 100 COLONNES ---
-    ville = Column(String(255)); population = Column(String(255)); langues = Column(String(255))
-    climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text)
-    acces = Column(Text); hebergement = Column(Text); fete_nom = Column(String(255))
-    contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text); budget = Column(String(100)); notes = Column(Text)
+    # --- MATRICE 100 COLONNES (SUBSTANCE) ---
+    ville = Column(String(255)); population = Column(String(255)); langues = Column(String(255)); climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text); acces = Column(Text); hebergement = Column(Text)
+    fete_nom = Column(String(255)); contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text); budget = Column(String(100)); notes = Column(Text)
     
     # GUARDIANS (3x10)
     gardien1_nom_prenom = Column(String(255)); gardien1_age = Column(Integer); gardien1_fonction = Column(String(255)); gardien1_savoir = Column(Text); gardien1_histoire = Column(Text); gardien1_psychologie = Column(Text); gardien1_evaluation = Column(Text); gardien1_langues = Column(String(255)); gardien1_contact = Column(Text); gardien1_intermediaire = Column(Text)
@@ -51,6 +46,7 @@ class Reperage(Base):
     lieu2_nom = Column(String(255)); lieu2_type = Column(String(255)); lieu2_description = Column(Text); lieu2_cinegenie = Column(Text); lieu2_axes = Column(Text); lieu2_points_vue = Column(Text); lieu2_moments = Column(Text); lieu2_son = Column(Text); lieu2_gps = Column(String(255)); lieu2_acces = Column(Text); lieu2_securite = Column(Text); lieu2_elec = Column(Text); lieu2_espace = Column(Text); lieu2_meteo = Column(Text); lieu2_permis = Column(Text)
     lieu3_nom = Column(String(255)); lieu3_type = Column(String(255)); lieu3_description = Column(Text); lieu3_cinegenie = Column(Text); lieu3_axes = Column(Text); lieu3_points_vue = Column(Text); lieu3_moments = Column(Text); lieu3_son = Column(Text); lieu3_gps = Column(String(255)); lieu3_acces = Column(Text); lieu3_securite = Column(Text); lieu3_elec = Column(Text); lieu3_espace = Column(Text); lieu3_meteo = Column(Text); lieu3_permis = Column(Text)
 
+    # FESTIVITY
     fete_lieu_date = Column(String(255)); fete_gps = Column(String(255)); fete_origines = Column(Text); fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
 
     fixer_rel = relationship("Fixer", back_populates="reperages")
