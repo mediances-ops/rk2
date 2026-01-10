@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* ============================================================
-           ARCHITECTURE VISUELLE V7 - COCKPIT DE PRODUCTION
+           ARCHITECTURE VISUELLE V7 - COCKPIT DE PRODUCTION V.57
            ============================================================ */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
@@ -24,7 +24,7 @@
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; line-height: 1; }
         .header .subtitle { color: #E67E22; font-size: 1.6rem; font-weight: 600; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* NAVIGATION PILOTAGE */
+        /* NAVIGATION */
         .nav { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
         .nav-link {
             background: white; color: #2C3E50; padding: 14px 28px; border-radius: 12px;
@@ -34,15 +34,12 @@
         .nav-link:hover { background: #E67E22; color: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(230, 126, 34, 0.3); }
         .nav-link.active { background: #2C3E50; color: white; border-bottom: 4px solid #E67E22; }
 
-        /* BANDEAU FILTRES ACTIFS */
+        /* FILTRES ACTIFS */
         .filter-bar {
             background: white; border-radius: 12px; padding: 20px; margin-bottom: 30px;
             display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .filter-bar select { 
-            padding: 12px 15px; border-radius: 8px; border: 2px solid #e2e8f0; 
-            flex: 1; font-family: inherit; font-weight: 600; color: #2C3E50; outline: none;
-        }
+        .filter-bar select { padding: 12px 15px; border-radius: 8px; border: 2px solid #e2e8f0; flex: 1; font-family: inherit; font-weight: 600; color: #2C3E50; outline: none; }
         .btn-filter { background: #2C3E50; color: white; padding: 12px 30px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; text-transform: uppercase; }
 
         /* STATS CARDS */
@@ -61,15 +58,10 @@
         /* INSTRUMENTS : JAUGE & NOTIFS */
         .progress-mini-bar { width: 120px; background: #eee; height: 8px; border-radius: 4px; margin-top: 8px; overflow: hidden; }
         .progress-mini-fill { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width 0.6s ease; }
-        
-        .chat-notif { 
-            background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; 
-            font-size: 0.75rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
-            animation: pulse 2s infinite; 
-        }
+        .chat-notif { background: #e74c3c; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-        /* BADGES STATUT */
+        /* BADGES */
         .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; }
         .badge-brouillon { background: #fef3c7; color: #92400e; } 
         .badge-soumis { background: #dbeafe; color: #1e40af; }
@@ -85,28 +77,19 @@
         .btn-rocket { background: #000; border: 1px solid #e50914; color: #e50914; }
         .btn-action:hover { transform: translateY(-3px); filter: brightness(1.2); }
 
-        /* MODALS */
+        /* MODALS (FIX : AGRANDISSEMENT 900PX) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-overlay.active { display: flex; }
-        .modal-box { background: white; border-radius: 24px; width: 650px; padding: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+        .modal-box { background: white; border-radius: 24px; width: 900px; max-height: 90vh; overflow-y: auto; padding: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); position: relative; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; color: #34495e; font-size: 0.95rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 1rem; color: #2C3E50; }
 
-        /* --- PANNEAUX COULISSANTS --- */
-        
-        /* CHAT ADMIN (À DROITE) */
-        #adminChatPanel { position: fixed; right: -450px; top: 0; width: 450px; height: 100vh; background: white; z-index: 20000; transition: 0.4s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: -10px 0 35px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
-        .chat-header { background: #2C3E50; color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f9f9f9; display: flex; flex-direction: column; gap: 10px; }
-        .chat-bubble { padding: 12px 16px; border-radius: 15px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; }
-        .chat-bubble.production { background: #E67E22; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .chat-bubble.fixer { background: white; border: 1px solid #ddd; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .chat-input-area { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
-
-        /* ASSISTANT IA (À GAUCHE - 80%) */
-        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .ai-floating-btn:hover { transform: scale(1.1) rotate(10deg); }
+        /* SIDE PANELS */
+        #adminChatPanel { position: fixed; right: -450px; top: 0; width: 450px; height: 100vh; background: white; z-index: 20000; transition: 0.4s; box-shadow: -10px 0 35px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
         #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
-        .ai-header { background: #2C3E50; padding: 25px 40px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 65px; height: 65px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
     </style>
 </head>
 <body>
@@ -196,7 +179,7 @@
                                 <a href="/admin/reperage/{{ rep.id }}" class="btn-action btn-view" title="Substance"><i data-lucide="eye"></i></a>
                                 <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action btn-print" title="Impression 7 pts"><i data-lucide="printer"></i></a>
                                 <a href="/formulaire/{{ rep.token }}" target="_blank" class="btn-action btn-link" title="Lien Fixer"><i data-lucide="external-link"></i></a>
-                                <button onclick="openEditModal({{ rep.id }})" class="btn-action btn-edit" title="Modifier"><i data-lucide="edit-3"></i></button>
+                                <button onclick="openEditModal({{ rep.id }})" class="btn-action btn-edit" title="Modifier le repérage"><i data-lucide="edit-3"></i></button>
                                 <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action btn-trash" title="Supprimer"><i data-lucide="trash-2"></i></button>
                                 <button onclick="sendToIA({{ rep.id }})" class="btn-action btn-rocket" title="Métamorphose IA"><i data-lucide="rocket"></i></button>
                             </div>
@@ -208,15 +191,46 @@
         </div>
     </div>
 
+    <!-- MODAL MODIFIER LE REPÉRAGE (FIX : LARGE MODAL 900PX) -->
+    <div class="modal-overlay" id="modalEdit">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 style="font-weight: 800; letter-spacing: -1px; text-transform: uppercase;">Modifier le repérage</h2>
+                <button onclick="closeModal('modalEdit')" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button>
+            </div>
+            <form onsubmit="updateRegion(event)">
+                <input type="hidden" id="edit_id">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group"><label>Région / Province</label><input type="text" id="edit_region"></div>
+                    <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
+                </div>
+                <div class="form-group">
+                    <label>Statut du Dossier</label>
+                    <select id="edit_statut">
+                        <option value="brouillon">🟠 EN COURS</option>
+                        <option value="soumis">🔵 SOUMIS (À VALIDER)</option>
+                        <option value="validé">🟢 VALIDÉ POUR TOURNAGE</option>
+                    </select>
+                </div>
+                <!-- SOUDURE : Informations de base (notes_admin) -->
+                <div class="form-group">
+                    <label>Informations de base</label>
+                    <textarea id="edit_notes" rows="12" placeholder="Saisir les consignes de production, les points de vigilance ou les informations transmises par le fixer..."></textarea>
+                </div>
+                <button type="submit" class="btn-filter" style="width:100%; background: #E67E22;">SAUVEGARDER LES MODIFICATIONS</button>
+            </form>
+        </div>
+    </div>
+
     <!-- CHAT ADMIN (À DROITE) -->
     <div id="adminChatPanel">
         <div class="chat-header">
-            <h3 id="chatTitle" style="font-weight: 800; letter-spacing: -1px;">Dossier Chat</h3>
+            <h3 id="chatTitle" style="font-weight: 800;">Dossier Chat</h3>
             <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
         </div>
-        <div class="chat-messages" id="adminChatMessages"></div>
-        <div class="chat-input-area">
-            <textarea id="adminChatInput" placeholder="Répondre au correspondant..." rows="2" style="flex:1; padding:12px; border-radius:10px; border:2px solid #e2e8f0; font-family:inherit;"></textarea>
+        <div class="chat-messages" id="adminChatMessages" style="flex:1; overflow-y:auto; padding:20px; background:#f9f9f9; display:flex; flex-direction:column; gap:10px;"></div>
+        <div style="padding:20px; border-top:1px solid #eee; display:flex; gap:10px;">
+            <textarea id="adminChatInput" placeholder="Répondre..." rows="2" style="flex:1; padding:10px; border-radius:8px; border:2px solid #e2e8f0; font-family:inherit;"></textarea>
             <button onclick="sendAdminMessage()" style="background:#E67E22; color:white; border:none; border-radius:10px; padding:0 15px; cursor:pointer;"><i data-lucide="send"></i></button>
         </div>
     </div>
@@ -231,30 +245,15 @@
         <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
     </div>
 
-    <!-- MODALS CRUD -->
+    <!-- MODAL NOUVEAU -->
     <div class="modal-overlay" id="modalNouveau">
-        <div class="modal-box">
+        <div class="modal-box" style="width: 600px;">
             <div class="modal-header"><h2>CRÉER UN NOUVEAU DOSSIER</h2><button onclick="closeModal('modalNouveau')" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
             <form onsubmit="creerDossier(event)">
                 <div class="form-group"><label>Région Cible</label><input type="text" id="new_region" required></div>
                 <div class="form-group"><label>Pays</label><input type="text" id="new_pays" required></div>
                 <div class="form-group"><label>Assigner Fixer</label><select id="new_fixer_id" required><option value="">-- CHOISIR --</option>{% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}</select></div>
-                <div class="form-group"><label>Notes Initiales</label><textarea id="new_notes" rows="3"></textarea></div>
                 <button type="submit" class="btn-filter" style="width:100%; margin-top:10px;">LANCER LE DOSSIER</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="modalEdit">
-        <div class="modal-box">
-            <div class="modal-header"><h2>MODIFIER L'IDENTITÉ</h2><button onclick="closeModal('modalEdit')" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
-            <form onsubmit="updateRegion(event)">
-                <input type="hidden" id="edit_id">
-                <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
-                <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                <div class="form-group"><label>Statut</label><select id="edit_statut"><option value="brouillon">🟠 EN COURS</option><option value="soumis">🔵 SOUMIS</option><option value="validé">🟢 VALIDÉ</option></select></div>
-                <div class="form-group"><label>Notes Administratives</label><textarea id="edit_notes" rows="5"></textarea></div>
-                <button type="submit" class="btn-filter" style="width:100%; background: #E67E22;">SAUVEGARDER</button>
             </form>
         </div>
     </div>
@@ -264,41 +263,10 @@
         const reperagesData = {{ reperages|tojson|safe }};
         let currentChatId = null;
 
-        /* LOGIQUE IA */
-        function toggleAI() {
-            const p = document.getElementById('aiPanel');
-            p.style.left = (p.style.left === '0px') ? '-82%' : '0px';
-        }
-
-        /* LOGIQUE CHAT ADMIN */
-        function openAdminChat(id, name) {
-            currentChatId = id;
-            document.getElementById('chatTitle').textContent = "Dialogue Dossier #" + id + " (" + name + ")";
-            document.getElementById('adminChatPanel').style.right = '0';
-            loadAdminMessages();
-        }
-        function closeAdminChat() { document.getElementById('adminChatPanel').style.right = '-450px'; }
-        async function loadAdminMessages() {
-            const res = await fetch(`/api/reperages/${currentChatId}/messages`);
-            const msgs = await res.json();
-            document.getElementById('adminChatMessages').innerHTML = msgs.map(m => `
-                <div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>
-            `).join('');
-        }
-        async function sendAdminMessage() {
-            const input = document.getElementById('adminChatInput');
-            if(!input.value.trim()) return;
-            await fetch(`/api/reperages/${currentChatId}/messages`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value })
-            });
-            input.value = ''; loadAdminMessages();
-        }
-
-        /* LOGIQUE MODALS & ACTIONS */
+        function toggleAI() { const p = document.getElementById('aiPanel'); p.style.left = (p.style.left==='0px') ? '-82%' : '0px'; }
         function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function closeModal(id) { if(id) document.getElementById(id).classList.remove('active'); else document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+        
         function openEditModal(id) {
             const item = reperagesData.find(x => x.reperage.id === id);
             document.getElementById('edit_id').value = id;
@@ -308,13 +276,7 @@
             document.getElementById('edit_notes').value = item.reperage.notes_admin || '';
             openModal('modalEdit');
         }
-        async function creerDossier(e) {
-            e.preventDefault();
-            const f = document.getElementById('new_fixer_id');
-            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, fixer_nom: f.options[f.selectedIndex].text, notes_admin: document.getElementById('new_notes').value };
-            await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            window.location.reload();
-        }
+
         async function updateRegion(e) {
             e.preventDefault();
             const id = document.getElementById('edit_id').value;
@@ -322,14 +284,28 @@
             await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             window.location.reload();
         }
-        async function deleteRep(id, reg) {
-            if (confirm(`⚠️ SUPPRIMER DÉFINITIVEMENT ${reg} ?`)) {
-                await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' });
-                window.location.reload();
-            }
+
+        async function openAdminChat(id, name) {
+            currentChatId = id;
+            document.getElementById('chatTitle').textContent = "Dialogue #" + id + " (" + name + ")";
+            document.getElementById('adminChatPanel').style.right = '0';
+            loadAdminMessages();
         }
+        function closeAdminChat() { document.getElementById('adminChatPanel').style.right = '-450px'; }
+        async function loadAdminMessages() {
+            const res = await fetch(`/api/reperages/${currentChatId}/messages`);
+            const msgs = await res.json();
+            document.getElementById('adminChatMessages').innerHTML = msgs.map(m => `<div class="chat-bubble ${m.auteur_type}"><strong>${m.auteur_nom}:</strong><br>${m.contenu}</div>`).join('');
+        }
+        async function sendAdminMessage() {
+            const input = document.getElementById('adminChatInput');
+            if(!input.value.trim()) return;
+            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
+            input.value = ''; loadAdminMessages();
+        }
+        async function deleteRep(id, reg) { if(confirm(`⚠️ Supprimer définitivement ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
         async function sendToIA(id) {
-            if(!confirm("🚀 LANCER MÉTAMORPHOSE IA ?")) return;
+            if(!confirm("🚀 Lancer Métamorphose IA ?")) return;
             const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
             const result = await res.json();
             if (result.bridge_sent) alert("✅ TRANSMIS AU BRIDGE.");
