@@ -9,7 +9,7 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
-# CONFIGURATION
+# --- CONFIGURATION RAILWAY ---
 raw_db_url = os.environ.get('DATABASE_URL')
 DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
@@ -18,7 +18,7 @@ DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 engine = init_db(DB_URL)
 
-# SOUDURE POSTGRES : MIGRATION DES 100 COLONNES
+# SOUDURE POSTGRES : MIGRATION AUTOMATIQUE DES 100 COLONNES
 with engine.connect() as conn:
     from models import Reperage as R
     for col in R.__table__.columns:
@@ -47,6 +47,7 @@ def admin_dashboard():
         p_filter = request.args.get('pays'); s_filter = request.args.get('statut')
         if p_filter: query = query.filter(Reperage.pays == p_filter)
         if s_filter: query = query.filter(Reperage.statut == s_filter)
+        
         reps = query.order_by(Reperage.id.desc()).all(); serialized = []
         for r in reps:
             f = session.query(Fixer).get(r.fixer_id)
@@ -54,8 +55,10 @@ def admin_dashboard():
             last_m = session.query(Message).filter_by(reperage_id=r.id).order_by(Message.id.desc()).first()
             d = r.to_dict(); d['unread_count'] = unread; d['last_sender'] = last_m.auteur_nom if (last_m and unread > 0) else None
             serialized.append({'reperage': d, 'fixer': f.to_dict() if f else None})
+            
+        pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
         stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
-        return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
+        return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=pays_list)
     finally: session.close()
 
 @app.route('/admin/fixers')
@@ -100,7 +103,7 @@ def admin_zip_cmd(id):
     memory_file.seek(0); return send_file(memory_file, download_name=f"Photos_Rep_{id}.zip", as_attachment=True)
 
 # =================================================================
-# II. API SOUDURE & SYNC (100 COLONNES)
+# II. API SOUDURE & CHAT (RADICAL FLAT-DATA)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
@@ -111,6 +114,7 @@ def api_sync_radical(id):
         if not rep: return jsonify({'error': '404'}), 404
         if request.method == 'GET': return jsonify(rep.to_dict())
         data = request.json
+        # MAPPAGE DIRECT 1:1 SUR LES 100 COLONNES
         for key, value in data.items():
             if hasattr(rep, key): setattr(rep, key, value)
         session.commit(); return jsonify({'status': 'success', 'synced_id': rep.id})
