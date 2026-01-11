@@ -1,166 +1,340 @@
-<!-- DOC-OS VERSION : V.64 SUPRÊME -->
+<!-- DOC-OS VERSION : V.66 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : FRONT-END INTERFACE FOR CORRESPONDENTS (FIXERS) -->
+<!-- ARCHITECTURE : 5 SEMANTIC RESERVOIRS - 100 FIELDS -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOC-OS | Scouting Grid</title>
+    <title>DOC-OS | Location Scouting Grid</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #2C3E50; --secondary: #E67E22; --lock: #e74c3c; }
-        .tab-content { display: none; padding: 50px 40px; background: white; border-radius: 0 0 20px 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; border-top: none; }
+        :root { 
+            --primary: #2C3E50; 
+            --secondary: #E67E22; 
+            --lock: #e74c3c; 
+            --glass: rgba(255, 255, 255, 0.85);
+            --success: #27ae60;
+        }
+
+        /* BANNER & NAVIGATION */
+        .header-fixer-banner { 
+            height: 480px; 
+            background-size: cover !important; 
+            background-position: center !important; 
+            position: relative; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-fixer-overlay {
+            text-align: center;
+            z-index: 2;
+        }
+        .header-fixer-title { 
+            font-size: 4.5rem; 
+            font-weight: 900; 
+            color: white; 
+            text-shadow: 0 8px 25px rgba(0,0,0,0.9); 
+            margin: 0; 
+        }
+
+        /* LOCK SYSTEM */
+        #lock-banner { 
+            display: none; 
+            position: sticky; 
+            top: 0; 
+            background: var(--lock); 
+            color: white; 
+            text-align: center; 
+            padding: 15px; 
+            font-weight: 900; 
+            z-index: 10000; 
+            letter-spacing: 2px;
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        /* TAB LOGIC */
+        .tabs-nav { display: flex; gap: 10px; margin-bottom: -1px; }
+        .tab-btn { 
+            background: #edf2f7; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 15px 15px 0 0; 
+            cursor: pointer; 
+            font-weight: 800; 
+            color: var(--primary);
+            transition: 0.3s;
+        }
+        .tab-btn.active { 
+            background: white; 
+            color: var(--secondary); 
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+            border-top: 4px solid var(--secondary);
+        }
+        .tab-content { 
+            display: none; 
+            padding: 50px 40px; 
+            background: white; 
+            border-radius: 0 20px 20px 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05); 
+            border: 1px solid #e2e8f0; 
+        }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
-        .sub-section { border-left: 5px solid var(--secondary); padding: 25px; background: #fafafa; margin-bottom: 40px; border-radius: 0 12px 12px 0; }
-        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 45px; }
-        .header-fixer-banner { height: 480px; background-size: cover !important; background-position: center !important; position: relative; }
-        .header-fixer-overlay { background: none !important; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-        .header-fixer-title { font-size: 4.5rem !important; font-weight: 900; color: white; text-shadow: 0 8px 25px rgba(0,0,0,0.9); margin: 0; }
-        #lock-banner { display: none; position: sticky; top: 0; background: var(--lock); color: white; text-align: center; padding: 15px; font-weight: 900; z-index: 10000; letter-spacing: 2px; }
-        .drop-area { padding: 80px; border: 4px dashed var(--secondary); border-radius: 24px; background: #fffcf9; text-align: center; cursor: pointer; }
-        .chat-panel { position: fixed; right: -420px; top: 0; width: 400px; height: 100vh; background: white; transition: 0.5s; box-shadow: -15px 0 40px rgba(0,0,0,0.2); display: flex; flex-direction: column; z-index: 9999; }
+
+        /* FIELDS & SUBSECTIONS */
+        .fields-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .sub-section { 
+            border-left: 5px solid var(--secondary); 
+            padding: 25px; 
+            background: #fafafa; 
+            margin-bottom: 40px; 
+            border-radius: 0 12px 12px 0; 
+        }
+        .gps-assistant {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 800;
+            margin-left: 10px;
+        }
+
+        /* CHAT GLASSMORPHISM */
+        .chat-panel { 
+            position: fixed; 
+            right: -420px; 
+            top: 0; 
+            width: 400px; 
+            height: 100vh; 
+            background: var(--glass); 
+            backdrop-filter: blur(12px);
+            transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); 
+            box-shadow: -15px 0 40px rgba(0,0,0,0.1); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 9999; 
+            border-left: 1px solid rgba(255,255,255,0.3);
+        }
         .chat-panel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
-        .bubble { padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; max-width: 85%; }
-        .msg-production .bubble { background: rgba(44, 62, 80, 0.8); backdrop-filter: blur(8px); color: white; align-self: flex-start; }
-        .msg-fixer .bubble { background: rgba(230, 126, 34, 0.8); backdrop-filter: blur(8px); color: white; align-self: flex-end; }
-        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; border-radius: 50%; background: #E67E22; color: white; border: none; cursor: pointer; z-index: 9998; box-shadow: 0 10px 25px rgba(230,126,34,0.4); display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .version-tag { position: fixed; bottom: 10px; left: 10px; font-size: 0.65rem; color: #bdc3c7; z-index: 100; font-weight: 800; }
-        .gps-link { font-size: 0.75rem; color: var(--secondary); font-weight: 800; text-decoration: none; margin-left: 10px; border-bottom: 1px solid var(--secondary); }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .bubble { padding: 12px 16px; border-radius: 18px; font-size: 0.9rem; max-width: 85%; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .msg-production .bubble { background: white; color: var(--primary); align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg-fixer .bubble { background: var(--secondary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
+        /* PULSE ANIMATION */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(230, 126, 34, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(230, 126, 34, 0); }
+        }
+        .chat-toggle-btn { 
+            position: fixed; right: 30px; bottom: 30px; width: 65px; height: 65px; 
+            border-radius: 50%; background: var(--secondary); color: white; 
+            border: none; cursor: pointer; z-index: 9998; 
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* NOTIFICATION TOAST */
+        #toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--success); color: white; padding: 15px 40px;
+            border-radius: 50px; font-weight: 800; z-index: 11000;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: none;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
+    <div id="toast">YOUR FORM HAS BEEN SAVED</div>
     <div id="lock-banner">⚠️ DATA LOCKED - DOSSIER SUBMITTED TO PRODUCTION</div>
+
+    <!-- HEADER -->
     <header class="header-fixer">
         <div class="header-fixer-banner" style="background-image: url('{{ FIXER_DATA.image_region or 'https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg' }}');">
             <div class="header-fixer-overlay">
-                <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RK" style="height: 100px; margin-bottom: 20px; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6));">
+                <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="RK" style="height: 80px; margin-bottom: 15px;">
                 <h1 class="header-fixer-title">{{ FIXER_DATA.region }}</h1>
-                <div style="font-size: 1.5rem; color: #E67E22; font-weight: 800; text-transform: uppercase; letter-spacing: 5px;">LOCATION SCOUTING GRID</div>
+                <div style="font-size: 1.2rem; color: var(--secondary); font-weight: 800; text-transform: uppercase; letter-spacing: 4px;">LOCATION SCOUTING GRID</div>
             </div>
         </div>
     </header>
-    <div class="container" style="margin-top: -50px; position: relative; z-index: 10;">
-        <div class="progress-container" style="background: white; padding: 40px; border-radius: 20px; margin-bottom: 50px; box-shadow: 0 15px 30px rgba(0,0,0,0.1);">
-            <div class="progress-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><span style="font-weight: 900; color: #2C3E50; font-size: 1.4rem;">PROGRESS</span><span id="progress-percentage">0%</span></div>
-            <div style="background: #edf2f7; height: 18px; border-radius: 9px; overflow: hidden;"><div id="progress-bar" class="progress-bar" style="height:100%; background: var(--secondary); transition: 0.5s;"></div></div>
-            <div class="progress-stats" style="margin-top: 15px; font-weight: 800; color: #95a5a6; text-transform: uppercase;"><span id="progress-filled">0</span> fields filled on 100</div>
+
+    <div class="container" style="margin-top: -60px; position: relative; z-index: 10; max-width: 1200px; margin-left: auto; margin-right: auto;">
+        
+        <!-- PROGRESS BAR -->
+        <div class="progress-container" style="background: white; padding: 35px; border-radius: 20px; margin-bottom: 40px; box-shadow: 0 15px 30px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="font-weight: 900; color: var(--primary); font-size: 1.2rem;">DATA SUBSTANCE PROGRESS</span>
+                <span id="progress-percentage" style="font-weight: 900; color: var(--secondary);">0%</span>
+            </div>
+            <div style="background: #edf2f7; height: 12px; border-radius: 6px; overflow: hidden;">
+                <div id="progress-bar" style="height: 100%; background: var(--secondary); width: 0%; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+            </div>
+            <div style="margin-top: 12px; font-weight: 800; color: #95a5a6; font-size: 0.8rem; text-transform: uppercase;">
+                <span id="progress-filled">0</span> fields filled out of 100
+            </div>
         </div>
-        <div class="tabs-nav">
-            <button class="tab-btn active" data-tab="territoire">TERRITORY</button>
-            <button class="tab-btn" data-tab="particularites">PARTICULARITIES</button>
-            <button class="tab-btn" data-tab="gardiens">GUARDIANS (3)</button>
-            <button class="tab-btn" data-tab="lieux">LOCATIONS (3)</button>
-            <button class="tab-btn" data-tab="fete">FESTIVITY</button>
-        </div>
+
+        <!-- TABS NAVIGATION -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-territory">1. TERRITORY</button>
+            <button class="tab-btn" data-tab="tab-pair1">2. PAIR N°1</button>
+            <button class="tab-btn" data-tab="tab-pair2">3. PAIR N°2</button>
+            <button class="tab-btn" data-tab="tab-pair3">4. PAIR N°3</button>
+            <button class="tab-btn" data-tab="tab-festivity">5. FESTIVITY</button>
+        </nav>
+
+        <!-- FORM CONTENT -->
         <div class="tabs-container">
-            <div class="tab-content active" id="territoire">
+            
+            <!-- RESERVOIR 1 : TERRITORY -->
+            <div class="tab-content active" id="tab-territory">
                 <div class="fields-grid">
                     <div class="field-group"><label>Country*</label><input type="text" name="pays" required></div>
                     <div class="field-group"><label>Region / Province*</label><input type="text" name="region" required></div>
-                    <div class="field-group"><label>Main City</label><input type="text" name="ville"></div>
-                    <div class="field-group"><label>Population</label><input type="text" name="population"></div>
-                    <div class="field-group"><label>Languages spoken</label><input type="text" name="langues"></div>
-                    <div class="field-group"><label>Planned shooting date</label><input type="text" name="climat"></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>History & Context</label><textarea name="histoire" rows="5"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Logistical Access*</label><textarea name="acces" rows="3" required></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Crew accommodation*</label><textarea name="hebergement" rows="3" required></textarea></div>
+                    <div class="field-group"><label>Target Cities (List)*</label><textarea name="villes" rows="1" required></textarea></div>
+                    <div class="field-group"><label>Total Population</label><input type="text" name="population"></div>
+                    <div class="field-group"><label>Languages Spoken</label><input type="text" name="langues"></div>
+                    <div class="field-group"><label>Planned Shooting Date / Climate</label><input type="text" name="climat"></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>History & Regional Context</label><textarea name="histoire" rows="4"></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Logistical Access Details*</label><textarea name="acces" rows="3" required></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Crew Accommodation Options*</label><textarea name="hebergement" rows="3" required></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Time & Administrative Constraints</label><textarea name="contraintes" rows="2"></textarea></div>
+                    <div class="field-group"><label>Narrative Arc</label><textarea name="arc" rows="2"></textarea></div>
+                    <div class="field-group"><label>Key Story Moments</label><textarea name="moments" rows="2"></textarea></div>
+                    <div class="field-group"><label>Sensitive Elements</label><textarea name="sensibles" rows="2"></textarea></div>
+                    <div class="field-group"><label>Estimated Local Budget</label><input type="text" name="budget"></div>
+                    <div class="field-group"><label>General Production Notes</label><textarea name="notes" rows="2"></textarea></div>
                 </div>
             </div>
-            <div class="tab-content" id="particularites">
-                <div class="fields-grid">
-                    <div class="field-group"><label>Central Festival / Event*</label><input type="text" name="fete_nom" required></div>
-                    <div class="field-group"><label>Time Constraints*</label><input type="text" name="contraintes" required></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>What must be filmed (The Arc)</label><textarea name="arc" rows="4"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Key moments identified</label><textarea name="moments" rows="4"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Culturally sensitive elements</label><textarea name="sensibles" rows="3"></textarea></div>
-                    <div class="field-group"><label>Estimated local budget</label><input type="text" name="budget"></div>
-                    <div class="field-group"><label>Risks identified</label><textarea name="notes" rows="2"></textarea></div>
-                </div>
-            </div>
-            <div class="tab-content" id="gardiens">
-                {% for i in [1, 2, 3] %}
+
+            <!-- RESERVOIRS 2, 3, 4 : PAIRS (GUARDIAN + LOCATION) -->
+            {% for i in [1, 2, 3] %}
+            <div class="tab-content" id="tab-pair{{i}}">
+                <!-- THE GUARDIAN (10 fields) -->
                 <div class="sub-section">
-                    <h3 style="font-weight:900; font-size:1.8rem; margin-bottom:25px;">Guardian {{ i }}</h3>
+                    <h3 style="font-weight:900; color: var(--primary); margin-bottom: 20px;">The Guardian n°{{i}} (Human Substance)</h3>
                     <div class="fields-grid">
                         <div class="field-group"><label>Full Name*</label><input type="text" name="gardien{{i}}_nom_prenom" required></div>
                         <div class="field-group"><label>Age*</label><input type="number" name="gardien{{i}}_age" required></div>
-                        <div class="field-group"><label>Community Role*</label><input type="text" name="gardien{{i}}_fonction" required></div>
-                        <div class="field-group"><label>Knowledge transmitted*</label><textarea name="gardien{{i}}_savoir" rows="2" required></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Personal History*</label><textarea name="gardien{{i}}_histoire" rows="3" required></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Psychological Portrait*</label><textarea name="gardien{{i}}_psychologie" rows="3" required></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>On-Camera Potential</label><textarea name="gardien{{i}}_evaluation" rows="2"></textarea></div>
-                        <div class="field-group"><label>Languages</label><input type="text" name="gardien{{i}}_langues"></div>
-                        <div class="field-group"><label>Contact</label><input type="text" name="gardien{{i}}_contact"></div>
-                        <div class="field-group"><label>Intermediate Contact*</label><input type="text" name="gardien{{i}}_intermediaire" required></div>
+                        <div class="field-group"><label>Role / Function*</label><input type="text" name="gardien{{i}}_fonction" required></div>
+                        <div class="field-group"><label>Specific Knowledge*</label><textarea name="gardien{{i}}_savoir" rows="2" required></textarea></div>
+                        <div class="field-group"><label>Personal Background*</label><textarea name="gardien{{i}}_histoire" rows="2" required></textarea></div>
+                        <div class="field-group"><label>Psychological Portrait*</label><textarea name="gardien{{i}}_psychologie" rows="2" required></textarea></div>
+                        <div class="field-group"><label>Camera Potential / Evaluation</label><textarea name="gardien{{i}}_evaluation" rows="2"></textarea></div>
+                        <div class="field-group"><label>Languages Spoken</label><input type="text" name="gardien{{i}}_langues"></div>
+                        <div class="field-group"><label>Direct Contact</label><input type="text" name="gardien{{i}}_contact"></div>
+                        <div class="field-group"><label>Local Intermediate*</label><input type="text" name="gardien{{i}}_intermediaire" required></div>
                     </div>
                 </div>
-                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
-                {% endfor %}
-            </div>
-            <div class="tab-content" id="lieux">
-                {% for i in [1, 2, 3] %}
-                <div class="sub-section">
-                    <h3 style="font-weight:900; font-size:1.8rem; margin-bottom:25px;">Location N°{{ i }}</h3>
+
+                <!-- THE LOCATION (16 fields) -->
+                <div class="sub-section" style="border-left-color: var(--primary);">
+                    <h3 style="font-weight:900; color: var(--primary); margin-bottom: 20px;">The Location n°{{i}} (Visual Substance)</h3>
                     <div class="fields-grid">
-                        <div class="field-group"><label>Place Name*</label><input type="text" name="lieu{{i}}_nom" required></div>
-                        <div class="field-group"><label>Type of Environment*</label><input type="text" name="lieu{{i}}_type" required></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Visual Description*</label><textarea name="lieu{{i}}_description" rows="3" required></textarea></div>
+                        <div class="field-group"><label>Location Name*</label><input type="text" name="lieu{{i}}_nom" required></div>
+                        <div class="field-group"><label>Environment Type*</label><input type="text" name="lieu{{i}}_type" required></div>
+                        <div class="field-group" style="grid-column: span 2;"><label>Detailed Visual Description*</label><textarea name="lieu{{i}}_description" rows="3" required></textarea></div>
                         <div class="field-group"><label>Cinematic Potential</label><textarea name="lieu{{i}}_cinegenie"></textarea></div>
-                        <div class="field-group"><label>Camera Angles</label><textarea name="lieu{{i}}_axes"></textarea></div>
+                        <div class="field-group"><label>Technical Angles</label><textarea name="lieu{{i}}_axes"></textarea></div>
                         <div class="field-group"><label>Remarkable Viewpoints</label><textarea name="lieu{{i}}_points_vue"></textarea></div>
-                        <div class="field-group"><label>Light / Moments</label><input type="text" name="lieu{{i}}_moments"></div>
+                        <div class="field-group"><label>Best Light / Timing</label><input type="text" name="lieu{{i}}_moments"></div>
                         <div class="field-group"><label>Sound Atmosphere</label><input type="text" name="lieu{{i}}_son"></div>
                         <div class="field-group">
-                            <label>GPS Localisation* <a href="https://www.google.com/maps" target="_blank" class="gps-link">[ 📍 Get Coordinates ]</a></label>
-                            <input type="text" name="lieu{{i}}_gps" required>
+                            <label>GPS Latitude* <a href="https://latitudelongitudefinder.com/" target="_blank" class="gps-assistant"><i data-lucide="map-pin"></i> Assistance</a></label>
+                            <input type="text" name="lieu{{i}}_gps_lat" placeholder="e.g. 37.3891" required>
+                        </div>
+                        <div class="field-group">
+                            <label>GPS Longitude*</label>
+                            <input type="text" name="lieu{{i}}_gps_long" placeholder="e.g. -5.9845" required>
                         </div>
                         <div class="field-group"><label>Accessibility</label><input type="text" name="lieu{{i}}_acces"></div>
                         <div class="field-group"><label>Security / Risks</label><input type="text" name="lieu{{i}}_securite"></div>
-                        <div class="field-group"><label>Electricity</label><input type="text" name="lieu{{i}}_elec"></div>
+                        <div class="field-group"><label>Power / Electricity</label><input type="text" name="lieu{{i}}_elec"></div>
                         <div class="field-group"><label>Crew Space</label><input type="text" name="lieu{{i}}_espace"></div>
-                        <div class="field-group"><label>Weather Protection</label><input type="text" name="lieu{{i}}_meteo"></div>
-                        <div class="field-group"><label>Permits Required</label><input type="text" name="lieu{{i}}_permis"></div>
+                        <div class="field-group"><label>Weather Backup</label><input type="text" name="lieu{{i}}_meteo"></div>
+                        <div class="field-group"><label>Permits Status</label><input type="text" name="lieu{{i}}_permis"></div>
                     </div>
                 </div>
-                {% if i < 3 %}<div class="section-divider"></div>{% endif %}
-                {% endfor %}
             </div>
-            <div class="tab-content" id="fete">
+            {% endfor %}
+
+            <!-- RESERVOIR 5 : FESTIVITY -->
+            <div class="tab-content" id="tab-festivity">
                 <div class="fields-grid">
-                    <div class="field-group"><label>Location & Exact Date*</label><input type="text" name="fete_lieu_date" required></div>
-                    <div class="field-group"><label>GPS Localisation* <a href="https://www.google.com/maps" target="_blank" class="gps-link">[ 📍 Get Coordinates ]</a></label><input type="text" name="fete_gps" required></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>History & Origins</label><textarea name="fete_origines" rows="5"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Sequence of events (Phases)</label><textarea name="fete_deroulement" rows="5"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>What to film? (Visual substance)</label><textarea name="fete_visuel" rows="5"></textarea></div>
-                    <div class="field-group"><label>Organizer Contact*</label><input type="text" name="fete_responsable" required></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Festival / Event Name*</label><input type="text" name="fete_nom" required></div>
+                    <div class="field-group"><label>Exact Date(s)*</label><input type="text" name="fete_date" required></div>
+                    <div class="field-group">
+                        <label>GPS Latitude* <a href="https://latitudelongitudefinder.com/" target="_blank" class="gps-assistant"><i data-lucide="map-pin"></i> Assistance</a></label>
+                        <input type="text" name="fete_gps_lat" required>
+                    </div>
+                    <div class="field-group"><label>GPS Longitude*</label><input type="text" name="fete_gps_long" required></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Origins & Cultural History</label><textarea name="fete_origines" rows="4"></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Event Sequence (Step by Step)</label><textarea name="fete_deroulement" rows="4"></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Visual Substance (What to film?)</label><textarea name="fete_visuel" rows="4"></textarea></div>
+                    <div class="field-group" style="grid-column: span 2;"><label>Main Organizer Contact*</label><input type="text" name="fete_responsable" required></div>
                 </div>
             </div>
+
         </div>
-        <section style="background: white; padding: 40px; border-radius: 20px; margin: 80px 0 60px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
-            <div class="sub-section-title"><i data-lucide="camera"></i> Photos & Documents Terrain</div>
+
+        <!-- MEDIA UPLOAD SECTION -->
+        <section style="background: white; padding: 40px; border-radius: 20px; margin: 60px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <h3 style="font-weight: 900; margin-bottom: 25px; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="camera" style="color: var(--secondary);"></i> Field Media (Photos & Documents)
+            </h3>
             <div class="upload-zone">
-                <input type="file" id="file-input" multiple accept="image/*,.pdf">
-                <div class="drop-area" id="drop-area">
-                    <i data-lucide="upload-cloud" style="width: 60px; height: 60px;"></i>
-                    <p style="font-weight: 800; font-size: 1.3rem; margin-top: 15px;">DROP YOUR MEDIA HERE</p>
+                <input type="file" id="file-input" multiple accept="image/*,.pdf" style="display: none;">
+                <div class="drop-area" id="drop-area" style="padding: 60px; border: 3px dashed #cbd5e0; border-radius: 15px; text-align: center; cursor: pointer; background: #f8fafc;">
+                    <i data-lucide="upload-cloud" style="width: 50px; height: 50px; color: #94a3b8; margin-bottom: 15px;"></i>
+                    <p style="font-weight: 800; color: #64748b;">DRAG & DROP YOUR MEDIA HERE OR CLICK TO BROWSE</p>
                 </div>
             </div>
-            <div id="files-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-top: 30px;"></div>
+            <div id="files-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 30px;"></div>
         </section>
-        <div class="actions-bar" style="display: flex; gap: 25px; justify-content: flex-end; margin: 60px 0;">
-            <button id="btn-save" class="btn" style="background: var(--primary); color: white; padding: 22px 60px; border-radius: 15px; font-weight: 900; cursor: pointer; border: none; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(44,62,80,0.2);">💾 SAVE DRAFT</button>
-            <button id="btn-submit" class="btn" style="background: #27ae60; color: white; padding: 22px 60px; border-radius: 15px; border: none; font-weight: 900; cursor: pointer; font-size: 1.1rem; box-shadow: 0 10px 20px rgba(39,174,96,0.2);">✅ SUBMIT TO PROD</button>
+
+        <!-- ACTION BAR -->
+        <div style="display: flex; gap: 20px; justify-content: flex-end; margin-bottom: 100px;">
+            <button id="btn-save" style="background: var(--primary); color: white; padding: 20px 50px; border-radius: 12px; font-weight: 900; border: none; cursor: pointer; font-size: 1rem;">💾 SAVE DRAFT</button>
+            <button id="btn-submit" style="background: var(--success); color: white; padding: 20px 50px; border-radius: 12px; font-weight: 900; border: none; cursor: pointer; font-size: 1rem;">🚀 SUBMIT TO PRODUCTION</button>
         </div>
     </div>
-    <button id="chat-toggle-btn" class="chat-toggle-btn"><i data-lucide="message-square" style="width: 32px; height: 32px;"></i></button>
+
+    <!-- CHAT SYSTEM -->
+    <button id="chat-toggle-btn" class="chat-toggle-btn"><i data-lucide="message-square" style="width: 30px; height: 30px;"></i></button>
+    
     <div id="chat-panel" class="chat-panel">
-        <div class="chat-header"><h3 style="font-weight: 900; margin: 0;">PRODUCTION CHAT</h3><button id="chat-close-btn" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button></div>
+        <div class="chat-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 10px; height: 10px; background: #2ecc71; border-radius: 50%;"></div>
+                <h3 style="font-weight: 900; margin: 0; font-size: 1rem;">HQ PRODUCTION</h3>
+            </div>
+            <button id="chat-close-btn" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+        </div>
         <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-container"><textarea id="chat-input" class="chat-input" placeholder="Message..."></textarea><button id="chat-send-btn" class="chat-send-btn" style="background: var(--secondary); color: white; border: none; border-radius: 8px; width: 45px; height: 45px; cursor: pointer;"><i data-lucide="send"></i></button></div>
+        <div style="padding: 20px; border-top: 1px solid rgba(0,0,0,0.05); display: flex; gap: 10px; background: white;">
+            <textarea id="chat-input" style="flex: 1; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; resize: none; font-family: inherit;" placeholder="Type your question..."></textarea>
+            <button id="chat-send-btn" style="background: var(--secondary); color: white; border: none; border-radius: 10px; width: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="send" style="width: 20px;"></i>
+            </button>
+        </div>
     </div>
-    <div class="version-tag">DOC-OS V.64 SUPRÊME MISSION CONTROL</div>
-    <script>window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }}; window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};</script>
+
+    <div style="position: fixed; bottom: 10px; left: 10px; font-size: 0.6rem; color: #bdc3c7; font-weight: 800;">DOC-OS V.66 SUPRÊME SYSTEM</div>
+
+    <script>
+        // PASSING FLASK DATA TO JS
+        window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }}; 
+        window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
+    </script>
     <script src="/static/js/app.js"></script>
     <script>lucide.createIcons();</script>
 </body>
