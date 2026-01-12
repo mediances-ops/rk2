@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.69.2 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - PRINT ROUTE SECURED & 100 FIELDS SYNC
+# DOC-OS VERSION : V.69.3 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - MEDIA DELETION & PHYSICAL DISK CLEANUP
 
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
@@ -90,10 +90,8 @@ def api_sync_engine(id):
                 if hasattr(l_obj, k): setattr(l_obj, k, v)
     session.commit(); return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
-@app.route('/api/reperages/<int:id>/print')
 @app.route('/admin/reperage/<int:id>/print')
 def admin_print(id):
-    """SOUDURE RÉTABLIE : Route d'impression certifiée."""
     session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
     pairs = []
     for i in [1, 2, 3]:
@@ -107,12 +105,44 @@ def api_chat(id):
     session = get_db()
     if request.method == 'GET':
         msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
-        if request.args.get('role') == 'admin':
-            session.query(Message).filter_by(reperage_id=id, auteur_type='fixer').update({Message.lu: True})
-            session.commit()
         return jsonify([m.to_dict() for m in msgs])
     data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
+
+@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
+def api_medias(id):
+    session = get_db()
+    if request.method == 'GET':
+        ms = session.query(Media).filter_by(reperage_id=id).all()
+        return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier} for m in ms])
+    file = request.files['file']; filename = secrets.token_hex(8) + "_" + file.filename
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True); file.save(os.path.join(path, filename))
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
+    session.add(m); session.commit(); return jsonify({'status': 'success'})
+
+# --- ROUTE DE DÉSTOCKAGE PHYSIQUE (V.69.3) ---
+@app.route('/api/medias/<int:media_id>', methods=['DELETE'])
+def api_delete_media(media_id):
+    session = get_db()
+    m = session.get(Media, media_id)
+    if not m: abort(404)
+    
+    # Sécurité Workflow
+    rep = session.get(Reperage, m.reperage_id)
+    if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
+
+    # Suppression physique sur le Volume Railway
+    try:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        print(f"Error deleting physical file: {e}")
+
+    # Suppression en Base de Données
+    session.delete(m)
+    session.commit()
+    return jsonify({'status': 'success'})
 
 @app.route('/formulaire/<token>')
 def route_form_fixer(token):
@@ -150,17 +180,6 @@ def admin_delete_rep(id):
     session = get_db(); rep = session.get(Reperage, id)
     if rep: session.delete(rep); session.commit()
     return jsonify({'status': 'success'})
-
-@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
-def api_medias(id):
-    session = get_db()
-    if request.method == 'GET':
-        ms = session.query(Media).filter_by(reperage_id=id).all()
-        return jsonify([{'nom_fichier': m.nom_fichier} for m in ms])
-    file = request.files['file']; filename = secrets.token_hex(8) + "_" + file.filename
-    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True); file.save(os.path.join(path, filename))
-    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
-    session.add(m); session.commit(); return jsonify({'status': 'success'})
 
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
