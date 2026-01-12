@@ -1,6 +1,6 @@
 /**
- * DOC-OS V.68.3 SUPRÊME - ENGINE RESTORED
- * FIX TABS, CHAT, PROGRESSION AND PERSISTENCE
+ * DOC-OS V.68.4 SUPRÊME - ENGINE & CHAT ENHANCED
+ * FEATURES : LINKIFY, CHAT TOAST NOTIFICATIONS
  */
 
 const API_URL = '/api';
@@ -8,35 +8,37 @@ let currentReperageId = window.REPERAGE_ID || null;
 const CONTEXT_TYPE = window.location.pathname.includes('/admin') ? 'production' : 'fixer';
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Launching DOC-OS V.68.3 - Full Stability Mode');
-    
-    // Initialisation séquentielle sécurisée
-    try { initTabs(); } catch(e) { console.error("Tab init fail", e); }
-    try { initFileUpload(); } catch(e) { console.error("File upload init fail", e); }
-    try { initEventListeners(); } catch(e) { console.error("Events init fail", e); }
-    
-    if (currentReperageId) {
-        await loadReperage();
-        initChat();
-        await loadMedias();
-    }
+    initTabs(); initFileUpload(); initEventListeners();
+    if (currentReperageId) { await loadReperage(); initChat(); await loadMedias(); }
 });
+
+function showToast(msg, isWarning = false) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.background = isWarning ? 'var(--secondary)' : '#27ae60';
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 4000);
+}
+
+function linkify(text) {
+    const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    return text.replace(urlRegex, function(url) {
+        return '<a href="' + url + '" target="_blank" style="color:inherit; text-decoration:underline; font-weight:bold;">' + url + '</a>';
+    });
+}
 
 function initTabs() {
     const buttons = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
-    
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-tab');
             if (!target) return;
-            
             buttons.forEach(b => b.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
-            
             btn.classList.add('active');
-            const targetEl = document.getElementById(target);
-            if (targetEl) targetEl.classList.add('active');
+            document.getElementById(target)?.classList.add('active');
         });
     });
 }
@@ -44,7 +46,6 @@ function initTabs() {
 function initEventListeners() {
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
     document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
-    
     document.querySelectorAll('input, textarea').forEach(el => {
         el.addEventListener('input', () => calculateProgress());
     });
@@ -52,23 +53,13 @@ function initEventListeners() {
 
 function calculateProgress() {
     const fields = document.querySelectorAll('.tab-content input[name], .tab-content textarea[name]');
-    if (fields.length === 0) return 0;
-    
     let filled = 0;
-    fields.forEach(input => {
-        if (input.value && input.value.trim().length > 1) filled++;
-    });
-
-    const percent = Math.min(100, Math.round((filled / 100) * 100)); // Base 100
-    
+    fields.forEach(input => { if (input.value && input.value.trim().length > 1) filled++; });
+    const percent = Math.min(100, filled);
     const bar = document.getElementById('progress-bar');
-    const label = document.getElementById('progress-percentage');
-    const filledText = document.getElementById('progress-filled');
-
     if (bar) bar.style.width = percent + '%';
-    if (label) label.textContent = percent + '%';
-    if (filledText) filledText.textContent = filled;
-
+    document.getElementById('progress-percentage').textContent = percent + '%';
+    document.getElementById('progress-filled').textContent = filled;
     return percent;
 }
 
@@ -76,62 +67,42 @@ async function loadReperage() {
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}`);
         const data = await res.json();
-        
         document.querySelectorAll('input[name], textarea[name]').forEach(input => {
             const name = input.name;
-            let val = data[name]; // Racine
-            
+            let val = data[name];
             if (data.territory && data.territory[name]) val = data.territory[name];
             if (data.festivity && data.festivity[name]) val = data.festivity[name];
-            
             for (let i = 1; i <= 3; i++) {
                 const pair = data[`pair_${i}`];
                 const shortName = name.replace(`gardien${i}_`, '').replace(`lieu${i}_`, '');
                 if (pair && pair[shortName] !== undefined) val = pair[shortName];
             }
-            
             if (val !== undefined && val !== null) input.value = val;
         });
-
         if (data.statut !== 'brouillon') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Persistence failed to load", e); }
+    } catch (e) { console.error("Load error", e); }
 }
 
-async function saveReperage(showToast) {
+async function saveReperage(show) {
     const payload = { progression_pourcent: calculateProgress() };
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => {
-        payload[el.name] = el.value;
-    });
-
+    document.querySelectorAll('input[name], textarea[name]').forEach(el => { payload[el.name] = el.value; });
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        
-        if (res.ok && showToast) {
-            const t = document.getElementById('toast');
-            if (t) {
-                t.style.display = 'block';
-                setTimeout(() => { t.style.display = 'none'; }, 3000);
-            }
-        }
-    } catch (e) { console.error("Save error", e); }
+        if (res.ok && show) showToast("YOUR FORM HAS BEEN SAVED");
+    } catch (e) { console.error("Save failed", e); }
 }
 
 async function submitToProduction() {
     const required = document.querySelectorAll('input[required], textarea[required]');
     let missing = [];
     required.forEach(el => { if(!el.value.trim()) missing.push(el.name); });
-
-    if (missing.length > 0) {
-        alert("⚠️ AT LEAST THESE FIELDS ARE REQUIRED FOR SUBMISSION.");
-        return;
-    }
-
-    if (confirm("🚀 SUBMIT TO PRODUCTION? (Dossier will be locked)")) {
+    if (missing.length > 0) { alert("⚠️ MISSING REQUIRED FIELDS."); return; }
+    if (confirm("🚀 SUBMIT FINAL DOSSIER?")) {
         await saveReperage(false);
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}/submit`, { method: 'POST' });
         if (res.ok) location.reload();
@@ -141,37 +112,20 @@ async function submitToProduction() {
 function initChat() {
     const toggle = document.getElementById('chat-toggle-btn');
     const panel = document.getElementById('chat-panel');
-    const close = document.getElementById('chat-close-btn');
     const send = document.getElementById('chat-send-btn');
-
     if (!toggle || !panel) return;
-
-    toggle.onclick = () => {
-        panel.classList.toggle('active');
-        if (panel.classList.contains('active')) loadMessages();
+    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) { loadMessages(); toggle.style.animation = 'none'; } };
+    document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
+    send.onclick = async () => {
+        const input = document.getElementById('chat-input');
+        if (!input.value.trim()) return;
+        await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ auteur_type: CONTEXT_TYPE, auteur_nom: CONTEXT_TYPE === 'production' ? 'Production' : (window.FIXER_DATA?.prenom || 'Correspondent'), contenu: input.value })
+        });
+        input.value = ''; loadMessages();
     };
-    
-    if (close) close.onclick = () => panel.classList.remove('active');
-
-    if (send) {
-        send.onclick = async () => {
-            const input = document.getElementById('chat-input');
-            if (!input.value.trim()) return;
-            const msg = {
-                auteur_type: CONTEXT_TYPE,
-                auteur_nom: CONTEXT_TYPE === 'production' ? 'Production' : (window.FIXER_DATA?.prenom || 'Correspondent'),
-                contenu: input.value
-            };
-            await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(msg)
-            });
-            input.value = '';
-            loadMessages();
-        };
-    }
-    
     setInterval(checkNewMessages, 20000);
 }
 
@@ -180,28 +134,19 @@ async function loadMessages() {
     const msgs = await res.json();
     const container = document.getElementById('chat-messages');
     if (!container) return;
-
-    let html = '';
-    let lastDate = null;
-
+    let html = ''; let lastDate = null;
     msgs.forEach(m => {
         const d = new Date(m.created_at);
         const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
         if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
-        
         const isMe = m.auteur_type === CONTEXT_TYPE;
-        html += `
-            <div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}">
-                <div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div>
-                <div class="bubble">
-                    <div class="msg-content">${m.contenu}</div>
-                    <div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div>
-                </div>
-            </div>
-        `;
+        html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}">
+            <div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div>
+            <div class="bubble"><div class="msg-content">${linkify(m.contenu)}</div>
+            <div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div>
+        </div>`;
     });
-    container.innerHTML = html;
-    container.scrollTop = container.scrollHeight;
+    container.innerHTML = html; container.scrollTop = container.scrollHeight;
 }
 
 async function checkNewMessages() {
@@ -213,6 +158,7 @@ async function checkNewMessages() {
             const panel = document.getElementById('chat-panel');
             if (last.auteur_type !== CONTEXT_TYPE && !panel.classList.contains('active')) {
                 document.getElementById('chat-toggle-btn').style.animation = 'pulse 1.5s infinite';
+                showToast("YOU RECEIVED A NEW MESSAGE", true);
             }
         }
     } catch(e) {}
@@ -225,8 +171,7 @@ function initFileUpload() {
     area.onclick = () => input.click();
     input.onchange = async (e) => {
         for (let file of e.target.files) {
-            const fd = new FormData();
-            fd.append('file', file);
+            const fd = new FormData(); fd.append('file', file);
             await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
         }
         await loadMedias();
