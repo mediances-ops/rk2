@@ -1,6 +1,5 @@
-<!-- DOC-OS VERSION : V.66.1 SUPRÊME MISSION CONTROL -->
-<!-- ROLE : CORRESPONDENTS (FIXERS) MANAGEMENT SYSTEM -->
-<!-- STATUS : UI FIXED - ROUTING SYNCHRONIZED -->
+<!-- DOC-OS VERSION : V.66.3 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : CORRESPONDENTS MANAGEMENT SYSTEM - UI CLEANED -->
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -10,135 +9,66 @@
     <title>Pre-scouting Platform | Correspondants</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* ============================================================
-           ARCHITECTURE VISUELLE V.66.1 - UI KIT RENFORCÉ
-           ============================================================ */
-        :root { 
-            --primary: #2C3E50; 
-            --secondary: #E67E22; 
-            --success: #27ae60; 
-            --danger: #e74c3c; 
-            --bg: #f3f4f6;
-            --input-border: #e2e8f0;
-        }
-        
+        :root { --primary: #2C3E50; --secondary: #E67E22; --success: #27ae60; --danger: #e74c3c; --bg: #f3f4f6; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--primary); padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         
-        /* HEADER V7 UNIFIÉ */
-        .header {
-            background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%);
-            border-radius: 16px; padding: 60px 40px; margin-bottom: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 40px;
-        }
-        .header img { height: 110px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); }
-        .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; line-height: 1; }
-        .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; margin-top: 10px; text-transform: uppercase; }
+        .header { background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); border-radius: 16px; padding: 60px 40px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 40px; }
+        .header img { height: 110px; }
+        .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
+        .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; text-transform: uppercase; }
 
-        /* NAVIGATION */
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
-        .nav-link {
-            background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px;
-            text-decoration: none; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
-        }
-        .nav-link:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .nav-link { background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; }
         .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
 
-        /* FILTRES */
         .card { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .filter-grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { flex: 1; min-width: 200px; }
         .filter-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; }
-        .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 2px solid var(--input-border); border-radius: 10px; font-family: inherit; font-weight: 600; color: var(--primary); outline: none; }
+        .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-weight: 600; color: var(--primary); outline: none; }
 
-        /* TABLEAU */
         .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
         td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         
-        .fixer-photo { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #7f8c8d; font-size: 1.2rem; }
-
+        .fixer-photo { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #7f8c8d; }
         .badge-status { padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
         .status-actif { background: #d1fae5; color: #065f46; }
         .status-inactif { background: #fee2e2; color: #991b1b; }
-
-        .btn-action { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
+        .btn-action { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; text-decoration: none; }
         
-        /* ============================================================
-           MODAL UI KIT (REPAIRED & STYLED)
-           ============================================================ */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
         .modal-content { background: white; border-radius: 24px; padding: 45px; width: 95%; max-width: 650px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
-        
         .form-group { margin-bottom: 22px; }
-        .form-group label { display: block; font-weight: 800; font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
-        .form-group input, .form-group select { 
-            width: 100%; padding: 14px; border-radius: 12px; border: 2px solid var(--input-border); 
-            font-family: inherit; font-weight: 600; color: var(--primary); outline: none; transition: 0.3s;
-        }
-        .form-group input:focus { border-color: var(--secondary); box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1); }
-
-        .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5); display: flex; align-items: center; justify-content: center; transition: 0.4s; }
-        #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
+        .form-group label { display: block; font-weight: 800; font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
+        .form-group input, .form-group select { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid #e2e8f0; font-family: inherit; font-weight: 600; outline: none; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <!-- HEADER -->
-        <header class="header">
-            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo">
-            <div class="header-text">
-                <h1>Pre-scouting Platform</h1>
-                <p class="subtitle">Correspondents Management System</p>
-            </div>
-        </header>
+        <header class="header"><img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo"><div><h1>Pre-scouting Platform</h1><p class="subtitle">Correspondents Management System</p></div></header>
 
-        <!-- NAVIGATION -->
         <nav class="nav">
             <a href="/admin" class="nav-link"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
             <a href="/admin/fixers" class="nav-link active"><i data-lucide="users"></i> CORRESPONDANTS LOCAUX</a>
             <button onclick="openModal()" class="nav-link" style="background:var(--secondary); color:white; font-weight:900;"><i data-lucide="user-plus"></i> NOUVEAU CORRESPONDANT</button>
         </nav>
 
-        <!-- FILTRES -->
         <div class="card">
             <form method="GET" action="/admin/fixers" class="filter-grid">
-                <div class="filter-group">
-                    <label>Recherche</label>
-                    <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Nom, société, spécialité...">
-                </div>
-                <div class="filter-group">
-                    <label>Pays</label>
-                    <select name="pays">
-                        <option value="">Tous les pays</option>
-                        {% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="nav-link" style="background:var(--primary); color:white; padding:12px 25px;">FILTRER</button>
-                    <a href="/admin/fixers" class="nav-link" style="padding:12px 20px;">RESET</a>
-                </div>
+                <div class="filter-group"><label>Recherche</label><input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Nom, société, spécialité..."></div>
+                <div class="filter-group"><label>Pays</label><select name="pays"><option value="">Tous les pays</option>{% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+                <div style="display: flex; gap: 10px;"><button type="submit" class="nav-link" style="background:var(--primary); color:white; padding:12px 25px;">FILTRER</button><a href="/admin/fixers" class="nav-link" style="padding:12px 20px;">RESET</a></div>
             </form>
         </div>
 
-        <!-- LISTE DES FIXERS -->
         <div class="table-container">
             <table>
-                <thead>
-                    <tr>
-                        <th>Profil</th>
-                        <th>Nom / Société</th>
-                        <th>Localisation</th>
-                        <th>Contact</th>
-                        <th>Statut</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Profil</th><th>Nom / Société</th><th>Localisation</th><th>Contact</th><th>Statut</th><th style="text-align:center;">Action</th></tr></thead>
                 <tbody>
                     {% for f in fixers %}
                     <tr>
@@ -153,11 +83,8 @@
                         <td><strong>{{ f.pays or '-' }}</strong><br><span style="color: #7f8c8d; font-size: 0.85rem;">{{ f.region or '-' }}</span></td>
                         <td><a href="mailto:{{ f.email }}" style="color: #3498db; text-decoration: none; font-weight: 600;">{{ f.email }}</a><br><small>{{ f.telephone or '-' }}</small></td>
                         <td><span class="badge-status {{ 'status-actif' if f.actif else 'status-inactif' }}">{{ 'ACTIF' if f.actif else 'INACTIF' }}</span></td>
-                        <td>
-                            <div style="display: flex;">
-                                <a href="/admin/fixer/{{ f.id }}" class="btn-action" style="background:var(--primary);" title="Voir"><i data-lucide="eye"></i></a>
-                                <a href="/admin/fixer/{{ f.id }}/edit" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></a>
-                            </div>
+                        <td style="text-align:center;">
+                            <a href="/admin/fixer/{{ f.id }}/edit" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -166,14 +93,9 @@
         </div>
     </div>
 
-    <!-- MODAL NOUVEAU CORRESPONDANT (SOUDURE V.66.1) -->
     <div id="modal" class="modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <h2 style="font-weight: 800; letter-spacing: -1px; color:var(--primary);">➕ NOUVEAU CORRESPONDANT</h2>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button>
-            </div>
-            <!-- FORMULAIRE CIBLANT LA ROUTE PYTHON CORRIGÉE -->
+            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2 style="font-weight: 800; color:var(--primary);">➕ NOUVEAU CORRESPONDANT</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
             <form method="POST" action="/admin/fixer/new">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
                     <div class="form-group"><label>Prénom *</label><input type="text" name="prenom" required></div>
@@ -185,37 +107,16 @@
                     <div class="form-group"><label>Pays *</label><input type="text" name="pays" required></div>
                     <div class="form-group"><label>Région</label><input type="text" name="region"></div>
                 </div>
-                <div class="form-group">
-                    <label>Langue d'interface préférée *</label>
-                    <select name="langue_preferee" required>
-                        <option value="FR">🇫🇷 Français</option>
-                        <option value="EN">🇬🇧 English</option>
-                        <option value="ES">🇪🇸 Español</option>
-                    </select>
-                </div>
-                <div style="display: flex; gap: 15px; margin-top: 30px;">
-                    <button type="submit" style="background:var(--primary); color:white; flex:2; padding:18px; border-radius:12px; font-weight:900; border:none; cursor:pointer; font-size:1rem;">CRÉER LE PROFIL</button>
-                    <button type="button" onclick="closeModal()" style="background:#f1f5f9; color:#64748b; flex:1; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">ANNULER</button>
-                </div>
+                <div class="form-group"><label>Langue d'interface préférée *</label><select name="langue_preferee" required><option value="FR">🇫🇷 Français</option><option value="EN">🇬🇧 English</option><option value="ES">🇪🇸 Español</option></select></div>
+                <div style="display: flex; gap: 15px; margin-top: 30px;"><button type="submit" style="background:var(--primary); color:white; flex:2; padding:18px; border-radius:12px; font-weight:900; border:none; cursor:pointer;">CRÉER LE PROFIL</button><button type="button" onclick="closeModal()" style="background:#f1f5f9; color:#64748b; flex:1; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">ANNULER</button></div>
             </form>
         </div>
-    </div>
-
-    <!-- ASSISTANT IA -->
-    <button onclick="toggleAI()" class="ai-floating-btn"><i data-lucide="brain-circuit" style="width:35px; height:35px;"></i></button>
-    <div id="aiPanel">
-        <div style="background:var(--primary); padding:25px; color:white; display:flex; justify-content:space-between; align-items:center;">
-            <h2 style="font-weight:800; margin:0;">ASSISTANT IA PRODUCTION</h2>
-            <button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
-        </div>
-        <iframe src="https://destinationsetcuisines.com/site" style="flex:1; border:none;"></iframe>
     </div>
 
     <script>
         lucide.createIcons();
         function openModal() { document.getElementById('modal').classList.add('active'); }
         function closeModal() { document.getElementById('modal').classList.remove('active'); }
-        function toggleAI() { const p = document.getElementById('aiPanel'); p.style.left = (p.style.left==='0px') ? '-82%' : '0px'; }
         window.onclick = (e) => { if(e.target.id === 'modal') closeModal(); }
     </script>
 </body>
