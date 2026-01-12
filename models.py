@@ -1,7 +1,4 @@
-# DOC-OS VERSION : V.67.2 SUPRÊME MISSION CONTROL
-# ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
-# ÉTAT : STABLE - FIX MISSING TO_DICT FOR CHAT & MEDIA
-
+# DOC-OS VERSION : V.68.1 SUPRÊME MISSION CONTROL
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -19,8 +16,7 @@ class Fixer(Base):
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
     notes_internes = Column(Text); photo_profil_url = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
-    def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
 
 class Reperage(Base):
     __tablename__ = 'reperages'
@@ -38,8 +34,6 @@ class Reperage(Base):
 
     def to_dict(self):
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
-        territory = clean({"villes": self.villes, "population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes})
-        festivity = clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement, "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable})
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None); l = next((x for x in self.lieux if x.index == i), None)
@@ -47,31 +41,27 @@ class Reperage(Base):
             if g: pair_data.update(g.to_dict())
             if l: pair_data.update(l.to_dict())
             if pair_data: pairs[f"pair_{i}"] = clean(pair_data)
-        return clean({"id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays, "territory": territory, **pairs, "festivity": festivity, "updated_at": self.updated_at.isoformat() if self.updated_at else None})
+        return clean({"id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays, "image_region": self.image_region, "villes": self.villes, "population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes, **pairs, "fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement, "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable, "updated_at": self.updated_at.isoformat() if self.updated_at else None})
 
 class Gardien(Base):
-    __tablename__ = 'gardiens'
-    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
+    __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
     nom_prenom = Column(String(255)); age = Column(Integer); fonction = Column(String(255)); savoir = Column(Text); histoire = Column(Text); psychologie = Column(Text); evaluation = Column(Text); langues = Column(String(255)); contact = Column(Text); intermediaire = Column(Text)
     reperage = relationship("Reperage", back_populates="gardiens")
     def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
 
 class Lieu(Base):
-    __tablename__ = 'lieux'
-    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
+    __tablename__ = 'lieux'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
     nom = Column(String(255)); type = Column(String(255)); description = Column(Text); cinegenie = Column(Text); axes = Column(Text); points_vue = Column(Text); moments = Column(Text); son = Column(Text); gps_lat = Column(String(100)); gps_long = Column(String(100)); acces = Column(Text); securite = Column(Text); elec = Column(Text); espace = Column(Text); meteo = Column(Text); permis = Column(Text)
     reperage = relationship("Reperage", back_populates="lieux")
     def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
 
 class Media(Base):
-    __tablename__ = 'medias'
-    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); type = Column(String(50)); nom_fichier = Column(String(255)); nom_original = Column(String(255)); chemin_fichier = Column(String(500)); uploaded_at = Column(DateTime, default=datetime.utcnow)
+    __tablename__ = 'medias'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); type = Column(String(50)); nom_fichier = Column(String(255)); nom_original = Column(String(255)); chemin_fichier = Column(String(500)); uploaded_at = Column(DateTime, default=datetime.utcnow)
     reperage = relationship("Reperage", back_populates="medias")
     def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
 
 class Message(Base):
-    __tablename__ = 'messages'
-    id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); auteur_type = Column(String(20)); auteur_nom = Column(String(255)); contenu = Column(Text); lu = Column(Boolean, default=False); created_at = Column(DateTime, default=datetime.utcnow)
+    __tablename__ = 'messages'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); auteur_type = Column(String(20)); auteur_nom = Column(String(255)); contenu = Column(Text); lu = Column(Boolean, default=False); created_at = Column(DateTime, default=datetime.utcnow)
     reperage = relationship("Reperage", back_populates="messages")
     def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
 
