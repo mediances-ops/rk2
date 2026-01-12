@@ -1,3 +1,7 @@
+# DOC-OS VERSION : V.70.1 SUPRÊME MISSION CONTROL
+# ENGINE : FLASK + SQLALCHEMY SCOPED SESSIONS
+# ÉTAT : STABLE - ROOT REDIRECT PRIORITIZED & MEDIA PATHS FIXED
+
 import os, json, secrets, requests, io, zipfile, shutil
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g
@@ -8,6 +12,7 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
+# --- CONFIGURATION ---
 DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
@@ -23,27 +28,51 @@ def get_db():
     if 'db_session' not in g: g.db_session = get_session(engine)
     return g.db_session
 
+# --- NAVIGATION RACINE (PRIORITAIRE) ---
+@app.route('/')
+def index_root(): 
+    """Rétablit l'accès automatique à l'admin dès l'URL racine."""
+    return redirect('/admin')
+
+# --- DASHBOARD & ADMIN ---
 @app.route('/admin')
 def admin_dashboard():
     session = get_db(); query = session.query(Reperage)
+    p_f = request.args.get('pays'); s_f = request.args.get('statut')
+    if p_f: query = query.filter(Reperage.pays == p_f)
+    if s_f: query = query.filter(Reperage.statut == s_f)
     reps = query.order_by(Reperage.id.desc()).all(); serialized = []
     for r in reps:
         f = session.get(Fixer, r.fixer_id)
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-        serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
+        serialized.append({
+            'reperage': r.to_dict(), 
+            'fixer': f.to_dict() if f else None,
+            'unread_count': unread 
+        })
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
+@app.route('/admin/fixers')
+def admin_fixers_list():
+    session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
+    if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
+    if pays: query = query.filter(Fixer.pays == pays)
+    return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
+
+# --- SERVICE DE FICHIERS (SOUDURE VOLUME ABSOLUE) ---
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
     directory = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
     return send_from_directory(directory, filename)
 
+# --- API SYNC DYNAMIQUE ---
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
 def api_sync_engine(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     if request.method == 'GET': return jsonify(rep.to_dict())
+    if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
     data = request.json
     PROTECTED = ['token', 'id', 'fixer_id']
     for k, v in data.items():
@@ -63,8 +92,9 @@ def api_sync_engine(id):
             if not l_obj: l_obj = Lieu(reperage_id=rep.id, index=i); session.add(l_obj)
             for k, v in l_data.items():
                 if hasattr(l_obj, k): setattr(l_obj, k, v)
-    session.commit(); return jsonify({'status': 'success'})
+    session.commit(); return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
+# --- AUTRES FONCTIONNALITÉS ---
 @app.route('/admin/fixer/new', methods=['POST'])
 def admin_new_fixer():
     session = get_db(); f = Fixer(token_unique=secrets.token_hex(6), created_at=datetime.utcnow())
@@ -116,13 +146,6 @@ def api_delete_media(media_id):
     except: pass
     session.delete(m); session.commit(); return jsonify({'status': 'success'})
 
-@app.route('/admin/fixers')
-def admin_fixers_list():
-    session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
-    if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
-    if pays: query = query.filter(Fixer.pays == pays)
-    return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
-
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 def admin_update_status(id):
     session = get_db(); rep = session.get(Reperage, id); data = request.json
@@ -148,9 +171,9 @@ def admin_print(id):
     session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
     pairs = []
     for i in [1, 2, 3]:
-        g_obj = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
-        l_obj = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
-        if g_obj or l_obj: pairs.append({'index': i, 'gardien': g_obj, 'lieu': l_obj})
+        g = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
+        l = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
+        if g or l: pairs.append({'index': i, 'gardien': g, 'lieu': l})
     return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
 
 @app.route('/formulaire/<token>')
