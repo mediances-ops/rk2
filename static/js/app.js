@@ -1,6 +1,6 @@
 /**
- * DOC-OS V.69.1 SUPRÊME - PERSISTENCE & MEDIA ENGINE
- * FEATURES : 60S AUTO-SAVE, STABLE FILE UPLOAD, CHAT POLLING
+ * DOC-OS V.69.2 SUPRÊME - ENGINE & PROGRESSION SYNC
+ * FEATURES : TARGETED .scouting-field PROGRESSION
  */
 
 const API_URL = '/api';
@@ -8,22 +8,13 @@ let currentReperageId = window.REPERAGE_ID || null;
 const CONTEXT_TYPE = window.location.pathname.includes('/admin') ? 'production' : 'fixer';
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Launching DOC-OS V.69.1 - Supreme Persistence Engine');
-    
-    initTabs(); 
-    initFileUpload(); 
-    initEventListeners();
-    
-    if (currentReperageId) {
-        await loadReperage();
-        initChat();
-        await loadMedias();
-        
-        // SÉCURITÉ : AUTO-SAVE TOUTES LES 60 SECONDES (SILENCIEUX)
-        setInterval(() => {
-            console.log("⏱️ Scheduled Auto-save triggered...");
-            saveReperage(false); 
-        }, 60000);
+    console.log('🎬 Launching DOC-OS V.69.2 - 100 Fields Core');
+    initTabs(); initFileUpload(); initEventListeners();
+    if (currentReperageId) { 
+        await loadReperage(); 
+        initChat(); 
+        await loadMedias(); 
+        setInterval(() => saveReperage(false), 60000); // Auto-save
     }
 });
 
@@ -39,7 +30,7 @@ function showToast(msg, isWarning = false) {
 function linkify(text) {
     const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
     return text.replace(urlRegex, function(url) {
-        return '<a href="' + url + '" target="_blank" style="color:inherit; text-decoration:underline; font-weight:bold;">' + url + '</a>';
+        return '<a href="' + url + '" target="_blank" style="color:inherit; text-decoration:underline;">' + url + '</a>';
     });
 }
 
@@ -49,7 +40,6 @@ function initTabs() {
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
             const target = btn.getAttribute('data-tab');
-            if (!target) return;
             buttons.forEach(b => b.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -61,16 +51,22 @@ function initTabs() {
 function initEventListeners() {
     document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
     document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
-    document.querySelectorAll('input, textarea').forEach(el => {
+    document.querySelectorAll('.scouting-field').forEach(el => {
         el.addEventListener('input', () => calculateProgress());
     });
 }
 
 function calculateProgress() {
-    const fields = document.querySelectorAll('.tab-content input[name], .tab-content textarea[name]');
+    // SOUDURE RIGUREUSE : Cible uniquement les 100 champs métier
+    const fields = document.querySelectorAll('.scouting-field');
+    if (fields.length === 0) return 0;
+    
     let filled = 0;
-    fields.forEach(input => { if (input.value && input.value.trim().length > 1) filled++; });
-    const percent = Math.min(100, Math.round((filled / 100) * 100)); 
+    fields.forEach(input => {
+        if (input.value && input.value.trim().length > 1) filled++;
+    });
+
+    const percent = Math.min(100, Math.round((filled / 100) * 100));
     const bar = document.getElementById('progress-bar');
     if (bar) bar.style.width = percent + '%';
     document.getElementById('progress-percentage').textContent = percent + '%';
@@ -82,7 +78,7 @@ async function loadReperage() {
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}`);
         const data = await res.json();
-        document.querySelectorAll('input[name], textarea[name]').forEach(input => {
+        document.querySelectorAll('.scouting-field').forEach(input => {
             const name = input.name;
             let val = data[name];
             if (data.territory && data.territory[name]) val = data.territory[name];
@@ -96,12 +92,12 @@ async function loadReperage() {
         });
         if (data.statut !== 'brouillon') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Persistence Load Error", e); }
+    } catch (e) { console.error("Load failed", e); }
 }
 
 async function saveReperage(show) {
     const payload = { progression_pourcent: calculateProgress() };
-    document.querySelectorAll('input[name], textarea[name]').forEach(el => { payload[el.name] = el.value; });
+    document.querySelectorAll('.scouting-field').forEach(el => { payload[el.name] = el.value; });
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}`, {
             method: 'PUT',
@@ -127,11 +123,10 @@ async function submitToProduction() {
 function initChat() {
     const toggle = document.getElementById('chat-toggle-btn');
     const panel = document.getElementById('chat-panel');
-    const send = document.getElementById('chat-send-btn');
     if (!toggle || !panel) return;
-    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) { loadMessages(); toggle.style.animation = 'none'; } };
+    toggle.onclick = () => { panel.classList.toggle('active'); if (panel.classList.contains('active')) loadMessages(); };
     document.getElementById('chat-close-btn').onclick = () => panel.classList.remove('active');
-    send.onclick = async () => {
+    document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
         if (!input.value.trim()) return;
         await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
@@ -183,17 +178,11 @@ function initFileUpload() {
     const area = document.getElementById('drop-area');
     const input = document.getElementById('file-input');
     if (!area || !input) return;
-    
-    // FIX PHOTO UPLOAD : Trigger input only once
     area.onclick = () => input.click();
-    
     input.onchange = async (e) => {
         for (let file of e.target.files) {
-            const fd = new FormData(); 
-            fd.append('file', file);
-            console.log("📤 Uploading media...");
-            const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
-            if (res.ok) console.log("✅ Media saved.");
+            const fd = new FormData(); fd.append('file', file);
+            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
         }
         await loadMedias();
     };
