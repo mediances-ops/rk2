@@ -1,4 +1,7 @@
-# DOC-OS VERSION : V.68.1 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.68.9 SUPRÊME MISSION CONTROL
+# ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
+# ÉTAT : STABLE - FIX MISSING FIXER_NOM IN TO_DICT
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -16,16 +19,22 @@ class Fixer(Base):
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
     notes_internes = Column(Text); photo_profil_url = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
-    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
 
 class Reperage(Base):
     __tablename__ = 'reperages'
     id = Column(Integer, primary_key=True); token = Column(String(32), unique=True)
     statut = Column(String(20), default='brouillon'); progression_pourcent = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow); updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255)); pays = Column(String(100)); region = Column(String(255)); image_region = Column(Text); notes_admin = Column(Text)
+    
+    # LIAISON FIXER
+    fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255))
+    
+    pays = Column(String(100)); region = Column(String(255)); image_region = Column(Text); notes_admin = Column(Text)
     villes = Column(Text); population = Column(String(255)); langues = Column(String(255)); climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text); acces = Column(Text); hebergement = Column(Text); contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text); budget = Column(String(255)); notes = Column(Text)
     fete_nom = Column(String(255)); fete_date = Column(String(255)); fete_gps_lat = Column(String(100)); fete_gps_long = Column(String(100)); fete_origines = Column(Text); fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
+    
     fixer_rel = relationship("Fixer", back_populates="reperages")
     gardiens = relationship("Gardien", back_populates="reperage", cascade="all, delete-orphan")
     lieux = relationship("Lieu", back_populates="reperage", cascade="all, delete-orphan")
@@ -33,7 +42,10 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
+        """CONSTRUCTION EXHAUSTIVE POUR DASHBOARD ET APP 2"""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
+        
+        # Paires (Reservoirs 2, 3, 4)
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None); l = next((x for x in self.lieux if x.index == i), None)
@@ -41,7 +53,35 @@ class Reperage(Base):
             if g: pair_data.update(g.to_dict())
             if l: pair_data.update(l.to_dict())
             if pair_data: pairs[f"pair_{i}"] = clean(pair_data)
-        return clean({"id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays, "image_region": self.image_region, "villes": self.villes, "population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes, **pairs, "fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement, "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable, "updated_at": self.updated_at.isoformat() if self.updated_at else None})
+        
+        # Retour incluant fixer_nom pour le Dashboard
+        return clean({
+            "id": self.id,
+            "token": self.token,
+            "statut": self.statut,
+            "progression_pourcent": self.progression_pourcent,
+            "fixer_id": self.fixer_id,
+            "fixer_nom": self.fixer_nom, # RESTAURÉ
+            "region": self.region,
+            "pays": self.pays,
+            "image_region": self.image_region,
+            "notes_admin": self.notes_admin,
+            "villes": self.villes,
+            "territory": clean({
+                "population": self.population, "langues": self.langues, "climat": self.climat,
+                "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces,
+                "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc,
+                "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes
+            }),
+            **pairs,
+            "festivity": clean({
+                "fete_nom": self.fete_nom, "fete_date": self.fete_date, 
+                "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long,
+                "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement,
+                "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable
+            }),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        })
 
 class Gardien(Base):
     __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
