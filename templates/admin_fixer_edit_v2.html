@@ -1,65 +1,150 @@
-<!-- DOC-OS VERSION : V.64 SUPRÊME -->
+<!-- DOC-OS VERSION : V.66 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : DETAILED CORRESPONDENT PROFILE MANAGEMENT -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Edit Fixer | Pre-scouting</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOC-OS | Profil Correspondant</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        :root { --primary: #2C3E50; --secondary: #E67E22; --accent: #3498db; --bg: #f3f4f6; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; padding: 40px; color: #2C3E50; }
-        .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #2C3E50; color: white; padding: 30px 40px; }
-        .form-body { padding: 40px; }
-        .tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 30px; }
-        .tab-btn { padding: 15px 25px; border: none; background: none; cursor: pointer; font-weight: bold; color: #7f8c8d; border-bottom: 3px solid transparent; }
-        .tab-btn.active { color: #E67E22; border-bottom: 3px solid #E67E22; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--primary); padding: 40px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+
+        /* TABS UI */
+        .tabs-nav { display: flex; gap: 5px; margin-bottom: -1px; }
+        .tab-btn { padding: 15px 30px; background: #e2e8f0; border: none; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: 700; color: #64748b; transition: 0.3s; }
+        .tab-btn.active { background: white; color: var(--secondary); border-top: 4px solid var(--secondary); box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        
+        .tab-content { display: none; background: white; padding: 40px; border-radius: 0 15px 15px 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+
+        /* FORM KIT */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 700; margin-bottom: 8px; color: #34495e; font-size: 0.9rem; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; }
-        .btn-save { background: #E67E22; color: white; padding: 18px; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; width: 100%; font-size: 1.1rem; box-shadow: 0 5px 15px rgba(230,126,34,0.3); transition: 0.2s; }
-        .btn-save:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { display: block; font-weight: 800; font-size: 0.75rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 8px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 14px; border-radius: 10px; border: 2px solid #e2e8f0; font-family: inherit; font-weight: 600; outline: none; transition: 0.3s; }
+        .form-group input:focus { border-color: var(--secondary); }
+        .form-group input:disabled { background: #f8fafc; color: #94a3b8; border-color: #f1f5f9; cursor: not-allowed; }
+
+        .photo-preview { width: 120px; height: 120px; border-radius: 50%; border: 4px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.1); object-fit: cover; background: #eee; margin-bottom: 20px; }
+
+        .actions { display: flex; gap: 15px; margin-top: 40px; justify-content: flex-end; }
+        .btn { padding: 15px 40px; border-radius: 12px; font-weight: 800; border: none; cursor: pointer; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .btn-save { background: var(--secondary); color: white; }
+        .btn-cancel { background: #eee; color: var(--primary); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <div class="header"><h2>MODIFIER LE CORRESPONDANT</h2></div>
-        <form method="POST" class="form-body">
-            <div class="tabs">
-                <button type="button" class="tab-btn active" data-tab="id">IDENTITÉ</button>
-                <button type="button" class="tab-btn" data-tab="pro">PROFESSIONNEL</button>
-                <button type="button" class="tab-btn" data-tab="admin">ADMIN</button>
+        <header class="header">
+            <div>
+                <h1>Modifier Correspondant</h1>
+                <p style="color:var(--secondary); font-weight:700;">{{ fixer.prenom }} {{ fixer.nom if fixer else 'Nouveau' }}</p>
             </div>
-            <div class="tab-content active" id="id">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                    <div class="form-group"><label>Nom</label><input type="text" name="nom" value="{{ fixer.nom if fixer else '' }}"></div>
-                    <div class="form-group"><label>Prénom</label><input type="text" name="prenom" value="{{ fixer.prenom if fixer else '' }}"></div>
+            <a href="/admin/fixers" class="btn btn-cancel"><i data-lucide="arrow-left"></i> Retour</a>
+        </header>
+
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="identite">Identité</button>
+            <button class="tab-btn" data-tab="coordonnees">Coordonnées</button>
+            <button class="tab-btn" data-tab="professionnel">Professionnel</button>
+            <button class="tab-btn" data-tab="administration">Administration</button>
+        </nav>
+
+        <form method="POST" action="{{ '/admin/fixer/' ~ fixer.id ~ '/edit' if fixer else '/admin/fixer/new' }}">
+            
+            <!-- ONGLET 1 : IDENTITÉ -->
+            <div class="tab-content active" id="identite">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <img src="{{ fixer.photo_profil_url or '' }}" class="photo-preview" id="preview" alt="Avatar">
+                    <div class="form-group" style="max-width: 400px; margin: 0 auto;">
+                        <label>URL Photo de profil</label>
+                        <input type="text" name="photo_profil_url" value="{{ fixer.photo_profil_url or '' }}" placeholder="Lien JPG/PNG/WebP..." oninput="document.getElementById('preview').src=this.value">
+                    </div>
                 </div>
-                <div class="form-group"><label>Email</label><input type="email" name="email" value="{{ fixer.email if fixer else '' }}"></div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-                    <div class="form-group"><label>Téléphone</label><input type="tel" name="telephone" value="{{ fixer.telephone if fixer else '' }}"></div>
-                    <div class="form-group"><label>Téléphone 2</label><input type="tel" name="telephone_2" value="{{ fixer.telephone_2 if fixer else '' }}"></div>
+                <div class="form-grid">
+                    <div class="form-group"><label>Nom *</label><input type="text" name="nom" value="{{ fixer.nom or '' }}" required></div>
+                    <div class="form-group"><label>Prénom *</label><input type="text" name="prenom" value="{{ fixer.prenom or '' }}" required></div>
+                    <div class="form-group"><label>Fonction / Poste</label><input type="text" name="fonction" value="{{ fixer.fonction or '' }}"></div>
+                    <div class="form-group"><label>Société / Agence</label><input type="text" name="societe" value="{{ fixer.societe or '' }}"></div>
+                    <div class="form-group full"><label>Biographie / Présentation</label><textarea name="bio" rows="5">{{ fixer.bio or '' }}</textarea></div>
                 </div>
-                <div class="form-group"><label>Pays</label><input type="text" name="pays" value="{{ fixer.pays if fixer else '' }}"></div>
-                <div class="form-group"><label>Ville</label><input type="text" name="ville" value="{{ fixer.ville if fixer else '' }}"></div>
             </div>
-            <div class="tab-content" id="pro">
-                <div class="form-group"><label>Société / Agence</label><input type="text" name="societe" value="{{ fixer.societe if fixer else '' }}"></div>
-                <div class="form-group"><label>Fonction</label><input type="text" name="fonction" value="{{ fixer.fonction if fixer else '' }}"></div>
-                <div class="form-group"><label>Biographie</label><textarea name="bio" rows="5">{{ fixer.bio if fixer else '' }}</textarea></div>
-                <div class="form-group"><label>Spécialités</label><textarea name="specialites" rows="3">{{ fixer.specialites if fixer else '' }}</textarea></div>
+
+            <!-- ONGLET 2 : COORDONNÉES -->
+            <div class="tab-content" id="coordonnees">
+                <div class="form-grid">
+                    <div class="form-group"><label>Email de contact *</label><input type="email" name="email" value="{{ fixer.email or '' }}" required></div>
+                    <div class="form-group"><label>Téléphone principal</label><input type="tel" name="telephone" value="{{ fixer.telephone or '' }}"></div>
+                    <div class="form-group"><label>Pays de résidence</label><input type="text" name="pays" value="{{ fixer.pays or '' }}"></div>
+                    <div class="form-group"><label>Région / Ville</label><input type="text" name="region" value="{{ fixer.region or '' }}"></div>
+                    <div class="form-group full"><label>Notes internes production</label><textarea name="notes_internes" rows="4">{{ fixer.notes_internes or '' }}</textarea></div>
+                </div>
             </div>
-            <div class="tab-content" id="admin">
-                <div class="form-group"><label>URL Photo Profil</label><input type="url" name="photo_profil_url" value="{{ fixer.photo_profil_url if fixer else '' }}"></div>
-                <div class="form-group"><label>Notes Internes (Production Only)</label><textarea name="notes_internes" rows="6">{{ fixer.notes_internes if fixer else '' }}</textarea></div>
-                <div class="form-group"><label><input type="checkbox" name="actif" {% if fixer.actif %}checked{% endif %}> Account Active</label></div>
+
+            <!-- ONGLET 3 : PROFESSIONNEL -->
+            <div class="tab-content" id="professionnel">
+                <div class="form-grid">
+                    <div class="form-group full"><label>Spécialités techniques</label><textarea name="specialites" rows="3" placeholder="Fixing, Drone, Traduction, Logistique sauvage...">{{ fixer.specialites or '' }}</textarea></div>
+                    <div class="form-group full"><label>Langues maîtrisées (Séparez par virgules)</label><input type="text" name="langues_parlees" value="{{ fixer.langues_parlees or '' }}" placeholder="Français, Anglais, Espagnol..."></div>
+                    <div class="form-group"><label>Langue d'interface préférée</label>
+                        <select name="langue_preferee">
+                            <option value="FR" {{ 'selected' if fixer.langue_preferee == 'FR' }}>Français</option>
+                            <option value="EN" {{ 'selected' if fixer.langue_preferee == 'EN' }}>English</option>
+                            <option value="ES" {{ 'selected' if fixer.langue_preferee == 'ES' }}>Español</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn-save">SAVE CORRESPONDENT PROFILE</button>
+
+            <!-- ONGLET 4 : ADMINISTRATION -->
+            <div class="tab-content" id="administration">
+                <div class="form-grid">
+                    <div class="form-group"><label>Statut du compte</label>
+                        <select name="actif">
+                            <option value="1" {{ 'selected' if fixer.actif }}>ACTIF</option>
+                            <option value="0" {{ 'selected' if not fixer.actif }}>INACTIF (Accès coupé)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>ID Unique Système</label><input type="text" value="{{ fixer.id or 'AUTO' }}" disabled></div>
+                    <div class="form-group"><label>Token de sécurité</label><input type="text" value="{{ fixer.token_unique or 'AUTO-GEN' }}" disabled></div>
+                    <div class="form-group"><label>Date de création</label><input type="text" value="{{ fixer.created_at.strftime('%d/%m/%Y %H:%M') if fixer.created_at else 'Maintenant' }}" disabled></div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-save"><i data-lucide="save"></i> Enregistrer les modifications</button>
+            </div>
         </form>
     </div>
+
     <script>
-        document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active'); }; });
+        lucide.createIcons();
+        // Tabs Logic
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+            };
+        });
+        // Readonly check
+        {% if readonly %}
+        document.querySelectorAll('input, textarea, select').forEach(el => el.disabled = true);
+        document.querySelector('.btn-save').style.display = 'none';
+        {% endif %}
     </script>
 </body>
 </html>
