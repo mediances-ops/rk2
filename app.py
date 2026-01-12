@@ -1,5 +1,6 @@
-# DOC-OS VERSION : V.67.1 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - FIX BANNER IMAGE & PERSISTENCE ENGINE
+# DOC-OS VERSION : V.67.2 SUPRÊME MISSION CONTROL
+# ENGINE : FLASK + SQLALCHEMY SCOPED SESSIONS
+# ÉTAT : STABLE - FIX INTEGER CAST FOR AGE
 
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
@@ -90,7 +91,10 @@ def api_sync_engine(id):
             g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first()
             if not g_obj: g_obj = Gardien(reperage_id=rep.id, index=i); session.add(g_obj)
             for k, v in g_data.items():
-                if hasattr(g_obj, k): setattr(g_obj, k, v)
+                if hasattr(g_obj, k):
+                    # TRACEABILITÉ : Cast Integer pour Age
+                    if k == 'age': setattr(g_obj, k, int(v) if (v and str(v).isdigit()) else None)
+                    else: setattr(g_obj, k, v)
         l_data = {k.replace(f'lieu{i}_', ''): v for k, v in data.items() if k.startswith(f'lieu{i}_')}
         if l_data:
             l_obj = session.query(Lieu).filter_by(reperage_id=rep.id, index=i).first()
@@ -121,7 +125,7 @@ def api_medias(id):
     session = get_db()
     if request.method == 'GET':
         ms = session.query(Media).filter_by(reperage_id=id).all()
-        return jsonify([{'nom_fichier': m.nom_fichier} for m in ms])
+        return jsonify([m.to_dict() for m in ms])
     file = request.files['file']; filename = secrets.token_hex(8) + "_" + file.filename
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True); file.save(os.path.join(path, filename))
     m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
@@ -131,7 +135,6 @@ def api_medias(id):
 def route_form_fixer(token):
     session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
     if not rep: abort(404)
-    # TRACABILITÉ : Injection de l'image de bannière
     d = rep.to_dict(); d['image_region'] = rep.image_region
     return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=d)
 
