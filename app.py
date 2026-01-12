@@ -1,6 +1,6 @@
-# DOC-OS VERSION : V.66 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.66.1 SUPRÊME MISSION CONTROL
 # ENGINE : FLASK + SQLALCHEMY SCOPED SESSIONS
-# ÉTAT : STABLE - INDUSTRIEL - ANTI-TIMEOUT RAILWAY
+# ÉTAT : STABLE - CORRECTIF ROUTE 404 CRÉATION FIXER
 
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
@@ -14,7 +14,6 @@ CORS(app)
 
 # --- CONFIGURATION ENVIRONNEMENT ---
 raw_db_url = os.environ.get('DATABASE_URL')
-# Correction du préfixe dialecte pour SQLAlchemy (Postgres vs PostgreSql)
 DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
@@ -27,16 +26,13 @@ engine = init_db(DB_URL)
 # --- GESTIONNAIRE DE SESSION (ANTI-TIMEOUT RAILWAY) ---
 @app.teardown_appcontext
 def shutdown_session(exception=None):
-    """
-    Ferme systématiquement la connexion à la base de données à la fin de chaque requête.
-    C'est la solution directe au bug 'QueuePool limit overflow'.
-    """
+    """Ferme systématiquement la connexion DB à la fin de chaque requête."""
     session = g.pop('db_session', None)
     if session is not None:
         session.close()
 
 def get_db():
-    """Fournit une session unique par requête via l'objet global 'g'."""
+    """Fournit une session unique par requête."""
     if 'db_session' not in g:
         g.db_session = get_session(engine)
     return g.db_session
@@ -84,9 +80,26 @@ def admin_fixers_list():
     pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
     return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
 
+@app.route('/admin/fixer/new', methods=['POST'])
+def admin_new_fixer():
+    """Route de création de correspondant (FIX DU BUG 404)"""
+    session = get_db()
+    f = Fixer(
+        token_unique=secrets.token_hex(6), # Génération du token unique 12 caractères
+        created_at=datetime.utcnow()
+    )
+    # Mappage des champs du formulaire vers le modèle
+    for key in ['nom', 'prenom', 'email', 'telephone', 'societe', 'fonction', 'pays', 'region', 'langue_preferee']:
+        if key in request.form:
+            setattr(f, key, request.form[key])
+    
+    session.add(f)
+    session.commit()
+    return redirect('/admin/fixers')
+
 @app.route('/admin/fixer/<int:id>')
 def admin_view_fixer(id):
-    """Route de consultation (Fix du bug 404)"""
+    """Consultation profil correspondant."""
     session = get_db()
     fixer = session.get(Fixer, id)
     if not fixer: abort(404)
@@ -113,18 +126,18 @@ def api_sync_engine(id):
     if request.method == 'GET':
         return jsonify(rep.to_dict())
 
-    # --- SÉCURITÉ WORKFLOW ---
+    # SÉCURITÉ WORKFLOW
     if rep.statut != 'brouillon':
-        return jsonify({'error': 'Dossier verrouillé (Soumis/Validé)'}), 403
+        return jsonify({'error': 'Dossier verrouillé'}), 403
 
     data = request.json
     
-    # 1. Mise à jour des champs directs (Territoire & Fête)
+    # 1. Territoire & Fête
     for key, value in data.items():
         if hasattr(rep, key) and not isinstance(value, (list, dict)):
             setattr(rep, key, value)
     
-    # 2. Mise à jour dynamique des Gardiens (Index 1-3)
+    # 2. Gardiens Dynamiques (Index 1-3)
     for i in [1, 2, 3]:
         g_data = {k.replace(f'gardien{i}_', ''): v for k, v in data.items() if k.startswith(f'gardien{i}_')}
         if g_data:
@@ -135,7 +148,7 @@ def api_sync_engine(id):
             for k, v in g_data.items():
                 if hasattr(g, k): setattr(g, k, v)
 
-    # 3. Mise à jour dynamique des Lieux (Index 1-3)
+    # 3. Lieux Dynamiques (Index 1-3)
     for i in [1, 2, 3]:
         l_data = {k.replace(f'lieu{i}_', ''): v for k, v in data.items() if k.startswith(f'lieu{i}_')}
         if l_data:
@@ -149,26 +162,38 @@ def api_sync_engine(id):
     session.commit()
     return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
-# --- WORKFLOW DE SOUMISSION & EXPORT APP 2 ---
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_rep():
+    """Route de lancement d'une mission de repérage."""
+    session = get_db()
+    data = request.json
+    f_id = data.get('fixer_id')
+    fixer = session.get(Fixer, f_id)
+    
+    new_rep = Reperage(
+        token=secrets.token_urlsafe(16),
+        region=data.get('region'),
+        pays=data.get('pays'),
+        fixer_id=f_id,
+        fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu",
+        notes_admin=data.get('notes_admin'),
+        image_region=data.get('image_region'),
+        statut='brouillon'
+    )
+    session.add(new_rep)
+    session.commit()
+    return jsonify({'status': 'success'})
+
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def api_submit_to_prod(id):
     session = get_db()
     rep = session.get(Reperage, id)
     if not rep: abort(404)
-    
     rep.statut = 'soumis'
     session.commit()
-    
-    # Envoi du JSON structuré (5 réservoirs) à l'App 2
     if DOCUGEN_URL:
-        try:
-            requests.post(DOCUGEN_URL, 
-                          json=rep.to_dict(), 
-                          headers={"X-Bridge-Token": BRIDGE_TOKEN}, 
-                          timeout=15)
-        except Exception as e:
-            print(f"Erreur Bridge IA: {e}")
-            
+        try: requests.post(DOCUGEN_URL, json=rep.to_dict(), headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=15)
+        except: pass
     return jsonify({'status': 'success'})
 
 # --- CHAT & MÉDIAS ---
@@ -177,17 +202,14 @@ def api_chat(id):
     session = get_db()
     if request.method == 'GET':
         msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
-        # Marquer comme lu si c'est l'admin qui consulte
         if request.args.get('role') == 'admin':
             session.query(Message).filter_by(reperage_id=id, auteur_type='fixer').update({Message.lu: True})
             session.commit()
         return jsonify([m.to_dict() for m in msgs])
     
     data = request.json
-    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), 
-                auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-    session.add(m)
-    session.commit()
+    m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit()
     return jsonify({'status': 'success'}), 201
 
 @app.route('/api/reperages/<int:id>/medias', methods=['POST'])
@@ -198,46 +220,42 @@ def api_upload_media(id):
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
     os.makedirs(path, exist_ok=True)
     file.save(os.path.join(path, filename))
-    
-    m = Media(reperage_id=id, nom_original=file.filename, 
-              nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
-    session.add(m)
-    session.commit()
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
+    session.add(m); session.commit()
     return jsonify({'status': 'success'})
 
-# --- ROUTES ADMIN SPÉCIFIQUES ---
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 def admin_update_status(id):
-    session = get_db()
-    rep = session.get(Reperage, id)
-    data = request.json
+    session = get_db(); rep = session.get(Reperage, id); data = request.json
     if 'statut' in data: rep.statut = data['statut']
     if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
-    session.commit()
+    session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_delete_rep(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if rep: session.delete(rep); session.commit()
     return jsonify({'status': 'success'})
 
 @app.route('/admin/reperage/<int:id>/print')
 def admin_print(id):
-    session = get_db()
-    rep = session.get(Reperage, id)
-    fixer = session.get(Fixer, rep.fixer_id)
-    
-    # Organisation des données pour le template d'impression (Paires)
+    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
     pairs = []
     for i in [1, 2, 3]:
         g = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
         l = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
-        if g or l:
-            pairs.append({'index': i, 'gardien': g, 'lieu': l})
-            
+        if g or l: pairs.append({'index': i, 'gardien': g, 'lieu': l})
     return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
 
 @app.route('/formulaire/<token>')
 def route_form_fixer(token):
-    session = get_db()
-    rep = session.query(Reperage).filter_by(token=token).first()
+    session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
     if not rep: abort(404)
     return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=rep.to_dict())
+
+@app.route('/uploads/<int:rep_id>/<filename>')
+def serve_uploads(rep_id, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)), filename)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
