@@ -1,6 +1,5 @@
-<!-- DOC-OS VERSION : V.68.2 SUPRÊME MISSION CONTROL -->
-<!-- ROLE : PRODUCTION COCKPIT - FULL UI RESTORED -->
-<!-- STATUS : CRITICAL STABILITY - ZERO SIMPLIFICATION -->
+<!-- DOC-OS VERSION : V.68.6 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : PRODUCTION COCKPIT - HARMONIZED NAV & FIXED EDIT ACTION -->
 
 <!DOCTYPE html>
 <html lang="fr">
@@ -11,7 +10,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* ============================================================
-           ARCHITECTURE VISUELLE UNIFIÉE V.68.2
+           ARCHITECTURE VISUELLE RK V.68.6
            ============================================================ */
         :root { 
             --primary: #2C3E50; 
@@ -25,7 +24,7 @@
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f3f4f6; color: var(--primary); }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-        /* HEADER & NAV */
+        /* HEADER */
         .header { 
             background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); 
             border-radius: 16px; padding: 60px 40px; 
@@ -36,6 +35,7 @@
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
         .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; }
         
+        /* NAV HARMONIZED */
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
         .nav-link { 
             background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; 
@@ -44,22 +44,23 @@
         }
         .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
 
-        /* KPI STATS */
+        /* KPI */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid var(--secondary); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-card .number { font-size: 2.8rem; font-weight: 800; color: var(--primary); }
 
-        /* DATA TABLE */
+        /* TABLE */
         .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
         td { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         .progress-mini-bar { width: 100px; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
         .progress-mini-fill { height: 100%; background: var(--success); }
-        .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; animation: pulse 1.5s infinite; }
+        
+        .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
         .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
 
-        /* MODALS UI KIT */
+        /* MODALS */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; border-radius: 24px; width: 650px; padding: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
@@ -67,7 +68,7 @@
         .form-group label { display: block; font-weight: 800; font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 8px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; font-family: inherit; font-weight: 600; outline: none; }
 
-        /* HARMONIZED CHAT PANEL (500px) */
+        /* CHAT V.68 HARMONIZED */
         #adminChatPanel { 
             position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; 
             background: var(--glass); backdrop-filter: blur(25px); 
@@ -78,10 +79,9 @@
         .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; }
         
-        /* BUBBLES ADMIN CONTEXT */
         .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
-        .msg-me { align-self: flex-end; align-items: flex-end; } /* Admin is ME */
-        .msg-them { align-self: flex-start; align-items: flex-start; } /* Fixer is THEM */
+        .msg-me { align-self: flex-end; align-items: flex-end; }
+        .msg-them { align-self: flex-start; align-items: flex-start; }
         
         .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
@@ -114,7 +114,8 @@
         </header>
         
         <nav class="nav">
-            <a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> DASHBOARD</a>
+            <!-- HARMONISATION : TABLEAU DE BORD -->
+            <a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
             <a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a>
             <button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button>
         </nav>
@@ -137,7 +138,6 @@
                         <td><strong>{{ rep.region }}</strong><br><small>{{ rep.pays }}</small><div class="progress-mini-bar"><div class="progress-mini-fill" style="width: {{ rep.progression_pourcent }}%;"></div></div></td>
                         <td>
                             {{ rep.fixer_nom }}
-                            <!-- SOUDURE : item.unread_count (racine de la boucle) -->
                             {% if item.unread_count > 0 %}
                                 <span class="chat-notif" onclick="openAdminChat({{ rep.id }})">✉️ {{ item.unread_count }} NEW</span>
                             {% else %}
@@ -148,6 +148,7 @@
                         <td>
                             <div style="display: flex;">
                                 <a href="/formulaire/{{ rep.token }}" target="_blank" class="btn-action" style="background:#f39c12;" title="Lien Fixer"><i data-lucide="external-link"></i></a>
+                                <!-- BOUTON MODIFIER FIXÉ -->
                                 <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></button>
                                 <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:var(--success);" title="Imprimer"><i data-lucide="printer"></i></a>
                                 <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:var(--danger);" title="Supprimer"><i data-lucide="trash-2"></i></button>
@@ -180,6 +181,30 @@
         </div>
     </div>
 
+    <!-- MODAL MODIFIER (RÉTABLI) -->
+    <div class="modal-overlay" id="modalEdit">
+        <div class="modal-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>PARAMÈTRES DOSSIER</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            <form onsubmit="updateRegion(event)">
+                <input type="hidden" id="edit_id">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
+                    <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
+                </div>
+                <div class="form-group">
+                    <label>Statut Mission</label>
+                    <select id="edit_statut">
+                        <option value="brouillon">🟠 EN COURS</option>
+                        <option value="soumis">🔵 SOUMIS</option>
+                        <option value="validé">🟢 VALIDÉ</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Notes Production</label><textarea id="edit_notes" rows="6"></textarea></div>
+                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:15px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">ENREGISTRER</button>
+            </form>
+        </div>
+    </div>
+
     <!-- CHAT HARMONIZED -->
     <div id="adminChatPanel">
         <div class="chat-header">
@@ -196,7 +221,7 @@
         </div>
     </div>
 
-    <div class="version-tag">DOC-OS V.68.2 SUPRÊME</div>
+    <div class="version-tag">DOC-OS V.68.6 SUPRÊME</div>
 
     <script>
         lucide.createIcons();
@@ -212,6 +237,35 @@
             loadAdminMessages(); 
         }
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
+
+        // FIX BOUTON BLEU : Recherche sécurisée dans les données
+        function openEditModal(id) { 
+            const item = reperagesData.find(x => Number(x.reperage.id) === Number(id));
+            if (!item) return;
+            document.getElementById('edit_id').value = id;
+            document.getElementById('edit_region').value = item.reperage.region;
+            document.getElementById('edit_pays').value = item.reperage.pays;
+            document.getElementById('edit_statut').value = item.reperage.statut;
+            document.getElementById('edit_notes').value = item.reperage.notes_admin || '';
+            openModal('modalEdit');
+        }
+
+        async function updateRegion(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit_id').value;
+            const data = { 
+                statut: document.getElementById('edit_statut').value, 
+                notes_admin: document.getElementById('edit_notes').value, 
+                region: document.getElementById('edit_region').value, 
+                pays: document.getElementById('edit_pays').value 
+            };
+            const res = await fetch(`/admin/reperage/${id}/update`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(data) 
+            });
+            if(res.ok) window.location.reload();
+        }
 
         async function loadAdminMessages() {
             const res = await fetch(`/api/reperages/${currentChatId}/messages?role=admin`);
@@ -234,7 +288,11 @@
         async function sendAdminMessage() {
             const input = document.getElementById('adminChatInput');
             if(!input.value.trim()) return;
-            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
+            await fetch(`/api/reperages/${currentChatId}/messages`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) 
+            });
             input.value = ''; loadAdminMessages();
         }
 
