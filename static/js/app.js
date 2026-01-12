@@ -1,6 +1,6 @@
 /**
- * DOC-OS V.68.4 SUPRÊME - ENGINE & CHAT ENHANCED
- * FEATURES : LINKIFY, CHAT TOAST NOTIFICATIONS
+ * DOC-OS V.69.1 SUPRÊME - PERSISTENCE & MEDIA ENGINE
+ * FEATURES : 60S AUTO-SAVE, STABLE FILE UPLOAD, CHAT POLLING
  */
 
 const API_URL = '/api';
@@ -8,8 +8,23 @@ let currentReperageId = window.REPERAGE_ID || null;
 const CONTEXT_TYPE = window.location.pathname.includes('/admin') ? 'production' : 'fixer';
 
 document.addEventListener('DOMContentLoaded', async function() {
-    initTabs(); initFileUpload(); initEventListeners();
-    if (currentReperageId) { await loadReperage(); initChat(); await loadMedias(); }
+    console.log('🎬 Launching DOC-OS V.69.1 - Supreme Persistence Engine');
+    
+    initTabs(); 
+    initFileUpload(); 
+    initEventListeners();
+    
+    if (currentReperageId) {
+        await loadReperage();
+        initChat();
+        await loadMedias();
+        
+        // SÉCURITÉ : AUTO-SAVE TOUTES LES 60 SECONDES (SILENCIEUX)
+        setInterval(() => {
+            console.log("⏱️ Scheduled Auto-save triggered...");
+            saveReperage(false); 
+        }, 60000);
+    }
 });
 
 function showToast(msg, isWarning = false) {
@@ -55,7 +70,7 @@ function calculateProgress() {
     const fields = document.querySelectorAll('.tab-content input[name], .tab-content textarea[name]');
     let filled = 0;
     fields.forEach(input => { if (input.value && input.value.trim().length > 1) filled++; });
-    const percent = Math.min(100, filled);
+    const percent = Math.min(100, Math.round((filled / 100) * 100)); 
     const bar = document.getElementById('progress-bar');
     if (bar) bar.style.width = percent + '%';
     document.getElementById('progress-percentage').textContent = percent + '%';
@@ -81,7 +96,7 @@ async function loadReperage() {
         });
         if (data.statut !== 'brouillon') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Load error", e); }
+    } catch (e) { console.error("Persistence Load Error", e); }
 }
 
 async function saveReperage(show) {
@@ -168,11 +183,17 @@ function initFileUpload() {
     const area = document.getElementById('drop-area');
     const input = document.getElementById('file-input');
     if (!area || !input) return;
+    
+    // FIX PHOTO UPLOAD : Trigger input only once
     area.onclick = () => input.click();
+    
     input.onchange = async (e) => {
         for (let file of e.target.files) {
-            const fd = new FormData(); fd.append('file', file);
-            await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
+            const fd = new FormData(); 
+            fd.append('file', file);
+            console.log("📤 Uploading media...");
+            const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`, { method: 'POST', body: fd });
+            if (res.ok) console.log("✅ Media saved.");
         }
         await loadMedias();
     };
