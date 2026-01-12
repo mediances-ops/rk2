@@ -1,20 +1,21 @@
 /**
- * DOC-OS V.69.2 SUPRÊME - ENGINE & PROGRESSION SYNC
- * FEATURES : TARGETED .scouting-field PROGRESSION
+ * DOC-OS V.69.3 SUPRÊME - PERSISTENCE & MEDIA DELETION
+ * FEATURES : PHYSICAL CLEANUP, AUTO-SAVE, CHAT POLLING
  */
 
 const API_URL = '/api';
 let currentReperageId = window.REPERAGE_ID || null;
 const CONTEXT_TYPE = window.location.pathname.includes('/admin') ? 'production' : 'fixer';
+let isLocked = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Launching DOC-OS V.69.2 - 100 Fields Core');
+    console.log('🎬 Launching DOC-OS V.69.3 - Media Management Mode');
     initTabs(); initFileUpload(); initEventListeners();
     if (currentReperageId) { 
         await loadReperage(); 
         initChat(); 
         await loadMedias(); 
-        setInterval(() => saveReperage(false), 60000); // Auto-save
+        setInterval(() => { if(!isLocked) saveReperage(false); }, 60000);
     }
 });
 
@@ -57,15 +58,10 @@ function initEventListeners() {
 }
 
 function calculateProgress() {
-    // SOUDURE RIGUREUSE : Cible uniquement les 100 champs métier
     const fields = document.querySelectorAll('.scouting-field');
     if (fields.length === 0) return 0;
-    
     let filled = 0;
-    fields.forEach(input => {
-        if (input.value && input.value.trim().length > 1) filled++;
-    });
-
+    fields.forEach(input => { if (input.value && input.value.trim().length > 1) filled++; });
     const percent = Math.min(100, Math.round((filled / 100) * 100));
     const bar = document.getElementById('progress-bar');
     if (bar) bar.style.width = percent + '%';
@@ -96,6 +92,7 @@ async function loadReperage() {
 }
 
 async function saveReperage(show) {
+    if(isLocked) return;
     const payload = { progression_pourcent: calculateProgress() };
     document.querySelectorAll('.scouting-field').forEach(el => { payload[el.name] = el.value; });
     try {
@@ -178,7 +175,7 @@ function initFileUpload() {
     const area = document.getElementById('drop-area');
     const input = document.getElementById('file-input');
     if (!area || !input) return;
-    area.onclick = () => input.click();
+    area.onclick = () => { if(!isLocked) input.click(); };
     input.onchange = async (e) => {
         for (let file of e.target.files) {
             const fd = new FormData(); fd.append('file', file);
@@ -192,10 +189,26 @@ async function loadMedias() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
     const ms = await res.json();
     const list = document.getElementById('files-list');
-    if (list) list.innerHTML = ms.map(m => `<div class="file-item"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:180px;height:180px;object-fit:cover;border-radius:12px;"></div>`).join('');
+    if (list) {
+        list.innerHTML = ms.map(m => `
+            <div class="file-item" style="position:relative; width:180px;">
+                <img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:180px; object-fit:cover; border-radius:12px;">
+                ${!isLocked ? `<button onclick="deleteMedia(${m.id})" style="position:absolute; top:10px; right:10px; background:rgba(231,76,60,0.8); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);"><i data-lucide="trash-2" style="width:16px;"></i></button>` : ''}
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+}
+
+async function deleteMedia(id) {
+    if (!confirm("Permanently delete this photo?")) return;
+    const res = await fetch(`${API_URL}/medias/${id}`, { method: 'DELETE' });
+    if (res.ok) await loadMedias();
+    else alert("Unable to delete. Dossier might be locked.");
 }
 
 function lockInterface() {
+    isLocked = true;
     document.getElementById('lock-banner').style.display = 'block';
     document.querySelectorAll('input, textarea, button:not(.chat-toggle-btn):not(#chat-close-btn)').forEach(el => {
         el.disabled = true; el.style.opacity = '0.6';
