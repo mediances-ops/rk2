@@ -1,6 +1,4 @@
-<!-- DOC-OS VERSION : V.68.6 SUPRÊME MISSION CONTROL -->
-<!-- ROLE : PRODUCTION COCKPIT - HARMONIZED NAV & FIXED EDIT ACTION -->
-
+<!-- DOC-OS VERSION : V.68.7 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -9,95 +7,55 @@
     <title>Pre-scouting Platform | Cockpit</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        /* ============================================================
-           ARCHITECTURE VISUELLE RK V.68.6
-           ============================================================ */
-        :root { 
-            --primary: #2C3E50; 
-            --secondary: #E67E22; 
-            --success: #27ae60; 
-            --danger: #e74c3c; 
-            --glass: rgba(255, 255, 255, 0.95); 
-        }
-        
+        :root { --primary: #2C3E50; --secondary: #E67E22; --success: #27ae60; --danger: #e74c3c; --glass: rgba(255, 255, 255, 0.95); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f3f4f6; color: var(--primary); }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
-        /* HEADER */
-        .header { 
-            background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); 
-            border-radius: 16px; padding: 60px 40px; 
-            display: flex; align-items: center; gap: 40px; 
-            margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
-        }
+        .header { background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); border-radius: 16px; padding: 60px 40px; display: flex; align-items: center; gap: 40px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
         .header img { height: 110px; }
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
         .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; }
         
-        /* NAV HARMONIZED */
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
-        .nav-link { 
-            background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; 
-            text-decoration: none; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.06); 
-            border:none; cursor:pointer; display: flex; align-items: center; gap: 10px; 
-        }
+        .nav-link { background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border:none; cursor:pointer; display: flex; align-items: center; gap: 10px; }
         .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
 
-        /* KPI */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid var(--secondary); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-card .number { font-size: 2.8rem; font-weight: 800; color: var(--primary); }
 
-        /* TABLE */
         .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
         td { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         .progress-mini-bar { width: 100px; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
         .progress-mini-fill { height: 100%; background: var(--success); }
-        
         .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
         .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
 
-        /* MODALS */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; }
-        .modal-box { background: white; border-radius: 24px; width: 650px; padding: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 800; font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 8px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #e2e8f0; font-family: inherit; font-weight: 600; outline: none; }
+        
+        /* MODAL ÉLARGI A 1100px */
+        .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; transition: 0.3s; background: #fafafa; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--secondary); background: white; }
 
-        /* CHAT V.68 HARMONIZED */
-        #adminChatPanel { 
-            position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; 
-            background: var(--glass); backdrop-filter: blur(25px); 
-            transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; 
-            display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4);
-        }
+        #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
         #adminChatPanel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
         .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-        
         .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .msg-me { align-self: flex-end; align-items: flex-end; }
         .msg-them { align-self: flex-start; align-items: flex-start; }
-        
         .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
         .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
-        
-        .msg-meta { font-size: 0.75rem; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
-        .color-fixer { color: var(--secondary); }
-        .color-production { color: var(--primary); }
-        
-        .msg-time { font-size: 0.65rem; opacity: 0.5; margin-top: 5px; text-align: right; font-weight: 800; }
         .day-separator { text-align: center; margin: 20px 0; border-bottom: 1px solid rgba(0,0,0,0.05); line-height: 0.1em; }
         .day-separator span { background: #f3f4f6; padding: 0 15px; color: #95a5a6; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
-
-        .chat-input-zone { padding: 30px; background: white; border-top: 1px solid #f1f1f1; display: flex; gap: 15px; }
-        #adminChatInput { flex: 1; border: 2px solid #eef2f7; border-radius: 15px; padding: 15px; height: 100px; resize: none; font-family: inherit; font-weight: 600; outline: none; }
-        .chat-send-btn { background: var(--secondary); color: white; border: none; border-radius: 15px; width: 60px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); opacity: 0.8; } 100% { transform: scale(1); } }
         .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
@@ -105,20 +63,8 @@
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo">
-            <div class="header-text">
-                <h1>Pre-scouting Platform</h1>
-                <p class="subtitle">Production Intelligence System</p>
-            </div>
-        </header>
-        
-        <nav class="nav">
-            <!-- HARMONISATION : TABLEAU DE BORD -->
-            <a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
-            <a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a>
-            <button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button>
-        </nav>
+        <header class="header"><img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo"><div class="header-text"><h1>Pre-scouting Platform</h1><p class="subtitle">Production Intelligence System</p></div></header>
+        <nav class="nav"><a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a><a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a><button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button></nav>
 
         <div class="stats">
             <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total Dossiers</div></div>
@@ -136,19 +82,11 @@
                     <tr>
                         <td>#{{ rep.id }}</td>
                         <td><strong>{{ rep.region }}</strong><br><small>{{ rep.pays }}</small><div class="progress-mini-bar"><div class="progress-mini-fill" style="width: {{ rep.progression_pourcent }}%;"></div></div></td>
-                        <td>
-                            {{ rep.fixer_nom }}
-                            {% if item.unread_count > 0 %}
-                                <span class="chat-notif" onclick="openAdminChat({{ rep.id }})">✉️ {{ item.unread_count }} NEW</span>
-                            {% else %}
-                                <button onclick="openAdminChat({{ rep.id }})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>
-                            {% endif %}
-                        </td>
+                        <td>{{ rep.fixer_nom }}{% if item.unread_count > 0 %}<span class="chat-notif" onclick="openAdminChat({{ rep.id }})">✉️ {{ item.unread_count }} NEW</span>{% else %}<button onclick="openAdminChat({{ rep.id }})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>{% endif %}</td>
                         <td><span style="font-weight:900; color: {{ 'var(--secondary)' if rep.statut == 'brouillon' else '#3498db' if rep.statut == 'soumis' else 'var(--success)' }}">{{ 'EN COURS' if rep.statut == 'brouillon' else rep.statut.upper() }}</span></td>
                         <td>
                             <div style="display: flex;">
                                 <a href="/formulaire/{{ rep.token }}" target="_blank" class="btn-action" style="background:#f39c12;" title="Lien Fixer"><i data-lucide="external-link"></i></a>
-                                <!-- BOUTON MODIFIER FIXÉ -->
                                 <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></button>
                                 <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:var(--success);" title="Imprimer"><i data-lucide="printer"></i></a>
                                 <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:var(--danger);" title="Supprimer"><i data-lucide="trash-2"></i></button>
@@ -163,7 +101,7 @@
 
     <!-- MODAL NOUVEAU -->
     <div class="modal-overlay" id="modalNouveau">
-        <div class="modal-box">
+        <div class="modal-box" style="width: 700px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>LANCER UN REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
             <form onsubmit="creerDossier(event)">
                 <div class="form-group"><label>Région Cible*</label><input type="text" id="new_region" required></div>
@@ -176,52 +114,57 @@
                     </select>
                 </div>
                 <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="new_image"></div>
-                <button type="submit" style="width:100%; background:var(--primary); color:white; padding:15px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
+                <button type="submit" style="width:100%; background:var(--primary); color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL MODIFIER (RÉTABLI) -->
+    <!-- MODAL MODIFIER (ÉLARGI ET COMPLÉTÉ) -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
-            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>PARAMÈTRES DOSSIER</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
             <form onsubmit="updateRegion(event)">
                 <input type="hidden" id="edit_id">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                    <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
-                    <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
+                        <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
+                        <div class="form-group">
+                            <label>Assigner à un autre Fixer</label>
+                            <select id="edit_fixer_id">
+                                {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Statut Mission</label>
+                            <select id="edit_statut">
+                                <option value="brouillon">🟠 EN COURS</option>
+                                <option value="soumis">🔵 SOUMIS</option>
+                                <option value="validé">🟢 VALIDÉ</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
+                    </div>
+                    <div>
+                        <div class="form-group"><label>Notes de Production (Expertise HQ)</label>
+                            <textarea id="edit_notes" style="height: 480px; font-size: 1rem; line-height: 1.6; border: 2px solid var(--primary); background: #fff;"></textarea>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Statut Mission</label>
-                    <select id="edit_statut">
-                        <option value="brouillon">🟠 EN COURS</option>
-                        <option value="soumis">🔵 SOUMIS</option>
-                        <option value="validé">🟢 VALIDÉ</option>
-                    </select>
-                </div>
-                <div class="form-group"><label>Notes Production</label><textarea id="edit_notes" rows="6"></textarea></div>
-                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:15px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">ENREGISTRER</button>
+                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px; box-shadow:0 10px 25px rgba(230,126,34,0.3);">ENREGISTRER LES MODIFICATIONS</button>
             </form>
         </div>
     </div>
 
-    <!-- CHAT HARMONIZED -->
     <div id="adminChatPanel">
         <div class="chat-header">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:12px; height:12px; background:#2ecc71; border-radius:50%; box-shadow:0 0 10px #2ecc71;"></div>
-                <h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3>
-            </div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
             <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
         </div>
         <div id="adminChatMessages" class="chat-messages"></div>
-        <div class="chat-input-zone">
-            <textarea id="adminChatInput" placeholder="Votre message au correspondant..."></textarea>
-            <button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button>
-        </div>
+        <div style="padding:30px; background:white; border-top:1px solid #f1f1f1; display:flex; gap:15px;"><textarea id="adminChatInput" style="flex:1; border:2px solid #eef2f7; border-radius:15px; padding:15px; height:100px; resize:none;" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" style="background:var(--secondary); color:white; border:none; border-radius:15px; width:60px; cursor:pointer;"><i data-lucide="send"></i></button></div>
     </div>
 
-    <div class="version-tag">DOC-OS V.68.6 SUPRÊME</div>
+    <div class="version-tag">DOC-OS V.68.7 SUPRÊME</div>
 
     <script>
         lucide.createIcons();
@@ -231,22 +174,19 @@
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
         
-        function openAdminChat(id) { 
-            currentChatId = id; 
-            document.getElementById('adminChatPanel').classList.add('active'); 
-            loadAdminMessages(); 
-        }
+        function openAdminChat(id) { currentChatId = id; document.getElementById('adminChatPanel').classList.add('active'); loadAdminMessages(); }
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
 
-        // FIX BOUTON BLEU : Recherche sécurisée dans les données
         function openEditModal(id) { 
             const item = reperagesData.find(x => Number(x.reperage.id) === Number(id));
             if (!item) return;
             document.getElementById('edit_id').value = id;
-            document.getElementById('edit_region').value = item.reperage.region;
-            document.getElementById('edit_pays').value = item.reperage.pays;
+            document.getElementById('edit_region').value = item.reperage.region || '';
+            document.getElementById('edit_pays').value = item.reperage.pays || '';
             document.getElementById('edit_statut').value = item.reperage.statut;
             document.getElementById('edit_notes').value = item.reperage.notes_admin || '';
+            document.getElementById('edit_fixer_id').value = item.reperage.fixer_id;
+            document.getElementById('edit_image').value = item.reperage.image_region || '';
             openModal('modalEdit');
         }
 
@@ -257,13 +197,11 @@
                 statut: document.getElementById('edit_statut').value, 
                 notes_admin: document.getElementById('edit_notes').value, 
                 region: document.getElementById('edit_region').value, 
-                pays: document.getElementById('edit_pays').value 
+                pays: document.getElementById('edit_pays').value,
+                fixer_id: document.getElementById('edit_fixer_id').value,
+                image_region: document.getElementById('edit_image').value
             };
-            const res = await fetch(`/admin/reperage/${id}/update`, { 
-                method: 'PUT', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(data) 
-            });
+            const res = await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             if(res.ok) window.location.reload();
         }
 
@@ -277,10 +215,7 @@
                 const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
                 if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
                 const isMe = m.auteur_type === 'production';
-                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}">
-                    <div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div>
-                    <div class="bubble">${m.contenu}<div class="msg-time">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div>
-                </div>`;
+                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div><div class="bubble">${m.contenu}<div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div></div>`;
             });
             container.innerHTML = html; container.scrollTop = container.scrollHeight;
         }
@@ -288,11 +223,7 @@
         async function sendAdminMessage() {
             const input = document.getElementById('adminChatInput');
             if(!input.value.trim()) return;
-            await fetch(`/api/reperages/${currentChatId}/messages`, { 
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) 
-            });
+            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
             input.value = ''; loadAdminMessages();
         }
 
