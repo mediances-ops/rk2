@@ -1,7 +1,7 @@
-# DOC-OS VERSION : V.69.3 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - MEDIA DELETION & PHYSICAL DISK CLEANUP
+# DOC-OS VERSION : V.69.4 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - TOTAL CLEANUP (DB + DISK) ON DELETE
 
-import os, json, secrets, requests, io, zipfile
+import os, json, secrets, requests, io, zipfile, shutil # AJOUT SHUTIL
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g
 from flask_cors import CORS
@@ -120,27 +120,34 @@ def api_medias(id):
     m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='photo')
     session.add(m); session.commit(); return jsonify({'status': 'success'})
 
-# --- ROUTE DE DÉSTOCKAGE PHYSIQUE (V.69.3) ---
 @app.route('/api/medias/<int:media_id>', methods=['DELETE'])
 def api_delete_media(media_id):
-    session = get_db()
-    m = session.get(Media, media_id)
+    session = get_db(); m = session.get(Media, media_id)
     if not m: abort(404)
-    
-    # Sécurité Workflow
     rep = session.get(Reperage, m.reperage_id)
     if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
-
-    # Suppression physique sur le Volume Railway
     try:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except Exception as e:
-        print(f"Error deleting physical file: {e}")
+        if os.path.exists(file_path): os.remove(file_path)
+    except: pass
+    session.delete(m); session.commit(); return jsonify({'status': 'success'})
 
-    # Suppression en Base de Données
-    session.delete(m)
+# --- ROUTE ADMIN SUPPRESSION TOTALE (V.69.4) ---
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_delete_rep(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if not rep: abort(404)
+
+    # 1. Suppression physique du dossier entier sur le volume
+    try:
+        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+        if os.path.exists(folder_path):
+            shutil.rmtree(folder_path) # Supprime le dossier et tout son contenu
+    except Exception as e:
+        print(f"Physical cleanup error: {e}")
+
+    # 2. Suppression de l'entrée en base (SQLAlchemy gère le cascade pour les tables liées)
+    session.delete(rep)
     session.commit()
     return jsonify({'status': 'success'})
 
@@ -174,12 +181,6 @@ def admin_fixers_list():
     if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
     if pays: query = query.filter(Fixer.pays == pays)
     return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
-
-@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
-def admin_delete_rep(id):
-    session = get_db(); rep = session.get(Reperage, id)
-    if rep: session.delete(rep); session.commit()
-    return jsonify({'status': 'success'})
 
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
