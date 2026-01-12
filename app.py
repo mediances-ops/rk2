@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.69.5 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - ENHANCED MEDIA TYPE DETECTION (PHOTO/PDF)
+# DOC-OS VERSION : V.69.6 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - ABSOLUTE PATH FIX FOR RAILWAY MEDIA STORAGE
 
 import os, json, secrets, requests, io, zipfile, shutil
 from datetime import datetime
@@ -11,10 +11,17 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
-DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
-app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
+# --- CONFIGURATION CHEMINS ABSOLUS ---
+raw_db_url = os.environ.get('DATABASE_URL')
+DB_URL = raw_db_url.replace('postgres://', 'postgresql://', 1) if raw_db_url and raw_db_url.startswith('postgres://') else (raw_db_url or 'sqlite:///reperage.db')
+
+# On s'assure que le dossier d'upload est traité de manière absolue
+base_dir = os.path.dirname(os.path.abspath(__file__))
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', os.path.join(base_dir, 'data/uploads'))
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
+
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 engine = init_db(DB_URL)
 
 @app.teardown_appcontext
@@ -26,6 +33,7 @@ def get_db():
     if 'db_session' not in g: g.db_session = get_session(engine)
     return g.db_session
 
+# --- ROUTES ADMINISTRATION ---
 @app.route('/')
 def index_root(): return redirect('/admin')
 
@@ -39,7 +47,8 @@ def admin_dashboard():
     for r in reps:
         f = session.get(Fixer, r.fixer_id)
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
-        serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
+        d = r.to_dict(); d['unread_count'] = unread
+        serialized.append({'reperage': d, 'fixer': f.to_dict() if f else None})
     stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
@@ -51,6 +60,13 @@ def admin_new_fixer():
             if k == 'actif': setattr(f, k, request.form[k] == '1')
             else: setattr(f, k, request.form[k])
     session.add(f); session.commit(); return redirect('/admin/fixers')
+
+@app.route('/admin/fixers')
+def admin_fixers_list():
+    session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
+    if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
+    if pays: query = query.filter(Fixer.pays == pays)
+    return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
 
 @app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
 def admin_edit_fixer(id):
@@ -90,42 +106,27 @@ def api_sync_engine(id):
                 if hasattr(l_obj, k): setattr(l_obj, k, v)
     session.commit(); return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
-@app.route('/admin/reperage/<int:id>/print')
-def admin_print(id):
-    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
-    pairs = []
-    for i in [1, 2, 3]:
-        g_obj = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
-        l_obj = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
-        if g_obj or l_obj: pairs.append({'index': i, 'gardien': g_obj, 'lieu': l_obj})
-    return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
+# --- SERVICE DE FICHIERS SÉCURISÉ ---
+@app.route('/uploads/<int:rep_id>/<filename>')
+def serve_uploads(rep_id, filename):
+    """SOUDURE PHYSIQUE : Accès absolu au volume Railway."""
+    target_dir = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
+    return send_from_directory(target_dir, filename)
 
-@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-def api_chat(id):
-    session = get_db()
-    if request.method == 'GET':
-        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
-        return jsonify([m.to_dict() for m in msgs])
-    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-    session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
-
+# --- API MÉDIAS ---
 @app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
 def api_medias(id):
     session = get_db()
     if request.method == 'GET':
         ms = session.query(Media).filter_by(reperage_id=id).all()
         return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier, 'type': m.type} for m in ms])
-    
     file = request.files['file']
-    # TRACABILITÉ : Détection intelligente du type (Photo vs PDF)
     ext = os.path.splitext(file.filename)[1].lower()
     media_type = 'pdf' if ext == '.pdf' else 'photo'
-    
     filename = secrets.token_hex(8) + "_" + file.filename
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
     os.makedirs(path, exist_ok=True)
     file.save(os.path.join(path, filename))
-    
     m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type=media_type)
     session.add(m); session.commit(); return jsonify({'status': 'success'})
 
@@ -136,7 +137,7 @@ def api_delete_media(media_id):
     rep = session.get(Reperage, m.reperage_id)
     if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
     try:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier)
+        file_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier))
         if os.path.exists(file_path): os.remove(file_path)
     except: pass
     session.delete(m); session.commit(); return jsonify({'status': 'success'})
@@ -146,10 +147,31 @@ def admin_delete_rep(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     try:
-        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+        folder_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(id)))
         if os.path.exists(folder_path): shutil.rmtree(folder_path)
     except: pass
     session.delete(rep); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
+def admin_update_status(id):
+    session = get_db(); rep = session.get(Reperage, id); data = request.json
+    if 'statut' in data: rep.statut = data['statut']
+    if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
+    if 'image_region' in data: rep.image_region = data['image_region']
+    if 'fixer_id' in data:
+        f = session.get(Fixer, int(data['fixer_id']))
+        if f: rep.fixer_id = f.id; rep.fixer_nom = f"{f.prenom} {f.nom}"
+    session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/admin/reperage/<int:id>/print')
+def admin_print(id):
+    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
+    pairs = []
+    for i in [1, 2, 3]:
+        g = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
+        l = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
+        if g or l: pairs.append({'index': i, 'gardien': g, 'lieu': l})
+    return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
 
 @app.route('/formulaire/<token>')
 def route_form_fixer(token):
