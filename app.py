@@ -1,6 +1,6 @@
-# DOC-OS VERSION : V.66.2 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.66.3 SUPRÊME MISSION CONTROL
 # ENGINE : FLASK + SQLALCHEMY SCOPED SESSIONS
-# ÉTAT : STABLE - FIX TYPEERROR BOOLEAN '1'
+# ÉTAT : STABLE - ACTIVATION FILTRES FIXERS & NETTOYAGE UI
 
 import os, json, secrets, requests, io, zipfile
 from datetime import datetime
@@ -20,10 +20,8 @@ BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Initialisation de l'Engine SQL
 engine = init_db(DB_URL)
 
-# --- GESTIONNAIRE DE SESSION (ANTI-TIMEOUT RAILWAY) ---
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     session = g.pop('db_session', None)
@@ -46,26 +44,38 @@ def admin_dashboard():
     p_f = request.args.get('pays'); s_f = request.args.get('statut')
     if p_f: query = query.filter(Reperage.pays == p_f)
     if s_f: query = query.filter(Reperage.statut == s_f)
-    
-    reps = query.order_by(Reperage.id.desc()).all()
-    serialized = []
+    reps = query.order_by(Reperage.id.desc()).all(); serialized = []
     for r in reps:
         f = session.get(Fixer, r.fixer_id)
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
         serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
-        
-    stats = {
-        'total': session.query(Reperage).count(),
-        'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(),
-        'soumis': session.query(Reperage).filter_by(statut='soumis').count(),
-        'valides': session.query(Reperage).filter_by(statut='validé').count()
-    }
+    stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
 @app.route('/admin/fixers')
 def admin_fixers_list():
+    """Route des correspondants avec FILTRES ACTIFS"""
     session = get_db()
-    fixers = session.query(Fixer).order_by(Fixer.nom.asc()).all()
+    query = session.query(Fixer)
+    
+    # Récupération des filtres
+    search = request.args.get('search')
+    pays = request.args.get('pays')
+    langue = request.args.get('langue')
+
+    if search:
+        query = query.filter(or_(
+            Fixer.nom.ilike(f'%{search}%'),
+            Fixer.prenom.ilike(f'%{search}%'),
+            Fixer.societe.ilike(f'%{search}%'),
+            Fixer.specialites.ilike(f'%{search}%')
+        ))
+    if pays:
+        query = query.filter(Fixer.pays == pays)
+    if langue:
+        query = query.filter(Fixer.langues_parlees.ilike(f'%{langue}%'))
+
+    fixers = query.order_by(Fixer.nom.asc()).all()
     pays_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
     return render_template('admin_fixers.html', fixers=fixers, pays_list=pays_list)
 
@@ -75,11 +85,8 @@ def admin_new_fixer():
     f = Fixer(token_unique=secrets.token_hex(6), created_at=datetime.utcnow())
     for key in request.form:
         if hasattr(f, key):
-            # SÉCURITÉ : Conversion du statut actif en vrai booléen
-            if key == 'actif':
-                setattr(f, key, request.form[key] == '1')
-            else:
-                setattr(f, key, request.form[key])
+            if key == 'actif': setattr(f, key, request.form[key] == '1')
+            else: setattr(f, key, request.form[key])
     session.add(f); session.commit()
     return redirect('/admin/fixers')
 
@@ -95,27 +102,20 @@ def admin_edit_fixer(id):
     if request.method == 'POST':
         for key in request.form:
             if hasattr(fixer, key):
-                # SÉCURITÉ : Conversion du statut actif en vrai booléen
-                if key == 'actif':
-                    setattr(fixer, key, request.form[key] == '1')
-                else:
-                    setattr(fixer, key, request.form[key])
+                if key == 'actif': setattr(fixer, key, request.form[key] == '1')
+                else: setattr(fixer, key, request.form[key])
         session.commit(); return redirect('/admin/fixers')
     return render_template('admin_fixer_edit_v2.html', fixer=fixer)
 
-# --- MOTEUR DE SYNCHRONISATION DYNAMIQUE ---
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
 def api_sync_engine(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     if request.method == 'GET': return jsonify(rep.to_dict())
     if rep.statut != 'brouillon': return jsonify({'error': 'Dossier verrouillé'}), 403
-
     data = request.json
     for key, value in data.items():
-        if hasattr(rep, key) and not isinstance(value, (list, dict)):
-            setattr(rep, key, value)
-    
+        if hasattr(rep, key) and not isinstance(value, (list, dict)): setattr(rep, key, value)
     for i in [1, 2, 3]:
         g_data = {k.replace(f'gardien{i}_', ''): v for k, v in data.items() if k.startswith(f'gardien{i}_')}
         if g_data:
@@ -123,7 +123,6 @@ def api_sync_engine(id):
             if not g_obj: g_obj = Gardien(reperage_id=rep.id, index=i); session.add(g_obj)
             for k, v in g_data.items():
                 if hasattr(g_obj, k): setattr(g_obj, k, v)
-
     for i in [1, 2, 3]:
         l_data = {k.replace(f'lieu{i}_', ''): v for k, v in data.items() if k.startswith(f'lieu{i}_')}
         if l_data:
@@ -131,7 +130,6 @@ def api_sync_engine(id):
             if not l_obj: l_obj = Lieu(reperage_id=rep.id, index=i); session.add(l_obj)
             for k, v in l_data.items():
                 if hasattr(l_obj, k): setattr(l_obj, k, v)
-
     session.commit(); return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
 @app.route('/admin/reperages/create', methods=['POST'])
@@ -150,7 +148,6 @@ def api_submit_to_prod(id):
         except: pass
     return jsonify({'status': 'success'})
 
-# --- CHAT & MÉDIAS ---
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
 def api_chat(id):
     session = get_db()
