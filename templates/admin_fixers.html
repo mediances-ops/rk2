@@ -1,65 +1,65 @@
+<!-- DOC-OS VERSION : V.66.1 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : CORRESPONDENTS (FIXERS) MANAGEMENT SYSTEM -->
+<!-- STATUS : UI FIXED - ROUTING SYNCHRONIZED -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pre-scouting Platform | Correspondants</title>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* ============================================================
-           ARCHITECTURE VISUELLE V7 - GESTION DES FIXERS SANS SIMPLIFICATION
+           ARCHITECTURE VISUELLE V.66.1 - UI KIT RENFORCÉ
            ============================================================ */
+        :root { 
+            --primary: #2C3E50; 
+            --secondary: #E67E22; 
+            --success: #27ae60; 
+            --danger: #e74c3c; 
+            --bg: #f3f4f6;
+            --input-border: #e2e8f0;
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; padding: 20px; color: #2C3E50; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--primary); padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; }
         
         /* HEADER V7 UNIFIÉ */
         .header {
-            background: linear-gradient(135deg, #2C3E50 0%, #1a252f 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%);
             border-radius: 16px; padding: 60px 40px; margin-bottom: 30px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 40px;
         }
         .header img { height: 110px; width: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2)); }
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; line-height: 1; }
-        .header .subtitle { color: #E67E22; font-size: 1.6rem; font-weight: 600; margin-top: 10px; text-transform: uppercase; }
+        .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; margin-top: 10px; text-transform: uppercase; }
 
         /* NAVIGATION */
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
         .nav-link {
-            background: white; color: #2C3E50; padding: 14px 28px; border-radius: 12px;
+            background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px;
             text-decoration: none; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px;
         }
-        .nav-link:hover { background: #E67E22; color: white; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(230, 126, 34, 0.3); }
-        .nav-link.active { background: #2C3E50; color: white; border-bottom: 4px solid #E67E22; }
+        .nav-link:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
 
-        /* FILTRES ENRICHIS */
+        /* FILTRES */
         .card { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .filter-grid { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { flex: 1; min-width: 200px; }
         .filter-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; }
-        .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-weight: 600; color: #2C3E50; }
+        .filter-group input, .filter-group select { width: 100%; padding: 12px; border: 2px solid var(--input-border); border-radius: 10px; font-family: inherit; font-weight: 600; color: var(--primary); outline: none; }
 
-        /* TABLEAU SUBSTANTIEL */
+        /* TABLEAU */
         .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
-        th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; font-weight: 800; }
+        th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
         td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         
-        /* CERCLE PHOTO / INITIALES */
-        .fixer-photo {
-            width: 55px; height: 55px; border-radius: 50%; object-fit: cover;
-            border: 3px solid #e2e8f0; background: #eee; display: flex;
-            align-items: center; justify-content: center; font-weight: 800; color: #7f8c8d; font-size: 1.2rem;
-        }
-
-        /* BADGES LANGUES AVEC DRAPEAUX */
-        .lang-badge {
-            display: inline-flex; align-items: center; gap: 4px; background: #f0f9ff;
-            padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-            color: #0369a1; margin-right: 5px; margin-bottom: 5px; border: 1px solid #e0f2fe;
-        }
+        .fixer-photo { width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0; background: #eee; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #7f8c8d; font-size: 1.2rem; }
 
         .badge-status { padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
         .status-actif { background: #d1fae5; color: #065f46; }
@@ -67,12 +67,21 @@
 
         .btn-action { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
         
-        /* MODAL */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        /* ============================================================
+           MODAL UI KIT (REPAIRED & STYLED)
+           ============================================================ */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .modal.active { display: flex; }
-        .modal-content { background: white; border-radius: 24px; padding: 40px; width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+        .modal-content { background: white; border-radius: 24px; padding: 45px; width: 95%; max-width: 650px; box-shadow: 0 30px 60px rgba(0,0,0,0.5); }
+        
+        .form-group { margin-bottom: 22px; }
+        .form-group label { display: block; font-weight: 800; font-size: 0.8rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .form-group input, .form-group select { 
+            width: 100%; padding: 14px; border-radius: 12px; border: 2px solid var(--input-border); 
+            font-family: inherit; font-weight: 600; color: var(--primary); outline: none; transition: 0.3s;
+        }
+        .form-group input:focus { border-color: var(--secondary); box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1); }
 
-        /* ASSISTANT IA */
         .ai-floating-btn { position: fixed; left: 30px; bottom: 30px; width: 70px; height: 70px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 50%; cursor: pointer; z-index: 999; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5); display: flex; align-items: center; justify-content: center; transition: 0.4s; }
         #aiPanel { position: fixed; left: -82%; top: 0; width: 80%; height: 100vh; background: white; z-index: 2000; transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); box-shadow: 10px 0 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; }
     </style>
@@ -80,7 +89,7 @@
 <body>
 
     <div class="container">
-        <!-- HEADER V7 -->
+        <!-- HEADER -->
         <header class="header">
             <img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo">
             <div class="header-text">
@@ -93,42 +102,31 @@
         <nav class="nav">
             <a href="/admin" class="nav-link"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
             <a href="/admin/fixers" class="nav-link active"><i data-lucide="users"></i> CORRESPONDANTS LOCAUX</a>
-            <button onclick="openModal()" class="nav-link" style="background:#E67E22; color:white;"><i data-lucide="user-plus"></i> NOUVEAU CORRESPONDANT</button>
-            <!-- FIX 9 : DÉCONNEXION SUPPRIMÉE -->
+            <button onclick="openModal()" class="nav-link" style="background:var(--secondary); color:white; font-weight:900;"><i data-lucide="user-plus"></i> NOUVEAU CORRESPONDANT</button>
         </nav>
 
-        <!-- FILTRES ENRICHIS -->
+        <!-- FILTRES -->
         <div class="card">
             <form method="GET" action="/admin/fixers" class="filter-grid">
                 <div class="filter-group">
-                    <label><i data-lucide="search" style="width:14px;"></i> Recherche</label>
+                    <label>Recherche</label>
                     <input type="text" name="search" value="{{ request.args.get('search', '') }}" placeholder="Nom, société, spécialité...">
                 </div>
                 <div class="filter-group">
-                    <label><i data-lucide="map" style="width:14px;"></i> Pays</label>
+                    <label>Pays</label>
                     <select name="pays">
                         <option value="">Tous les pays</option>
                         {% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
                     </select>
                 </div>
-                <div class="filter-group">
-                    <label><i data-lucide="languages" style="width:14px;"></i> Langue</label>
-                    <select name="langue">
-                        <option value="">Toutes les langues</option>
-                        <option value="Français">Français</option>
-                        <option value="Anglais">Anglais</option>
-                        <option value="Italien">Italien</option>
-                        <option value="Espagnol">Espagnol</option>
-                    </select>
-                </div>
                 <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="nav-link" style="background:#2C3E50; color:white; padding:12px 25px;">FILTRER</button>
+                    <button type="submit" class="nav-link" style="background:var(--primary); color:white; padding:12px 25px;">FILTRER</button>
                     <a href="/admin/fixers" class="nav-link" style="padding:12px 20px;">RESET</a>
                 </div>
             </form>
         </div>
 
-        <!-- TABLEAU DES FIXERS -->
+        <!-- LISTE DES FIXERS -->
         <div class="table-container">
             <table>
                 <thead>
@@ -137,7 +135,6 @@
                         <th>Nom / Société</th>
                         <th>Localisation</th>
                         <th>Contact</th>
-                        <th>Langues Maîtrisées</th>
                         <th>Statut</th>
                         <th>Actions</th>
                     </tr>
@@ -149,43 +146,16 @@
                             {% if f.photo_profil_url %}
                             <img src="{{ f.photo_profil_url }}" class="fixer-photo" alt="{{ f.nom }}">
                             {% else %}
-                            <div class="fixer-photo">
-                                {{ f.prenom[0]|upper if f.prenom else '' }}{{ f.nom[0]|upper if f.nom else '?' }}
-                            </div>
+                            <div class="fixer-photo">{{ f.prenom[0]|upper if f.prenom else '' }}{{ f.nom[0]|upper if f.nom else '?' }}</div>
                             {% endif %}
                         </td>
-                        <td>
-                            <strong style="font-size: 1.1rem;">{{ f.prenom }} {{ f.nom }}</strong><br>
-                            <small style="color: #E67E22; font-weight: 700;">{{ f.societe or 'Indépendant' }}</small>
-                        </td>
-                        <td>
-                            <strong>{{ f.pays or '-' }}</strong><br>
-                            <span style="color: #7f8c8d; font-size: 0.85rem;">{{ f.ville or f.region or '-' }}</span>
-                        </td>
-                        <td>
-                            <a href="mailto:{{ f.email }}" style="color: #3498db; text-decoration: none; font-weight: 600;">{{ f.email }}</a><br>
-                            <small style="color: #7f8c8d;">{{ f.telephone or '-' }}</small>
-                        </td>
-                        <td>
-                            {% if f.langues_parlees %}
-                                {% for lang in f.langues_parlees.split(',') %}
-                                <span class="lang-badge">
-                                    {% if 'Français' in lang %}🇫🇷{% elif 'Anglais' in lang %}🇬🇧{% elif 'Italien' in lang %}🇮🇹{% elif 'Espagnol' in lang %}🇪🇸{% endif %}
-                                    {{ lang.strip() }}
-                                </span>
-                                {% endfor %}
-                            {% else %}
-                                <small style="color:#95a5a6;">Non renseigné</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge-status {{ 'status-actif' if f.actif else 'status-inactif' }}">
-                                {{ 'ACTIF' if f.actif else 'INACTIF' }}
-                            </span>
-                        </td>
+                        <td><strong>{{ f.prenom }} {{ f.nom }}</strong><br><small style="color: var(--secondary); font-weight: 700;">{{ f.societe or 'Indépendant' }}</small></td>
+                        <td><strong>{{ f.pays or '-' }}</strong><br><span style="color: #7f8c8d; font-size: 0.85rem;">{{ f.region or '-' }}</span></td>
+                        <td><a href="mailto:{{ f.email }}" style="color: #3498db; text-decoration: none; font-weight: 600;">{{ f.email }}</a><br><small>{{ f.telephone or '-' }}</small></td>
+                        <td><span class="badge-status {{ 'status-actif' if f.actif else 'status-inactif' }}">{{ 'ACTIF' if f.actif else 'INACTIF' }}</span></td>
                         <td>
                             <div style="display: flex;">
-                                <a href="/admin/fixer/{{ f.id }}" class="btn-action" style="background:#2C3E50;" title="Voir"><i data-lucide="eye"></i></a>
+                                <a href="/admin/fixer/{{ f.id }}" class="btn-action" style="background:var(--primary);" title="Voir"><i data-lucide="eye"></i></a>
                                 <a href="/admin/fixer/{{ f.id }}/edit" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></a>
                             </div>
                         </td>
@@ -196,13 +166,14 @@
         </div>
     </div>
 
-    <!-- MODAL NOUVEAU CORRESPONDANT (RESTAURÉ) -->
+    <!-- MODAL NOUVEAU CORRESPONDANT (SOUDURE V.66.1) -->
     <div id="modal" class="modal">
         <div class="modal-content">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-                <h2 style="font-weight: 800; letter-spacing: -1px; color:#2C3E50;">➕ NOUVEAU CORRESPONDANT</h2>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+                <h2 style="font-weight: 800; letter-spacing: -1px; color:var(--primary);">➕ NOUVEAU CORRESPONDANT</h2>
+                <button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button>
             </div>
+            <!-- FORMULAIRE CIBLANT LA ROUTE PYTHON CORRIGÉE -->
             <form method="POST" action="/admin/fixer/new">
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
                     <div class="form-group"><label>Prénom *</label><input type="text" name="prenom" required></div>
@@ -218,23 +189,22 @@
                     <label>Langue d'interface préférée *</label>
                     <select name="langue_preferee" required>
                         <option value="FR">🇫🇷 Français</option>
-                        <option value="GB">🇬🇧 English</option>
-                        <option value="ITAL">🇮🇹 Italiano</option>
-                        <option value="ESP">🇪🇸 Español</option>
+                        <option value="EN">🇬🇧 English</option>
+                        <option value="ES">🇪🇸 Español</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 15px; margin-top: 30px;">
-                    <button type="submit" class="nav-link" style="background:#2C3E50; color:white; flex:1; justify-content:center;">CRÉER LE PROFIL</button>
-                    <button type="button" onclick="closeModal()" class="nav-link" style="background:#eee; flex:1; justify-content:center;">ANNULER</button>
+                    <button type="submit" style="background:var(--primary); color:white; flex:2; padding:18px; border-radius:12px; font-weight:900; border:none; cursor:pointer; font-size:1rem;">CRÉER LE PROFIL</button>
+                    <button type="button" onclick="closeModal()" style="background:#f1f5f9; color:#64748b; flex:1; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">ANNULER</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ASSISTANT IA LATÉRAL -->
+    <!-- ASSISTANT IA -->
     <button onclick="toggleAI()" class="ai-floating-btn"><i data-lucide="brain-circuit" style="width:35px; height:35px;"></i></button>
     <div id="aiPanel">
-        <div style="background:#2C3E50; padding:25px; color:white; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:var(--primary); padding:25px; color:white; display:flex; justify-content:space-between; align-items:center;">
             <h2 style="font-weight:800; margin:0;">ASSISTANT IA PRODUCTION</h2>
             <button onclick="toggleAI()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
         </div>
