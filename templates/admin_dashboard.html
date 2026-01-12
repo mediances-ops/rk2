@@ -1,17 +1,25 @@
-<!-- DOC-OS VERSION : V.68.7 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.68.8 SUPRÊME MISSION CONTROL -->
+<!-- ROLE : PRODUCTION COCKPIT - INTEGRATED RICH TEXT EDITOR (QUILL) -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pre-scouting Platform | Cockpit</title>
+    
+    <!-- LIBRARIES -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
     <style>
         :root { --primary: #2C3E50; --secondary: #E67E22; --success: #27ae60; --danger: #e74c3c; --glass: rgba(255, 255, 255, 0.95); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f3f4f6; color: var(--primary); }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 
+        /* UI COMPONENTS */
         .header { background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); border-radius: 16px; padding: 60px 40px; display: flex; align-items: center; gap: 40px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
         .header img { height: 110px; }
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
@@ -34,15 +42,19 @@
         .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
         .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
 
+        /* MODAL 1100px */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; }
-        
-        /* MODAL ÉLARGI A 1100px */
         .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
+        
         .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; transition: 0.3s; background: #fafafa; }
-        .form-group input:focus, .form-group textarea:focus { border-color: var(--secondary); background: white; }
+        .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
+        .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
+
+        /* QUILL EDITOR STYLE */
+        #editor-container { height: 450px; background: white; border-radius: 0 0 12px 12px; font-size: 1.05rem; }
+        .ql-toolbar { background: #f8fafc; border-radius: 12px 12px 0 0; border: 2px solid #eef2f7 !important; }
+        .ql-container { border: 2px solid #eef2f7 !important; border-top: none !important; }
 
         #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
         #adminChatPanel.active { right: 0; }
@@ -54,10 +66,8 @@
         .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
         .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
-        .day-separator { text-align: center; margin: 20px 0; border-bottom: 1px solid rgba(0,0,0,0.05); line-height: 0.1em; }
-        .day-separator span { background: #f3f4f6; padding: 0 15px; color: #95a5a6; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); opacity: 0.8; } 100% { transform: scale(1); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
     </style>
 </head>
@@ -119,18 +129,17 @@
         </div>
     </div>
 
-    <!-- MODAL MODIFIER (ÉLARGI ET COMPLÉTÉ) -->
+    <!-- MODAL PARAMÈTRES AVEC ÉDITEUR PRO -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
             <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
             <form onsubmit="updateRegion(event)">
                 <input type="hidden" id="edit_id">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="display: grid; grid-template-columns: 400px 1fr; gap: 40px;">
                     <div>
                         <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
                         <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                        <div class="form-group">
-                            <label>Assigner à un autre Fixer</label>
+                        <div class="form-group"><label>Assigner Fixer</label>
                             <select id="edit_fixer_id">
                                 {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
                             </select>
@@ -145,16 +154,18 @@
                         <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
                     </div>
                     <div>
-                        <div class="form-group"><label>Notes de Production (Expertise HQ)</label>
-                            <textarea id="edit_notes" style="height: 480px; font-size: 1rem; line-height: 1.6; border: 2px solid var(--primary); background: #fff;"></textarea>
+                        <div class="form-group">
+                            <label>Notes de Production (Éditeur Haute Substance)</label>
+                            <div id="editor-container"></div>
                         </div>
                     </div>
                 </div>
-                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px; box-shadow:0 10px 25px rgba(230,126,34,0.3);">ENREGISTRER LES MODIFICATIONS</button>
+                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px;">ENREGISTRER LES MODIFICATIONS</button>
             </form>
         </div>
     </div>
 
+    <!-- CHAT PANEL -->
     <div id="adminChatPanel">
         <div class="chat-header">
             <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
@@ -164,12 +175,18 @@
         <div style="padding:30px; background:white; border-top:1px solid #f1f1f1; display:flex; gap:15px;"><textarea id="adminChatInput" style="flex:1; border:2px solid #eef2f7; border-radius:15px; padding:15px; height:100px; resize:none;" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" style="background:var(--secondary); color:white; border:none; border-radius:15px; width:60px; cursor:pointer;"><i data-lucide="send"></i></button></div>
     </div>
 
-    <div class="version-tag">DOC-OS V.68.7 SUPRÊME</div>
+    <div class="version-tag">DOC-OS V.68.8 SUPRÊME</div>
 
     <script>
         lucide.createIcons();
         const reperagesData = {{ reperages|tojson|safe }};
         let currentChatId = null;
+
+        // INITIALISATION ÉDITEUR QUILL
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
+        });
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
@@ -184,9 +201,12 @@
             document.getElementById('edit_region').value = item.reperage.region || '';
             document.getElementById('edit_pays').value = item.reperage.pays || '';
             document.getElementById('edit_statut').value = item.reperage.statut;
-            document.getElementById('edit_notes').value = item.reperage.notes_admin || '';
             document.getElementById('edit_fixer_id').value = item.reperage.fixer_id;
             document.getElementById('edit_image').value = item.reperage.image_region || '';
+            
+            // CHARGEMENT NOTES DANS QUILL
+            quill.root.innerHTML = item.reperage.notes_admin || '';
+            
             openModal('modalEdit');
         }
 
@@ -195,7 +215,7 @@
             const id = document.getElementById('edit_id').value;
             const data = { 
                 statut: document.getElementById('edit_statut').value, 
-                notes_admin: document.getElementById('edit_notes').value, 
+                notes_admin: quill.root.innerHTML, // RÉCUPÉRATION DU HTML DE QUILL
                 region: document.getElementById('edit_region').value, 
                 pays: document.getElementById('edit_pays').value,
                 fixer_id: document.getElementById('edit_fixer_id').value,
