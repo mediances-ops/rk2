@@ -1,6 +1,6 @@
 /**
- * DOC-OS V.69.3 SUPRÊME - PERSISTENCE & MEDIA DELETION
- * FEATURES : PHYSICAL CLEANUP, AUTO-SAVE, CHAT POLLING
+ * DOC-OS V.69.5 SUPRÊME - MEDIA VAULT ENHANCED
+ * FEATURES : PHOTO/PDF DISCRIMINATION, FORMAT BADGES, AUTO-SAVE
  */
 
 const API_URL = '/api';
@@ -9,7 +9,7 @@ const CONTEXT_TYPE = window.location.pathname.includes('/admin') ? 'production' 
 let isLocked = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🎬 Launching DOC-OS V.69.3 - Media Management Mode');
+    console.log('🎬 Launching DOC-OS V.69.5 - Media Vault Specialist');
     initTabs(); initFileUpload(); initEventListeners();
     if (currentReperageId) { 
         await loadReperage(); 
@@ -126,10 +126,15 @@ function initChat() {
     document.getElementById('chat-send-btn').onclick = async () => {
         const input = document.getElementById('chat-input');
         if (!input.value.trim()) return;
+        const msg = {
+            auteur_type: CONTEXT_TYPE,
+            auteur_nom: CONTEXT_TYPE === 'production' ? 'Production' : (window.FIXER_DATA?.prenom || 'Correspondent'),
+            contenu: input.value
+        };
         await fetch(`${API_URL}/reperages/${currentReperageId}/messages`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ auteur_type: CONTEXT_TYPE, auteur_nom: CONTEXT_TYPE === 'production' ? 'Production' : (window.FIXER_DATA?.prenom || 'Correspondent'), contenu: input.value })
+            body: JSON.stringify(msg)
         });
         input.value = ''; loadMessages();
     };
@@ -190,21 +195,31 @@ async function loadMedias() {
     const ms = await res.json();
     const list = document.getElementById('files-list');
     if (list) {
-        list.innerHTML = ms.map(m => `
-            <div class="file-item" style="position:relative; width:180px;">
-                <img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:180px; object-fit:cover; border-radius:12px;">
-                ${!isLocked ? `<button onclick="deleteMedia(${m.id})" style="position:absolute; top:10px; right:10px; background:rgba(231,76,60,0.8); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);"><i data-lucide="trash-2" style="width:16px;"></i></button>` : ''}
-            </div>
-        `).join('');
+        list.innerHTML = ms.map(m => {
+            const ext = m.nom_fichier.split('.').pop().toUpperCase();
+            const isPDF = m.type === 'pdf' || ext === 'PDF';
+            
+            // TRACABILITÉ : Rendu conditionnel Photo vs PDF
+            const mediaContent = isPDF 
+                ? `<div onclick="window.open('/uploads/${currentReperageId}/${m.nom_fichier}')" style="width:100%; height:180px; background:#f1f5f9; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; border:1px solid #e2e8f0;"><i data-lucide="file-text" style="width:40px; height:40px; color:#64748b; margin-bottom:10px;"></i><span style="font-size:0.7rem; font-weight:800; color:#64748b; padding:0 10px; text-align:center;">${m.nom_fichier.substring(17)}</span></div>`
+                : `<img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:180px; object-fit:cover; border-radius:12px; border:1px solid #e2e8f0;">`;
+
+            return `
+                <div class="file-item" style="position:relative; width:180px;">
+                    ${mediaContent}
+                    <div style="position:absolute; bottom:10px; left:10px; background:rgba(44,62,80,0.8); color:white; font-size:0.6rem; font-weight:900; padding:2px 8px; border-radius:4px; backdrop-filter:blur(4px);">${ext}</div>
+                    ${!isLocked ? `<button onclick="deleteMedia(${m.id})" style="position:absolute; top:10px; right:10px; background:rgba(231,76,60,0.8); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(5px);"><i data-lucide="trash-2" style="width:16px;"></i></button>` : ''}
+                </div>
+            `;
+        }).join('');
         lucide.createIcons();
     }
 }
 
 async function deleteMedia(id) {
-    if (!confirm("Permanently delete this photo?")) return;
+    if (!confirm("Permanently delete this file?")) return;
     const res = await fetch(`${API_URL}/medias/${id}`, { method: 'DELETE' });
     if (res.ok) await loadMedias();
-    else alert("Unable to delete. Dossier might be locked.");
 }
 
 function lockInterface() {
