@@ -1,243 +1,209 @@
-<!-- DOC-OS VERSION : V.70.2 SUPRÊME MISSION CONTROL -->
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pre-scouting Platform | Cockpit</title>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-    <style>
-        :root { --primary: #2C3E50; --secondary: #E67E22; --success: #27ae60; --danger: #e74c3c; --glass: rgba(255, 255, 255, 0.95); }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f3f4f6; color: var(--primary); }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); border-radius: 16px; padding: 60px 40px; display: flex; align-items: center; gap: 40px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
-        .header img { height: 110px; }
-        .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
-        .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; }
-        .nav { display: flex; gap: 15px; margin-bottom: 30px; }
-        .nav-link { background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border:none; cursor:pointer; display: flex; align-items: center; gap: 10px; }
-        .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
-        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid var(--secondary); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .stat-card .number { font-size: 2.8rem; font-weight: 800; color: var(--primary); }
-        .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
-        td { padding: 18px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        .progress-mini-bar { width: 100px; background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; }
-        .progress-mini-fill { height: 100%; background: var(--success); }
-        .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
-        .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal-overlay.active { display: flex; }
-        .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
-        .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
-        .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
-        #editor-container { height: 400px; background: white; border-radius: 0 0 12px 12px; font-size: 1rem; }
-        #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
-        #adminChatPanel.active { right: 0; }
-        .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; }
-        .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
-        .msg-me { align-self: flex-end; align-items: flex-end; }
-        .msg-them { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
-        .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
-        .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header class="header"><img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo"><div class="header-text"><h1>Pre-scouting Platform</h1><p class="subtitle">Production Intelligence System</p></div></header>
-        <nav class="nav"><a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a><a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a><button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button></nav>
+# DOC-OS VERSION : V.70.2 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - BRIDGE ACTIF & MODAL SAVE FIXED
 
-        <div class="stats">
-            <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total Dossiers</div></div>
-            <div class="stat-card"><div class="number" style="color:var(--secondary);">{{ stats.brouillons }}</div><div class="label">En cours</div></div>
-            <div class="stat-card"><div class="number" style="color:#3498db;">{{ stats.soumis }}</div><div class="label">Soumis</div></div>
-            <div class="stat-card"><div class="number" style="color:var(--success);">{{ stats.valides }}</div><div class="label">Validés</div></div>
-        </div>
+import os, json, secrets, requests, io, zipfile, shutil
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g
+from flask_cors import CORS
+from sqlalchemy import text, or_
+from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardien, Lieu
 
-        <div class="table-container">
-            <table>
-                <thead><tr><th>ID</th><th>Région / Progress</th><th>Fixer / Notifications</th><th>Statut</th><th>Actions</th></tr></thead>
-                <tbody>
-                    {% for item in reperages %}
-                    {% set rep = item.reperage %}
-                    <tr>
-                        <td>#{{ rep.id }}</td>
-                        <td><strong>{{ rep.region }}</strong><br><small>{{ rep.pays }}</small><div class="progress-mini-bar"><div class="progress-mini-fill" style="width: {{ rep.progression_pourcent }}%;"></div></div></td>
-                        <td>{{ rep.fixer_nom }}{% if item.unread_count > 0 %}<span class="chat-notif" onclick="openAdminChat({{ rep.id }})">✉️ {{ item.unread_count }} NEW</span>{% else %}<button onclick="openAdminChat({{ rep.id }})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>{% endif %}</td>
-                        <td><span style="font-weight:900; color: {{ 'var(--secondary)' if rep.statut == 'brouillon' else '#3498db' if rep.statut == 'soumis' else 'var(--success)' }}">{{ 'EN COURS' if rep.statut == 'brouillon' else rep.statut.upper() }}</span></td>
-                        <td>
-                            <div style="display: flex;">
-                                <a href="/formulaire/{{ rep.token }}" target="_blank" class="btn-action" style="background:#f39c12;" title="Lien Fixer"><i data-lucide="external-link"></i></a>
-                                <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></button>
-                                <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:var(--success);" title="Imprimer"><i data-lucide="printer"></i></a>
-                                <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:var(--danger);" title="Supprimer"><i data-lucide="trash-2"></i></button>
-                                <!-- FUSÉE BRIDGE APP 2 -->
-                                <button onclick="sendToIA({{ rep.id }})" class="btn-action" style="background:black; border:1px solid #ff0000; color:#ff0000;" title="Rocket Bridge App 2"><i data-lucide="rocket"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+app = Flask(__name__)
+CORS(app)
 
-    <!-- MODAL NOUVEAU -->
-    <div class="modal-overlay" id="modalNouveau">
-        <div class="modal-box" style="width: 700px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>LANCER UN REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
-            <form onsubmit="creerDossier(event)">
-                <div class="form-group"><label>Région Cible*</label><input type="text" id="new_region" required></div>
-                <div class="form-group"><label>Pays*</label><input type="text" id="new_pays" required></div>
-                <div class="form-group"><label>Assigner Fixer*</label>
-                    <select id="new_fixer_id" required>
-                        <option value="">-- SÉLECTIONNER --</option>
-                        {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="new_image"></div>
-                <button type="submit" style="width:100%; background:var(--primary); color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
-            </form>
-        </div>
-    </div>
+# --- CONFIGURATION ---
+DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
+BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
+DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
+engine = init_db(DB_URL)
 
-    <!-- MODAL PARAMÈTRES DU REPÉRAGE (ÉLARGI) -->
-    <div class="modal-overlay" id="modalEdit">
-        <div class="modal-box">
-            <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
-            <form onsubmit="updateRegion(event)">
-                <input type="hidden" id="edit_id">
-                <div style="display: grid; grid-template-columns: 400px 1fr; gap: 40px;">
-                    <div>
-                        <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
-                        <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                        <div class="form-group"><label>Ré-assigner Fixer</label>
-                            <select id="edit_fixer_id">
-                                {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Statut Mission</label>
-                            <select id="edit_statut">
-                                <option value="brouillon">🟠 EN COURS</option>
-                                <option value="soumis">🔵 SOUMIS</option>
-                                <option value="validé">🟢 VALIDÉ</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
-                    </div>
-                    <div>
-                        <div class="form-group"><label>Notes de Production (Éditeur Haute Substance)</label><div id="editor-container"></div></div>
-                    </div>
-                </div>
-                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px;">ENREGISTRER LES MODIFICATIONS</button>
-            </form>
-        </div>
-    </div>
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    session = g.pop('db_session', None)
+    if session is not None: session.close()
 
-    <!-- CHAT HARMONIZED -->
-    <div id="adminChatPanel">
-        <div class="chat-header">
-            <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
-            <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
-        </div>
-        <div id="adminChatMessages" class="chat-messages"></div>
-        <div style="padding:30px; background:white; border-top:1px solid #f1f1f1; display:flex; gap:15px;"><textarea id="adminChatInput" style="flex:1; border:2px solid #eef2f7; border-radius:15px; padding:15px; height:100px; resize:none;" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" style="background:var(--secondary); color:white; border:none; border-radius:15px; width:60px; cursor:pointer;"><i data-lucide="send"></i></button></div>
-    </div>
+def get_db():
+    if 'db_session' not in g: g.db_session = get_session(engine)
+    return g.db_session
 
-    <script>
-        lucide.createIcons();
-        const reperagesData = {{ reperages|tojson|safe }};
-        let currentChatId = null;
+# --- NAVIGATION RACINE ---
+@app.route('/')
+def index_root(): return redirect('/admin')
 
-        var quill = new Quill('#editor-container', {
-            theme: 'snow',
-            modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
-        });
+# --- DASHBOARD ---
+@app.route('/admin')
+def admin_dashboard():
+    session = get_db(); query = session.query(Reperage)
+    p_f = request.args.get('pays'); s_f = request.args.get('statut')
+    if p_f: query = query.filter(Reperage.pays == p_f)
+    if s_f: query = query.filter(Reperage.statut == s_f)
+    reps = query.order_by(Reperage.id.desc()).all(); serialized = []
+    for r in reps:
+        f = session.get(Fixer, r.fixer_id)
+        unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+        serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
+    stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
+    return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
-        
-        function openAdminChat(id) { currentChatId = id; document.getElementById('adminChatPanel').classList.add('active'); loadAdminMessages(); }
-        function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
+# --- MISE À JOUR DEPUIS MODAL (SOUDURE FIXÉE) ---
+@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
+def admin_update_status(id):
+    session = get_db(); rep = session.get(Reperage, id); data = request.json
+    if not rep: abort(404)
+    
+    if 'statut' in data: rep.statut = data['statut']
+    if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
+    if 'image_region' in data: rep.image_region = data['image_region']
+    if 'region' in data: rep.region = data['region']
+    if 'pays' in data: rep.pays = data['pays']
+    
+    if 'fixer_id' in data and data['fixer_id']:
+        f_obj = session.get(Fixer, int(data['fixer_id']))
+        if f_obj:
+            rep.fixer_id = f_obj.id
+            rep.fixer_nom = f"{f_obj.prenom} {f_obj.nom}"
+    
+    session.commit()
+    return jsonify({'status': 'success'})
 
-        function openEditModal(id) { 
-            const item = reperagesData.find(x => Number(x.reperage.id) === Number(id));
-            if (!item) return;
-            document.getElementById('edit_id').value = id;
-            document.getElementById('edit_region').value = item.reperage.region || '';
-            document.getElementById('edit_pays').value = item.reperage.pays || '';
-            document.getElementById('edit_statut').value = item.reperage.statut;
-            document.getElementById('edit_fixer_id').value = item.reperage.fixer_id;
-            document.getElementById('edit_image').value = item.reperage.image_region || '';
-            quill.root.innerHTML = item.reperage.notes_admin || '';
-            openModal('modalEdit');
-        }
+# --- BRIDGE APP 2 (FUSÉE) ---
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def api_submit_to_prod(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    
+    # On marque comme soumis si ce n'est pas déjà fait
+    if rep.statut == 'brouillon': rep.statut = 'soumis'
+    session.commit()
+    
+    # Envoi vers l'App 2 via le Bridge
+    if DOCUGEN_URL:
+        try:
+            payload = rep.to_dict()
+            requests.post(DOCUGEN_URL, json=payload, headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=15)
+        except Exception as e:
+            print(f"Bridge error: {e}")
+            return jsonify({'status': 'bridge_error', 'message': str(e)}), 502
+            
+    return jsonify({'status': 'success'})
 
-        async function updateRegion(e) {
-            e.preventDefault();
-            const id = document.getElementById('edit_id').value;
-            const data = { 
-                statut: document.getElementById('edit_statut').value, 
-                notes_admin: quill.root.innerHTML, 
-                region: document.getElementById('edit_region').value, 
-                pays: document.getElementById('edit_pays').value, 
-                fixer_id: document.getElementById('edit_fixer_id').value, 
-                image_region: document.getElementById('edit_image').value 
-            };
-            const res = await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) window.location.reload();
-        }
+# --- MÉDIAS & UPLOADS ---
+@app.route('/uploads/<int:rep_id>/<filename>')
+def serve_uploads(rep_id, filename):
+    directory = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
+    return send_from_directory(directory, filename)
 
-        async function sendToIA(id) {
-            if(confirm("Lancer l'exportation Rocket Bridge vers App 2 ?")) {
-                const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
-                if(res.ok) alert("🚀 SUCCÈS : Données transmises au cerveau App 2.");
-                else alert("❌ ÉCHEC : Erreur de communication avec le Bridge IA.");
-            }
-        }
+@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
+def api_medias(id):
+    session = get_db()
+    if request.method == 'GET':
+        ms = session.query(Media).filter_by(reperage_id=id).all()
+        return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier, 'type': m.type} for m in ms])
+    file = request.files['file']; ext = os.path.splitext(file.filename)[1].lower()
+    filename = secrets.token_hex(8) + "_" + file.filename
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True)
+    file.save(os.path.join(path, filename))
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type='pdf' if ext == '.pdf' else 'photo')
+    session.add(m); session.commit(); return jsonify({'status': 'success'})
 
-        async function loadAdminMessages() {
-            const res = await fetch(`/api/reperages/${currentChatId}/messages?role=admin`);
-            const msgs = await res.json();
-            const container = document.getElementById('adminChatMessages');
-            let html = ''; let lastDate = null;
-            msgs.forEach(m => {
-                const d = new Date(m.created_at);
-                const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
-                if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
-                const isMe = m.auteur_type === 'production';
-                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div><div class="bubble">${m.contenu}<div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div></div>`;
-            });
-            container.innerHTML = html; container.scrollTop = container.scrollHeight;
-        }
+# --- AUTRES ROUTES ADMIN ---
+@app.route('/admin/fixers')
+def admin_fixers_list():
+    session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
+    if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
+    if pays: query = query.filter(Fixer.pays == pays)
+    return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
 
-        async function sendAdminMessage() {
-            const input = document.getElementById('adminChatInput');
-            if(!input.value.trim()) return;
-            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
-            input.value = ''; loadAdminMessages();
-        }
+@app.route('/admin/fixer/new', methods=['POST'])
+def admin_new_fixer():
+    session = get_db(); f = Fixer(token_unique=secrets.token_hex(6), created_at=datetime.utcnow())
+    for k in request.form:
+        if hasattr(f, k):
+            if k == 'actif': setattr(f, k, request.form[k] == '1')
+            else: setattr(f, k, request.form[k])
+    session.add(f); session.commit(); return redirect('/admin/fixers')
 
-        async function creerDossier(e) {
-            e.preventDefault();
-            const f = document.getElementById('new_fixer_id');
-            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, image_region: document.getElementById('new_image').value };
-            const res = await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) window.location.reload();
-        }
+@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
+def admin_edit_fixer(id):
+    session = get_db(); fixer = session.get(Fixer, id)
+    if request.method == 'POST':
+        for k in request.form:
+            if hasattr(fixer, k):
+                if k == 'actif': setattr(fixer, k, request.form[k] == '1')
+                else: setattr(fixer, k, request.form[k])
+        session.commit(); return redirect('/admin/fixers')
+    return render_template('admin_fixer_edit_v2.html', fixer=fixer)
 
-        async function deleteRep(id, reg) { if(confirm(`Supprimer définitivement ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
-        window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) closeModal(); }
-    </script>
-</body>
-</html>
+@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
+def api_sync_engine(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    if request.method == 'GET': return jsonify(rep.to_dict())
+    if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
+    data = request.json
+    PROTECTED = ['token', 'id', 'fixer_id']
+    for k, v in data.items():
+        if hasattr(rep, k) and k not in PROTECTED and not isinstance(v, (list, dict)): setattr(rep, k, v)
+    for i in [1, 2, 3]:
+        g_data = {key.replace(f'gardien{i}_', ''): val for key, val in data.items() if key.startswith(f'gardien{i}_')}
+        if g_data:
+            g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first()
+            if not g_obj: g_obj = Gardien(reperage_id=rep.id, index=i); session.add(g_obj)
+            for k, v in g_data.items():
+                if hasattr(g_obj, k):
+                    if k == 'age': setattr(g_obj, k, int(v) if (v and str(v).isdigit()) else None)
+                    else: setattr(g_obj, k, v)
+        l_data = {key.replace(f'lieu{i}_', ''): val for key, val in data.items() if key.startswith(f'lieu{i}_')}
+        if l_data:
+            l_obj = session.query(Lieu).filter_by(reperage_id=rep.id, index=i).first()
+            if not l_obj: l_obj = Lieu(reperage_id=rep.id, index=i); session.add(l_obj)
+            for k, v in l_data.items():
+                if hasattr(l_obj, k): setattr(l_obj, k, v)
+    session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
+def api_chat(id):
+    session = get_db()
+    if request.method == 'GET':
+        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
+        if request.args.get('role') == 'admin':
+            session.query(Message).filter_by(reperage_id=id, auteur_type='fixer').update({Message.lu: True}); session.commit()
+        return jsonify([m.to_dict() for m in msgs])
+    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
+
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_delete_rep(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if rep: 
+        try: shutil.rmtree(os.path.join(app.config['UPLOAD_FOLDER'], str(id)))
+        except: pass
+        session.delete(rep); session.commit()
+    return jsonify({'status': 'success'})
+
+@app.route('/admin/reperage/<int:id>/print')
+def admin_print(id):
+    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
+    pairs = []
+    for i in [1, 2, 3]:
+        g = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
+        l = session.query(Lieu).filter_by(reperage_id=id, index=i).first()
+        if g or l: pairs.append({'index': i, 'gardien': g, 'lieu': l})
+    return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
+
+@app.route('/formulaire/<token>')
+def route_form_fixer(token):
+    session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
+    if not rep: abort(404)
+    d = rep.to_dict(); d['image_region'] = rep.image_region 
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=d)
+
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_rep():
+    session = get_db(); data = request.json; fixer = session.get(Fixer, data.get('fixer_id'))
+    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
+    session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
