@@ -1,38 +1,28 @@
-<!-- DOC-OS VERSION : V.68.8 SUPRÊME MISSION CONTROL -->
-<!-- ROLE : PRODUCTION COCKPIT - INTEGRATED RICH TEXT EDITOR (QUILL) -->
-
+<!-- DOC-OS VERSION : V.70.2 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pre-scouting Platform | Cockpit</title>
-    
-    <!-- LIBRARIES -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-
     <style>
         :root { --primary: #2C3E50; --secondary: #E67E22; --success: #27ae60; --danger: #e74c3c; --glass: rgba(255, 255, 255, 0.95); }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f3f4f6; color: var(--primary); }
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-
-        /* UI COMPONENTS */
         .header { background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%); border-radius: 16px; padding: 60px 40px; display: flex; align-items: center; gap: 40px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
         .header img { height: 110px; }
         .header h1 { color: white; font-size: 3.5rem; font-weight: 800; margin: 0; letter-spacing: -2px; }
         .header .subtitle { color: var(--secondary); font-size: 1.6rem; font-weight: 600; }
-        
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
         .nav-link { background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border:none; cursor:pointer; display: flex; align-items: center; gap: 10px; }
         .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
-
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid var(--secondary); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-card .number { font-size: 2.8rem; font-weight: 800; color: var(--primary); }
-
         .table-container { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { padding: 20px 15px; text-align: left; color: #7f8c8d; border-bottom: 2px solid #f1f5f9; text-transform: uppercase; font-size: 0.85rem; font-weight: 800; }
@@ -41,21 +31,13 @@
         .progress-mini-fill { height: 100%; background: var(--success); }
         .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
         .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
-
-        /* MODAL 1100px */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
-        
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
         .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
-
-        /* QUILL EDITOR STYLE */
-        #editor-container { height: 450px; background: white; border-radius: 0 0 12px 12px; font-size: 1.05rem; }
-        .ql-toolbar { background: #f8fafc; border-radius: 12px 12px 0 0; border: 2px solid #eef2f7 !important; }
-        .ql-container { border: 2px solid #eef2f7 !important; border-top: none !important; }
-
+        #editor-container { height: 400px; background: white; border-radius: 0 0 12px 12px; font-size: 1rem; }
         #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
         #adminChatPanel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
@@ -66,7 +48,6 @@
         .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
         .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
-
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
     </style>
@@ -100,6 +81,8 @@
                                 <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></button>
                                 <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:var(--success);" title="Imprimer"><i data-lucide="printer"></i></a>
                                 <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:var(--danger);" title="Supprimer"><i data-lucide="trash-2"></i></button>
+                                <!-- FUSÉE BRIDGE APP 2 -->
+                                <button onclick="sendToIA({{ rep.id }})" class="btn-action" style="background:black; border:1px solid #ff0000; color:#ff0000;" title="Rocket Bridge App 2"><i data-lucide="rocket"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -116,8 +99,7 @@
             <form onsubmit="creerDossier(event)">
                 <div class="form-group"><label>Région Cible*</label><input type="text" id="new_region" required></div>
                 <div class="form-group"><label>Pays*</label><input type="text" id="new_pays" required></div>
-                <div class="form-group">
-                    <label>Assigner Fixer*</label>
+                <div class="form-group"><label>Assigner Fixer*</label>
                     <select id="new_fixer_id" required>
                         <option value="">-- SÉLECTIONNER --</option>
                         {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
@@ -129,7 +111,7 @@
         </div>
     </div>
 
-    <!-- MODAL PARAMÈTRES AVEC ÉDITEUR PRO -->
+    <!-- MODAL PARAMÈTRES DU REPÉRAGE (ÉLARGI) -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
             <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
@@ -139,7 +121,7 @@
                     <div>
                         <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
                         <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                        <div class="form-group"><label>Assigner Fixer</label>
+                        <div class="form-group"><label>Ré-assigner Fixer</label>
                             <select id="edit_fixer_id">
                                 {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
                             </select>
@@ -154,10 +136,7 @@
                         <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
                     </div>
                     <div>
-                        <div class="form-group">
-                            <label>Notes de Production (Éditeur Haute Substance)</label>
-                            <div id="editor-container"></div>
-                        </div>
+                        <div class="form-group"><label>Notes de Production (Éditeur Haute Substance)</label><div id="editor-container"></div></div>
                     </div>
                 </div>
                 <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px;">ENREGISTRER LES MODIFICATIONS</button>
@@ -165,7 +144,7 @@
         </div>
     </div>
 
-    <!-- CHAT PANEL -->
+    <!-- CHAT HARMONIZED -->
     <div id="adminChatPanel">
         <div class="chat-header">
             <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
@@ -175,14 +154,11 @@
         <div style="padding:30px; background:white; border-top:1px solid #f1f1f1; display:flex; gap:15px;"><textarea id="adminChatInput" style="flex:1; border:2px solid #eef2f7; border-radius:15px; padding:15px; height:100px; resize:none;" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" style="background:var(--secondary); color:white; border:none; border-radius:15px; width:60px; cursor:pointer;"><i data-lucide="send"></i></button></div>
     </div>
 
-    <div class="version-tag">DOC-OS V.68.8 SUPRÊME</div>
-
     <script>
         lucide.createIcons();
         const reperagesData = {{ reperages|tojson|safe }};
         let currentChatId = null;
 
-        // INITIALISATION ÉDITEUR QUILL
         var quill = new Quill('#editor-container', {
             theme: 'snow',
             modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
@@ -203,10 +179,7 @@
             document.getElementById('edit_statut').value = item.reperage.statut;
             document.getElementById('edit_fixer_id').value = item.reperage.fixer_id;
             document.getElementById('edit_image').value = item.reperage.image_region || '';
-            
-            // CHARGEMENT NOTES DANS QUILL
             quill.root.innerHTML = item.reperage.notes_admin || '';
-            
             openModal('modalEdit');
         }
 
@@ -215,14 +188,22 @@
             const id = document.getElementById('edit_id').value;
             const data = { 
                 statut: document.getElementById('edit_statut').value, 
-                notes_admin: quill.root.innerHTML, // RÉCUPÉRATION DU HTML DE QUILL
+                notes_admin: quill.root.innerHTML, 
                 region: document.getElementById('edit_region').value, 
-                pays: document.getElementById('edit_pays').value,
-                fixer_id: document.getElementById('edit_fixer_id').value,
-                image_region: document.getElementById('edit_image').value
+                pays: document.getElementById('edit_pays').value, 
+                fixer_id: document.getElementById('edit_fixer_id').value, 
+                image_region: document.getElementById('edit_image').value 
             };
             const res = await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             if(res.ok) window.location.reload();
+        }
+
+        async function sendToIA(id) {
+            if(confirm("Lancer l'exportation Rocket Bridge vers App 2 ?")) {
+                const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
+                if(res.ok) alert("🚀 SUCCÈS : Données transmises au cerveau App 2.");
+                else alert("❌ ÉCHEC : Erreur de communication avec le Bridge IA.");
+            }
         }
 
         async function loadAdminMessages() {
