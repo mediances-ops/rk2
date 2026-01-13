@@ -1,4 +1,6 @@
-<!-- DOC-OS VERSION : V.70.2 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.70.3 SUPRÊME MISSION CONTROL -->
+<!-- FIXES : FILTERS RESTORED, ADMIN LINKIFY, CHAT AUTO-REFRESH -->
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -20,6 +22,12 @@
         .nav { display: flex; gap: 15px; margin-bottom: 30px; }
         .nav-link { background: white; color: var(--primary); padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border:none; cursor:pointer; display: flex; align-items: center; gap: 10px; }
         .nav-link.active { background: var(--primary); color: white; border-bottom: 4px solid var(--secondary); }
+        
+        /* FILTERS BAR RESTORED (N°9) */
+        .filter-bar { background: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; display: flex; gap: 15px; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .filter-bar select { padding: 12px; border-radius: 8px; border: 1px solid #ddd; flex: 1; font-weight: 600; font-family: inherit; outline: none; }
+        .btn-filter { background: var(--primary); color: white; padding: 12px 30px; border-radius: 8px; border: none; cursor: pointer; font-weight: 800; }
+
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 16px; padding: 25px; text-align: center; border-top: 5px solid var(--secondary); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-card .number { font-size: 2.8rem; font-weight: 800; color: var(--primary); }
@@ -31,6 +39,7 @@
         .progress-mini-fill { height: 100%; background: var(--success); }
         .chat-notif { background: var(--danger); color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; cursor: pointer; animation: pulse 1.5s infinite; }
         .btn-action { width: 38px; height: 38px; border-radius: 10px; border: none; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; margin-right: 5px; text-decoration: none; }
+        
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-overlay.active { display: flex; }
         .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
@@ -38,6 +47,7 @@
         .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
         .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
         #editor-container { height: 400px; background: white; border-radius: 0 0 12px 12px; font-size: 1rem; }
+        
         #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
         #adminChatPanel.active { right: 0; }
         .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
@@ -48,6 +58,12 @@
         .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
         .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
         .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
+        .day-separator { text-align: center; margin: 20px 0; border-bottom: 1px solid rgba(0,0,0,0.05); line-height: 0.1em; }
+        .day-separator span { background: #f3f4f6; padding: 0 15px; color: #95a5a6; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+        .chat-input-zone { padding: 30px; background: white; border-top: 1px solid #f1f1f1; display: flex; gap: 15px; }
+        #adminChatInput { flex: 1; border: 2px solid #eef2f7; border-radius: 15px; padding: 15px; height: 100px; resize: none; font-family: inherit; font-weight: 600; outline: none; }
+        .chat-send-btn { background: var(--secondary); color: white; border: none; border-radius: 15px; width: 60px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
     </style>
@@ -56,6 +72,22 @@
     <div class="container">
         <header class="header"><img src="https://destinationsetcuisines.com/doc/logoRK.png" alt="Logo"><div class="header-text"><h1>Pre-scouting Platform</h1><p class="subtitle">Production Intelligence System</p></div></header>
         <nav class="nav"><a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a><a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a><button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button></nav>
+
+        <!-- FILTERS RESTORED (N°9) -->
+        <form class="filter-bar" method="GET" action="/admin">
+            <select name="pays">
+                <option value="">-- TOUS LES PAYS --</option>
+                {% for p in pays_list %}<option value="{{ p }}" {% if request.args.get('pays') == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+            </select>
+            <select name="statut">
+                <option value="">-- TOUS LES STATUTS --</option>
+                <option value="brouillon" {% if request.args.get('statut') == 'brouillon' %}selected{% endif %}>🟠 EN COURS</option>
+                <option value="soumis" {% if request.args.get('statut') == 'soumis' %}selected{% endif %}>🔵 SOUMIS</option>
+                <option value="validé" {% if request.args.get('statut') == 'validé' %}selected{% endif %}>🟢 VALIDÉ</option>
+            </select>
+            <button type="submit" class="btn-filter">FILTRER</button>
+            <a href="/admin" class="nav-link" style="padding: 12px 20px; box-shadow: none;">RESET</a>
+        </form>
 
         <div class="stats">
             <div class="stat-card"><div class="number">{{ stats.total }}</div><div class="label">Total Dossiers</div></div>
@@ -81,7 +113,6 @@
                                 <button onclick="openEditModal({{ rep.id }})" class="btn-action" style="background:#3498db;" title="Modifier"><i data-lucide="edit-3"></i></button>
                                 <a href="/admin/reperage/{{ rep.id }}/print" target="_blank" class="btn-action" style="background:var(--success);" title="Imprimer"><i data-lucide="printer"></i></a>
                                 <button onclick="deleteRep({{ rep.id }}, '{{ rep.region }}')" class="btn-action" style="background:var(--danger);" title="Supprimer"><i data-lucide="trash-2"></i></button>
-                                <!-- FUSÉE BRIDGE APP 2 -->
                                 <button onclick="sendToIA({{ rep.id }})" class="btn-action" style="background:black; border:1px solid #ff0000; color:#ff0000;" title="Rocket Bridge App 2"><i data-lucide="rocket"></i></button>
                             </div>
                         </td>
@@ -92,54 +123,23 @@
         </div>
     </div>
 
-    <!-- MODAL NOUVEAU -->
-    <div class="modal-overlay" id="modalNouveau">
-        <div class="modal-box" style="width: 700px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>LANCER UN REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
-            <form onsubmit="creerDossier(event)">
-                <div class="form-group"><label>Région Cible*</label><input type="text" id="new_region" required></div>
-                <div class="form-group"><label>Pays*</label><input type="text" id="new_pays" required></div>
-                <div class="form-group"><label>Assigner Fixer*</label>
-                    <select id="new_fixer_id" required>
-                        <option value="">-- SÉLECTIONNER --</option>
-                        {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-                    </select>
-                </div>
-                <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="new_image"></div>
-                <button type="submit" style="width:100%; background:var(--primary); color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL PARAMÈTRES DU REPÉRAGE (ÉLARGI) -->
+    <!-- MODAL EDIT -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
-            <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
             <form onsubmit="updateRegion(event)">
                 <input type="hidden" id="edit_id">
                 <div style="display: grid; grid-template-columns: 400px 1fr; gap: 40px;">
                     <div>
                         <div class="form-group"><label>Région</label><input type="text" id="edit_region"></div>
                         <div class="form-group"><label>Pays</label><input type="text" id="edit_pays"></div>
-                        <div class="form-group"><label>Ré-assigner Fixer</label>
-                            <select id="edit_fixer_id">
-                                {% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Statut Mission</label>
-                            <select id="edit_statut">
-                                <option value="brouillon">🟠 EN COURS</option>
-                                <option value="soumis">🔵 SOUMIS</option>
-                                <option value="validé">🟢 VALIDÉ</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label>Ré-assigner Fixer</label><select id="edit_fixer_id">{% for f in fixers %}<option value="{{ f.id }}">{{ f.nom }} {{ f.prenom }}</option>{% endfor %}</select></div>
+                        <div class="form-group"><label>Statut Mission</label><select id="edit_statut"><option value="brouillon">🟠 EN COURS</option><option value="soumis">🔵 SOUMIS</option><option value="validé">🟢 VALIDÉ</option></select></div>
                         <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
                     </div>
-                    <div>
-                        <div class="form-group"><label>Notes de Production (Éditeur Haute Substance)</label><div id="editor-container"></div></div>
-                    </div>
+                    <div><div class="form-group"><label>Notes de Production</label><div id="editor-container"></div></div></div>
                 </div>
-                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px;">ENREGISTRER LES MODIFICATIONS</button>
+                <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer;">ENREGISTRER</button>
             </form>
         </div>
     </div>
@@ -151,24 +151,45 @@
             <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
         </div>
         <div id="adminChatMessages" class="chat-messages"></div>
-        <div style="padding:30px; background:white; border-top:1px solid #f1f1f1; display:flex; gap:15px;"><textarea id="adminChatInput" style="flex:1; border:2px solid #eef2f7; border-radius:15px; padding:15px; height:100px; resize:none;" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" style="background:var(--secondary); color:white; border:none; border-radius:15px; width:60px; cursor:pointer;"><i data-lucide="send"></i></button></div>
+        <div class="chat-input-zone"><textarea id="adminChatInput" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
     </div>
 
     <script>
         lucide.createIcons();
         const reperagesData = {{ reperages|tojson|safe }};
         let currentChatId = null;
-
-        var quill = new Quill('#editor-container', {
-            theme: 'snow',
-            modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
-        });
+        var quill = new Quill('#editor-container', { theme: 'snow', modules: { toolbar: [['bold', 'italic'], [{ 'list': 'bullet' }], ['clean']] } });
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
         
         function openAdminChat(id) { currentChatId = id; document.getElementById('adminChatPanel').classList.add('active'); loadAdminMessages(); }
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
+
+        // LINKIFY FIX (N°30)
+        function linkify(t) { return t.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (u) => `<a href="${u}" target="_blank" style="color:inherit;text-decoration:underline;font-weight:bold;">${u}</a>`); }
+
+        async function loadAdminMessages() {
+            const res = await fetch(`/api/reperages/${currentChatId}/messages?role=admin`);
+            const msgs = await res.json();
+            const container = document.getElementById('adminChatMessages');
+            let html = ''; let lastDate = null;
+            msgs.forEach(m => {
+                const d = new Date(m.created_at);
+                const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+                if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
+                const isMe = m.auteur_type === 'production';
+                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div><div class="bubble">${linkify(m.contenu)}<div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div></div>`;
+            });
+            container.innerHTML = html; container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendAdminMessage() {
+            const input = document.getElementById('adminChatInput');
+            if(!input.value.trim()) return;
+            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
+            input.value = ''; loadAdminMessages();
+        }
 
         function openEditModal(id) { 
             const item = reperagesData.find(x => Number(x.reperage.id) === Number(id));
@@ -185,59 +206,16 @@
 
         async function updateRegion(e) {
             e.preventDefault();
-            const id = document.getElementById('edit_id').value;
-            const data = { 
-                statut: document.getElementById('edit_statut').value, 
-                notes_admin: quill.root.innerHTML, 
-                region: document.getElementById('edit_region').value, 
-                pays: document.getElementById('edit_pays').value, 
-                fixer_id: document.getElementById('edit_fixer_id').value, 
-                image_region: document.getElementById('edit_image').value 
-            };
-            const res = await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) window.location.reload();
+            const data = { statut: document.getElementById('edit_statut').value, notes_admin: quill.root.innerHTML, region: document.getElementById('edit_region').value, pays: document.getElementById('edit_pays').value, fixer_id: document.getElementById('edit_fixer_id').value, image_region: document.getElementById('edit_image').value };
+            await fetch(`/admin/reperage/${document.getElementById('edit_id').value}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            window.location.reload();
         }
 
-        async function sendToIA(id) {
-            if(confirm("Lancer l'exportation Rocket Bridge vers App 2 ?")) {
-                const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
-                if(res.ok) alert("🚀 SUCCÈS : Données transmises au cerveau App 2.");
-                else alert("❌ ÉCHEC : Erreur de communication avec le Bridge IA.");
-            }
-        }
-
-        async function loadAdminMessages() {
-            const res = await fetch(`/api/reperages/${currentChatId}/messages?role=admin`);
-            const msgs = await res.json();
-            const container = document.getElementById('adminChatMessages');
-            let html = ''; let lastDate = null;
-            msgs.forEach(m => {
-                const d = new Date(m.created_at);
-                const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
-                if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
-                const isMe = m.auteur_type === 'production';
-                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div><div class="bubble">${m.contenu}<div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div></div>`;
-            });
-            container.innerHTML = html; container.scrollTop = container.scrollHeight;
-        }
-
-        async function sendAdminMessage() {
-            const input = document.getElementById('adminChatInput');
-            if(!input.value.trim()) return;
-            await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
-            input.value = ''; loadAdminMessages();
-        }
-
-        async function creerDossier(e) {
-            e.preventDefault();
-            const f = document.getElementById('new_fixer_id');
-            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, image_region: document.getElementById('new_image').value };
-            const res = await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) window.location.reload();
-        }
-
-        async function deleteRep(id, reg) { if(confirm(`Supprimer définitivement ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
+        async function sendToIA(id) { if(confirm("Lancer Rocket Bridge vers App 2 ?")) { const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' }); if(res.ok) alert("🚀 SUCCÈS !"); } }
         window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) closeModal(); }
+        
+        // POLLING DASHBOARD (N°27)
+        setInterval(() => { if(document.getElementById('adminChatPanel').classList.contains('active')) loadAdminMessages(); }, 15000);
     </script>
 </body>
 </html>
