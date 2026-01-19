@@ -15,7 +15,7 @@ CORS(app)
 DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
-DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
+QUILL_URL = os.environ.get('QUILL_BRIDGE_URL')
 engine = init_db(DB_URL)
 
 @app.teardown_appcontext
@@ -73,15 +73,15 @@ def api_submit_to_prod(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     
-    # On marque comme soumis si ce n'est pas déjà fait
     if rep.statut == 'brouillon': rep.statut = 'soumis'
     session.commit()
     
-    # Envoi vers l'App 2 via le Bridge
-    if DOCUGEN_URL:
+    # On utilise maintenant QUILL_URL
+    if QUILL_URL: 
         try:
             payload = rep.to_dict()
-            requests.post(DOCUGEN_URL, json=payload, headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=15)
+            # On envoie vers l'App 2 (Quill)
+            requests.post(QUILL_URL, json=payload, headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=15)
         except Exception as e:
             print(f"Bridge error: {e}")
             return jsonify({'status': 'bridge_error', 'message': str(e)}), 502
