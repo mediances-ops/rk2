@@ -273,10 +273,7 @@ def admin_create_rep():
     new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
     session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
 
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def api_submit_to_prod(id):
-    session = get_db(); rep = session.get(Reperage, id); rep.statut = 'soumis'; session.commit()
-    return jsonify({'status': 'success'})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
