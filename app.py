@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.70.4 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - MODULE IMPORT JSON AJOUTÉ (ZÉRO RISQUE)
+# DOC-OS VERSION : V.70.5 - PATCH BRIDGE & DEBUG
+# ACTION : CORRECTION DU FLUX VERS QUILL (APP 2)
 
 import os, json, secrets, requests, io, zipfile, shutil
 from datetime import datetime
@@ -26,7 +26,57 @@ def get_db():
     if 'db_session' not in g: g.db_session = get_session(engine)
     return g.db_session
 
-# --- NAVIGATION & DASHBOARD ---
+# =================================================================
+# 2. FONCTION BRIDGE (AVEC DEBUG & MAPPING)
+# =================================================================
+
+def send_to_docugen(reperage_dict):
+    url = os.environ.get('DOCUGEN_API_URL')
+    token = os.environ.get('BRIDGE_SECRET_TOKEN')
+    
+    # 1. DIAGNOSTIC LOGS
+    print(f"\n--- 🚀 LANCEMENT BRIDGE VERS APP 2 ---")
+    print(f"URL Cible: '{url}'")
+    
+    if not url: 
+        print("❌ ERREUR: Variable DOCUGEN_API_URL manquante ou vide !")
+        return False
+
+    # 2. MAPPING DES DONNÉES (Adaptation pour Quill)
+    # On transforme les noms de champs de l'App 1 vers l'App 2
+    payload = {
+        "region": reperage_dict.get('region', 'Region Inconnue'),
+        "country": reperage_dict.get('pays', 'Pays Inconnu'), # App 1 = pays -> App 2 = country
+        "fixer": reperage_dict.get('fixer_nom', 'Anonyme'),   # App 1 = fixer_nom -> App 2 = fixer
+        "completion": 50 # Valeur par défaut pour l'instant
+    }
+    
+    headers = {"X-Bridge-Token": token, "Content-Type": "application/json"}
+    
+    try:
+        print(f"Envoi du Payload: {json.dumps(payload, indent=2)}")
+        
+        # 3. L'APPEL
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        
+        print(f"Code Réponse Quill: {response.status_code}")
+        print(f"Contenu Réponse: {response.text}")
+        
+        if response.status_code == 200:
+            print("✅ SUCCÈS: Données reçues par Quill.")
+            return True
+        else:
+            print(f"❌ ÉCHEC: Quill a rejeté la demande ({response.status_code}).")
+            return False
+            
+    except Exception as e:
+        print(f"🔥 CRASH BRIDGE: {str(e)}")
+        return False
+
+# =================================================================
+# 3. ROUTES
+# =================================================================
+
 @app.route('/')
 def index_root(): return redirect('/admin')
 
@@ -44,7 +94,7 @@ def admin_dashboard():
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-# --- MOTEUR D'IMPORTATION JSON (NOUVEAU MODULE V.70.4) ---
+# --- MOTEUR D'IMPORTATION JSON ---
 @app.route('/admin/reperages/import', methods=['POST'])
 def admin_import_json():
     session = get_db()
@@ -52,14 +102,13 @@ def admin_import_json():
     if not data: return jsonify({'error': 'No data'}), 400
 
     try:
-        # 1. Création de l'entité Maîtresse (R1 + R5)
         new_rep = Reperage(
             token=secrets.token_urlsafe(16),
             region=data.get('region', 'Imported Region'),
             pays=data.get('pays', 'Unknown'),
             image_region=data.get('image_region'),
             statut='brouillon',
-            # Reservoir 1 : Territory
+            # Reservoir 1
             villes=data.get('villes'),
             population=data.get('territory', {}).get('population'),
             langues=data.get('territory', {}).get('langues'),
@@ -72,7 +121,7 @@ def admin_import_json():
             arc=data.get('territory', {}).get('arc'),
             moments=data.get('territory', {}).get('moments'),
             budget=data.get('territory', {}).get('budget'),
-            # Reservoir 5 : Festivity
+            # Reservoir 5
             fete_nom=data.get('festivity', {}).get('fete_nom'),
             fete_date=data.get('festivity', {}).get('fete_date'),
             fete_gps_lat=data.get('festivity', {}).get('fete_gps_lat'),
@@ -83,53 +132,36 @@ def admin_import_json():
             fete_responsable=data.get('festivity', {}).get('fete_responsable')
         )
         session.add(new_rep)
-        session.flush() # Récupère l'ID sans commiter
+        session.flush()
 
-        # 2. Déballage des Paires (R2, R3, R4)
         for i in [1, 2, 3]:
             pair_key = f"pair_{i}"
             if pair_key in data:
                 p = data[pair_key]
-                # Partie Gardien
                 g_data = p.get('gardien', {})
                 if g_data:
                     new_g = Gardien(
-                        reperage_id=new_rep.id,
-                        index=i,
+                        reperage_id=new_rep.id, index=i,
                         nom_prenom=g_data.get('nom_prenom'),
                         age=int(g_data.get('age')) if g_data.get('age') else None,
-                        fonction=g_data.get('fonction'),
-                        savoir=g_data.get('savoir'),
-                        histoire=g_data.get('histoire'),
-                        psychologie=g_data.get('psychologie'),
-                        evaluation=g_data.get('evaluation'),
-                        langues=g_data.get('langues'),
-                        contact=g_data.get('contact'),
-                        intermediaire=g_data.get('intermediaire')
+                        fonction=g_data.get('fonction'), savoir=g_data.get('savoir'),
+                        histoire=g_data.get('histoire'), psychologie=g_data.get('psychologie'),
+                        evaluation=g_data.get('evaluation'), langues=g_data.get('langues'),
+                        contact=g_data.get('contact'), intermediaire=g_data.get('intermediaire')
                     )
                     session.add(new_g)
-                # Partie Lieu
                 l_data = p.get('location', {})
                 if l_data:
                     new_l = Lieu(
-                        reperage_id=new_rep.id,
-                        index=i,
-                        nom=l_data.get('nom'),
-                        type=l_data.get('type'),
-                        gps_lat=l_data.get('gps_lat'),
-                        gps_long=l_data.get('gps_long'),
-                        description=l_data.get('description'),
-                        cinegenie=l_data.get('cinegenie'),
-                        axes=l_data.get('axes'),
-                        points_vue=l_data.get('points_vue'),
-                        moments=l_data.get('moments'),
-                        son=l_data.get('son'),
-                        acces=l_data.get('acces'),
-                        securite=l_data.get('securite'),
-                        elec=l_data.get('elec'),
-                        espace=l_data.get('espace'),
-                        meteo=l_data.get('meteo'),
-                        permis=l_data.get('permis')
+                        reperage_id=new_rep.id, index=i,
+                        nom=l_data.get('nom'), type=l_data.get('type'),
+                        gps_lat=l_data.get('gps_lat'), gps_long=l_data.get('gps_long'),
+                        description=l_data.get('description'), cinegenie=l_data.get('cinegenie'),
+                        axes=l_data.get('axes'), points_vue=l_data.get('points_vue'),
+                        moments=l_data.get('moments'), son=l_data.get('son'),
+                        acces=l_data.get('acces'), securite=l_data.get('securite'),
+                        elec=l_data.get('elec'), espace=l_data.get('espace'),
+                        meteo=l_data.get('meteo'), permis=l_data.get('permis')
                     )
                     session.add(new_l)
 
@@ -139,7 +171,31 @@ def admin_import_json():
         session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# --- ROUTES EXISTANTES (SÉCURISÉES) ---
+# --- ROUTE QUI DECLENCHE LE BRIDGE (Celle de la Fusée) ---
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def submit_reperage(id):
+    session = get_db()
+    try:
+        reperage = session.get(Reperage, id)
+        if not reperage: return jsonify({'error': 'Non trouvé'}), 404
+        
+        # 1. Mise à jour statut local
+        reperage.statut = 'soumis'
+        session.commit()
+        
+        # 2. Appel du Bridge
+        success = send_to_docugen(reperage.to_dict())
+        
+        if success:
+            return jsonify({'status': 'success', 'message': 'Envoyé au cerveau App 2'})
+        else:
+            # On renvoie une erreur 502 pour que le JS affiche "ÉCHEC"
+            return jsonify({'status': 'error', 'message': 'Echec envoi Bridge'}), 502
+            
+    except Exception as e: 
+        return jsonify({'error': str(e)}), 500
+
+# --- AUTRES ROUTES ---
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
     directory = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
@@ -155,21 +211,6 @@ def api_sync_engine(id):
     PROTECTED = ['token', 'id', 'fixer_id']
     for k, v in data.items():
         if hasattr(rep, k) and k not in PROTECTED and not isinstance(v, (list, dict)): setattr(rep, k, v)
-    for i in [1, 2, 3]:
-        g_data = {key.replace(f'gardien{i}_', ''): val for key, val in data.items() if key.startswith(f'gardien{i}_')}
-        if g_data:
-            g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first()
-            if not g_obj: g_obj = Gardien(reperage_id=rep.id, index=i); session.add(g_obj)
-            for k, v in g_data.items():
-                if hasattr(g_obj, k):
-                    if k == 'age': setattr(g_obj, k, int(v) if (v and str(v).isdigit()) else None)
-                    else: setattr(g_obj, k, v)
-        l_data = {key.replace(f'lieu{i}_', ''): val for key, val in data.items() if key.startswith(f'lieu{i}_')}
-        if l_data:
-            l_obj = session.query(Lieu).filter_by(reperage_id=rep.id, index=i).first()
-            if not l_obj: l_obj = Lieu(reperage_id=rep.id, index=i); session.add(l_obj)
-            for k, v in l_data.items():
-                if hasattr(l_obj, k): setattr(l_obj, k, v)
     session.commit(); return jsonify({'status': 'success'})
 
 @app.route('/admin/fixer/new', methods=['POST'])
@@ -272,8 +313,6 @@ def admin_create_rep():
     session = get_db(); data = request.json; fixer = session.get(Fixer, data.get('fixer_id'))
     new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
     session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
-
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
