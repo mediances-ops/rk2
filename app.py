@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.70.5 - PATCH BRIDGE & DEBUG
-# ACTION : CORRECTION DU FLUX VERS QUILL (APP 2)
+# DOC-OS VERSION : V.70.6 - BRIDGE FULL DATA
+# ACTION : ENVOI DU DOSSIER COMPLET VERS QUILL (APP 2)
 
 import os, json, secrets, requests, io, zipfile, shutil
 from datetime import datetime
@@ -27,46 +27,34 @@ def get_db():
     return g.db_session
 
 # =================================================================
-# 2. FONCTION BRIDGE (AVEC DEBUG & MAPPING)
+# 2. FONCTION BRIDGE (FULL DATA)
 # =================================================================
 
 def send_to_docugen(reperage_dict):
     url = os.environ.get('DOCUGEN_API_URL')
     token = os.environ.get('BRIDGE_SECRET_TOKEN')
     
-    # 1. DIAGNOSTIC LOGS
-    print(f"\n--- 🚀 LANCEMENT BRIDGE VERS APP 2 ---")
-    print(f"URL Cible: '{url}'")
+    print(f"\n--- 🚀 LANCEMENT BRIDGE VERS APP 2 (FULL DATA) ---")
     
     if not url: 
-        print("❌ ERREUR: Variable DOCUGEN_API_URL manquante ou vide !")
+        print("❌ ERREUR: Variable DOCUGEN_API_URL manquante !")
         return False
 
-    # 2. MAPPING DES DONNÉES (Adaptation pour Quill)
-    # On transforme les noms de champs de l'App 1 vers l'App 2
-    payload = {
-        "region": reperage_dict.get('region', 'Region Inconnue'),
-        "country": reperage_dict.get('pays', 'Pays Inconnu'), # App 1 = pays -> App 2 = country
-        "fixer": reperage_dict.get('fixer_nom', 'Anonyme'),   # App 1 = fixer_nom -> App 2 = fixer
-        "completion": 50 # Valeur par défaut pour l'instant
-    }
-    
     headers = {"X-Bridge-Token": token, "Content-Type": "application/json"}
     
     try:
-        print(f"Envoi du Payload: {json.dumps(payload, indent=2)}")
+        # C'EST ICI LE POINT CLÉ : On envoie tout le dictionnaire
+        print(f"Envoi du paquet ID: {reperage_dict.get('id')}")
         
-        # 3. L'APPEL
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        response = requests.post(url, json=reperage_dict, headers=headers, timeout=30)
         
         print(f"Code Réponse Quill: {response.status_code}")
-        print(f"Contenu Réponse: {response.text}")
         
         if response.status_code == 200:
-            print("✅ SUCCÈS: Données reçues par Quill.")
+            print("✅ SUCCÈS: Données complètes reçues.")
             return True
         else:
-            print(f"❌ ÉCHEC: Quill a rejeté la demande ({response.status_code}).")
+            print(f"❌ ÉCHEC: Rejet serveur ({response.text})")
             return False
             
     except Exception as e:
@@ -74,7 +62,7 @@ def send_to_docugen(reperage_dict):
         return False
 
 # =================================================================
-# 3. ROUTES
+# 3. ROUTES NAVIGATION
 # =================================================================
 
 @app.route('/')
@@ -94,7 +82,38 @@ def admin_dashboard():
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-# --- MOTEUR D'IMPORTATION JSON ---
+# =================================================================
+# 4. ROUTE FUSÉE (ACTION UTILISATEUR)
+# =================================================================
+
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+def submit_reperage(id):
+    session = get_db()
+    try:
+        reperage = session.get(Reperage, id)
+        if not reperage: return jsonify({'error': 'Non trouvé'}), 404
+        
+        # 1. Mise à jour statut local
+        reperage.statut = 'soumis'
+        session.commit()
+        
+        # 2. Appel du Bridge avec les données complètes
+        # La méthode .to_dict() du modèle doit renvoyer toutes les relations (gardiens, lieux...)
+        # Si .to_dict() est bien fait dans models.py de l'App 1, tout partira.
+        success = send_to_docugen(reperage.to_dict())
+        
+        if success:
+            return jsonify({'status': 'success', 'message': 'Envoyé au cerveau App 2'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Echec envoi Bridge'}), 502
+            
+    except Exception as e: 
+        return jsonify({'error': str(e)}), 500
+
+# =================================================================
+# 5. AUTRES ROUTES (IMPORT, UPLOAD, FIXER...)
+# =================================================================
+
 @app.route('/admin/reperages/import', methods=['POST'])
 def admin_import_json():
     session = get_db()
@@ -171,31 +190,6 @@ def admin_import_json():
         session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# --- ROUTE QUI DECLENCHE LE BRIDGE (Celle de la Fusée) ---
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-def submit_reperage(id):
-    session = get_db()
-    try:
-        reperage = session.get(Reperage, id)
-        if not reperage: return jsonify({'error': 'Non trouvé'}), 404
-        
-        # 1. Mise à jour statut local
-        reperage.statut = 'soumis'
-        session.commit()
-        
-        # 2. Appel du Bridge
-        success = send_to_docugen(reperage.to_dict())
-        
-        if success:
-            return jsonify({'status': 'success', 'message': 'Envoyé au cerveau App 2'})
-        else:
-            # On renvoie une erreur 502 pour que le JS affiche "ÉCHEC"
-            return jsonify({'status': 'error', 'message': 'Echec envoi Bridge'}), 502
-            
-    except Exception as e: 
-        return jsonify({'error': str(e)}), 500
-
-# --- AUTRES ROUTES ---
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
     directory = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
