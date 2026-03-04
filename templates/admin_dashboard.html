@@ -1,4 +1,4 @@
-<!-- DOC-OS VERSION : V.70.4 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.70.7 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -36,7 +36,7 @@
         .modal-box { background: white; border-radius: 28px; width: 1100px; padding: 50px; box-shadow: 0 40px 80px rgba(0,0,0,0.5); max-height: 95vh; overflow-y: auto; }
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
-        .form-group input, .form-group select { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
         #editor-container { height: 400px; background: white; border-radius: 0 0 12px 12px; font-size: 1rem; }
         #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
         #adminChatPanel.active { right: 0; }
@@ -59,7 +59,6 @@
             <a href="/admin" class="nav-link active"><i data-lucide="layout-dashboard"></i> TABLEAU DE BORD</a>
             <a href="/admin/fixers" class="nav-link"><i data-lucide="users"></i> CORRESPONDANTS</a>
             <button onclick="openModal('modalNouveau')" class="nav-link" style="background: var(--secondary); color:white;"><i data-lucide="file-plus"></i> NOUVEAU REPÉRAGE</button>
-            <!-- BOUTON IMPORT JSON (NOUVEAU) -->
             <button onclick="openModal('modalImport')" class="nav-link" style="background: #34495e; color:white;"><i data-lucide="upload-cloud"></i> IMPORT JSON</button>
         </nav>
 
@@ -97,19 +96,9 @@
         </div>
     </div>
 
-    <!-- MODAL IMPORT JSON (NOUVEAU) -->
-    <div class="modal-overlay" id="modalImport">
-        <div class="modal-box" style="width: 800px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>IMPORTER UNE SIMULATION JSON</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
-            <p style="font-size: 0.8rem; margin-bottom: 20px; color: #7f8c8d;">Collez ici le code JSON fourni pour injecter un dossier complet (Andalousie, Côte d'Ivoire, etc.).</p>
-            <textarea id="import_json_data" style="width:100%; height:400px; padding:20px; border-radius:15px; border:2px solid #eef2f7; font-family: monospace; font-size: 0.8rem; outline: none;" placeholder='{ "region": "Andalousie", ... }'></textarea>
-            <button onclick="executeImport()" style="width:100%; background:#34495e; color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer; margin-top: 20px;">LANCER L'IMPORTATION</button>
-        </div>
-    </div>
-
-    <!-- MODAL NOUVEAU -->
+    <!-- MODAL NOUVEAU (FIXED ID: new_notes) -->
     <div class="modal-overlay" id="modalNouveau">
-        <div class="modal-box" style="width: 700px;">
+        <div class="modal-box" style="width: 750px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>LANCER UN REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
             <form onsubmit="creerDossier(event)">
                 <div class="form-group"><label>Région Cible*</label><input type="text" id="new_region" required></div>
@@ -122,12 +111,14 @@
                     </select>
                 </div>
                 <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="new_image"></div>
+                <!-- CORRECTIF SOUDURE : Ajout du champ manquant -->
+                <div class="form-group"><label>Notes Initiales</label><textarea id="new_notes" rows="3"></textarea></div>
                 <button type="submit" style="width:100%; background:var(--primary); color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL PARAMÈTRES -->
+    <!-- MODAL PARAMÈTRES (QUILL) -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
             <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
@@ -151,66 +142,50 @@
                         </div>
                         <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="edit_image"></div>
                     </div>
-                    <div>
-                        <div class="form-group"><label>Notes de Production</label><div id="editor-container"></div></div>
-                    </div>
+                    <div><div class="form-group"><label>Notes de Production</label><div id="editor-container"></div></div></div>
                 </div>
                 <button type="submit" style="width:100%; background:var(--secondary); color:white; padding:20px; border-radius:15px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; margin-top:20px;">ENREGISTRER LES MODIFICATIONS</button>
             </form>
         </div>
     </div>
 
-    <!-- CHAT HARMONIZED -->
+    <!-- MODAL IMPORT -->
+    <div class="modal-overlay" id="modalImport">
+        <div class="modal-box" style="width: 800px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>IMPORTER UNE SIMULATION JSON</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
+            <p style="font-size: 0.8rem; margin-bottom: 20px; color: #7f8c8d;">Collez ici le code JSON fourni.</p>
+            <textarea id="import_json_data" style="width:100%; height:400px; padding:20px; border-radius:15px; border:2px solid #eef2f7; font-family: monospace; font-size: 0.8rem; outline: none;"></textarea>
+            <button onclick="executeImport()" style="width:100%; background:#34495e; color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer; margin-top: 20px;">LANCER L'IMPORTATION</button>
+        </div>
+    </div>
+
+    <!-- CHAT -->
     <div id="adminChatPanel">
         <div class="chat-header">
             <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
             <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
         </div>
         <div id="adminChatMessages" class="chat-messages"></div>
-        <div class="chat-input-zone">
-            <textarea id="adminChatInput" placeholder="Répondre..."></textarea>
-            <button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button>
-        </div>
+        <div class="chat-input-zone"><textarea id="adminChatInput" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
     </div>
 
     <script>
         lucide.createIcons();
         const reperagesData = {{ reperages|tojson|safe }};
         let currentChatId = null;
-
-        var quill = new Quill('#editor-container', {
-            theme: 'snow',
-            modules: { toolbar: [['bold', 'italic', 'underline'], [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['clean']] }
-        });
+        var quill = new Quill('#editor-container', { theme: 'snow', modules: { toolbar: [['bold', 'italic'], [{ 'list': 'bullet' }], ['clean']] } });
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
-        
         function openAdminChat(id) { currentChatId = id; document.getElementById('adminChatPanel').classList.add('active'); loadAdminMessages(); }
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
 
-        // FONCTION D'IMPORTATION JSON (NOUVEAU)
         async function executeImport() {
             const rawData = document.getElementById('import_json_data').value;
-            if(!rawData.trim()) return alert("Veuillez coller du JSON valide.");
-            
             try {
-                const jsonData = JSON.parse(rawData);
-                const res = await fetch('/admin/reperages/import', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(jsonData)
-                });
-                if(res.ok) {
-                    alert("✅ Importation réussie !");
-                    window.location.reload();
-                } else {
-                    const err = await res.json();
-                    alert("❌ Erreur d'importation : " + err.error);
-                }
-            } catch (e) {
-                alert("❌ Format JSON invalide. Vérifiez votre copier-coller.");
-            }
+                const res = await fetch('/admin/reperages/import', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: rawData });
+                if(res.ok) window.location.reload();
+            } catch (e) { alert("Format JSON invalide"); }
         }
 
         function openEditModal(id) { 
@@ -228,17 +203,29 @@
 
         async function updateRegion(e) {
             e.preventDefault();
-            const id = document.getElementById('edit_id').value;
             const data = { statut: document.getElementById('edit_statut').value, notes_admin: quill.root.innerHTML, region: document.getElementById('edit_region').value, pays: document.getElementById('edit_pays').value, fixer_id: document.getElementById('edit_fixer_id').value, image_region: document.getElementById('edit_image').value };
-            const res = await fetch(`/admin/reperage/${id}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            await fetch(`/admin/reperage/${document.getElementById('edit_id').value}/update`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
+            window.location.reload();
+        }
+
+        async function creerDossier(e) {
+            e.preventDefault();
+            const f = document.getElementById('new_fixer_id');
+            const data = { 
+                region: document.getElementById('new_region').value, 
+                pays: document.getElementById('new_pays').value, 
+                fixer_id: f.value, 
+                image_region: document.getElementById('new_image').value,
+                notes_admin: document.getElementById('new_notes').value // CORRECTIF : Désormais lisible
+            };
+            const res = await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             if(res.ok) window.location.reload();
         }
 
         async function sendToIA(id) {
-            if(confirm("Lancer l'exportation Rocket Bridge vers App 2 ?")) {
+            if(confirm("Rocket Bridge App 2 ?")) {
                 const res = await fetch(`/api/reperages/${id}/submit`, { method: 'POST' });
-                if(res.ok) alert("🚀 SUCCÈS : Données transmises au cerveau App 2.");
-                else alert("❌ ÉCHEC : Erreur de communication avec le Bridge IA.");
+                if(res.ok) alert("🚀 SUCCÈS");
             }
         }
 
@@ -246,13 +233,10 @@
             const res = await fetch(`/api/reperages/${currentChatId}/messages?role=admin`);
             const msgs = await res.json();
             const container = document.getElementById('adminChatMessages');
-            let html = ''; let lastDate = null;
+            let html = '';
             msgs.forEach(m => {
-                const d = new Date(m.created_at);
-                const ds = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
-                if (ds !== lastDate) { html += `<div class="day-separator"><span>${ds}</span></div>`; lastDate = ds; }
                 const isMe = m.auteur_type === 'production';
-                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="msg-meta ${m.auteur_type === 'fixer' ? 'color-fixer' : 'color-production'}">${m.auteur_nom}</div><div class="bubble">${m.contenu}<div style="font-size:0.6rem; opacity:0.5; margin-top:5px; text-align:right;">${d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}</div></div></div>`;
+                html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="bubble">${m.contenu}</div></div>`;
             });
             container.innerHTML = html; container.scrollTop = container.scrollHeight;
         }
@@ -264,15 +248,7 @@
             input.value = ''; loadAdminMessages();
         }
 
-        async function creerDossier(e) {
-            e.preventDefault();
-            const f = document.getElementById('new_fixer_id');
-            const data = { region: document.getElementById('new_region').value, pays: document.getElementById('new_pays').value, fixer_id: f.value, fixer_nom: f.options[f.selectedIndex].text, image_region: document.getElementById('new_image').value, notes_admin: document.getElementById('new_notes').value };
-            const res = await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
-            if(res.ok) window.location.reload();
-        }
-
-        async function deleteRep(id, reg) { if(confirm(`Supprimer définitivement ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
+        async function deleteRep(id, reg) { if(confirm(`Supprimer ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
         window.onclick = (e) => { if(e.target.classList.contains('modal-overlay')) closeModal(); }
     </script>
 </body>
