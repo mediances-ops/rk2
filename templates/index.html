@@ -1,4 +1,4 @@
-<!-- DOC-OS VERSION : V.74.2 FINALE -->
+<!-- DOC-OS VERSION : V.74.3 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,19 +8,20 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #2C3E50; --secondary: #E67E22; --lock: #e74c3c; }
+        :root { --primary: #2C3E50; --secondary: #E67E22; --lock: #e74c3c; --glass: rgba(255, 255, 255, 0.95); }
         body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; }
         .container { max-width: 1400px; margin: 0 auto; padding: 40px; }
-        #lock-banner { display: none; position: sticky; top: 0; background: var(--lock); color: white; text-align: center; padding: 15px; z-index: 10000; }
+        #lock-banner { display: none; position: sticky; top: 0; background: var(--lock); color: white; text-align: center; padding: 15px; font-weight: 900; z-index: 10000; }
         #toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #27ae60; color: white; padding: 15px 40px; border-radius: 50px; display: none; z-index: 11000; }
-        .header-banner { height: 450px; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; }
-        .tab-btn { background: transparent; border: none; padding: 20px 35px; cursor: pointer; font-weight: 800; }
+        .header-banner { height: 450px; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .tab-btn { background: transparent; border: none; padding: 20px 35px; cursor: pointer; font-weight: 800; color: #7f8c8d; }
         .tab-btn.active { border-bottom: 4px solid var(--secondary); color: var(--secondary); }
-        .tab-content { display: none; background: white; padding: 60px; border-radius: 20px; }
+        .tab-content { display: none; background: white; padding: 60px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .tab-content.active { display: block; }
         .fields-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 45px; }
         .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
-        .field-group input, .field-group textarea { padding: 15px; border: 2px solid #eee; border-radius: 10px; }
+        .field-group label { font-weight: 800; font-size: 0.85rem; color: #95a5a6; text-transform: uppercase; margin-bottom: 10px; }
+        .field-group input, .field-group textarea { padding: 15px; border: 2px solid #eee; border-radius: 10px; font-weight: 600; }
         textarea { grid-column: 1 / -1; }
     </style>
 </head>
@@ -29,13 +30,14 @@
     <div id="toast">YOUR FORM HAS BEEN SAVED</div>
 
     <header class="header-banner" style="background-image: url('{{ FIXER_DATA.image_region }}');">
-        <h1 style="color: white; font-size: 4rem;">{{ FIXER_DATA.region }}</h1>
+        <h1 style="color: white; font-size: 5rem; text-shadow: 0 5px 15px rgba(0,0,0,0.5); margin: 0;">{{ FIXER_DATA.region }}</h1>
+        <p style="color: white; font-weight: 800; letter-spacing: 5px; text-transform: uppercase;">{{ FIXER_DATA.fixer_nom }}</p>
     </header>
 
     <div class="container">
-        <div style="background: white; padding: 30px; border-radius: 20px; margin-bottom: 30px;">
-            <span id="progress-percentage" style="font-weight: 900; color: var(--secondary);">0%</span>
-            <div style="background: #eee; height: 10px; border-radius: 5px;"><div id="progress-bar" style="height: 100%; background: var(--secondary); width: 0%;"></div></div>
+        <div style="background: white; padding: 30px; border-radius: 20px; margin-top: -60px; position: relative; z-index: 10;">
+            <span id="progress-percentage" style="font-weight: 900; color: var(--secondary); font-size: 1.5rem;">0%</span>
+            <div style="background: #eee; height: 12px; border-radius: 6px;"><div id="progress-bar" style="height: 100%; background: var(--secondary); width: 0%; transition: 0.6s;"></div></div>
         </div>
 
         <nav style="display: flex; gap: 10px; margin-bottom: -1px;">
@@ -51,38 +53,38 @@
                 <div class="fields-grid">
                     <div class="field-group"><label>Country</label><input type="text" name="pays" class="scouting-field" readonly></div>
                     <div class="field-group"><label>Region</label><input type="text" name="region" class="scouting-field" readonly></div>
-                    <div class="field-group"><label>Villes*</label><input type="text" name="villes" class="scouting-field" required></div>
-                    <textarea name="traditions" class="scouting-field" rows="5" placeholder="Traditions & Culture"></textarea>
-                    <textarea name="histoire" class="scouting-field" rows="5" placeholder="History"></textarea>
-                    <!-- Ajoutez ici les autres champs Territoire avec class="scouting-field" -->
+                    <div class="field-group"><label>Target Cities*</label><input type="text" name="villes" class="scouting-field" required></div>
+                    <div class="field-group"><label>Population</label><input type="text" name="population" class="scouting-field"></div>
+                    <div class="field-group"><label>Traditions*</label><textarea name="traditions" class="scouting-field" rows="6"></textarea></div>
+                    <div class="field-group"><label>History</label><textarea name="histoire" class="scouting-field" rows="6"></textarea></div>
                 </div>
             </div>
             {% for i in [1, 2, 3] %}
             <div class="tab-content" id="p{{i}}">
                 <div class="fields-grid">
-                    <input type="text" name="gardien{{i}}_nom_prenom" class="scouting-field" placeholder="Full Name*">
-                    <input type="number" name="gardien{{i}}_age" class="scouting-field" placeholder="Age*">
-                    <input type="text" name="lieu{{i}}_nom" class="scouting-field" placeholder="Place Name*">
-                    <textarea name="lieu{{i}}_description" class="scouting-field" rows="4"></textarea>
+                    <div class="field-group"><label>Full Name*</label><input type="text" name="gardien{{i}}_nom_prenom" class="scouting-field" required></div>
+                    <div class="field-group"><label>Age*</label><input type="number" name="gardien{{i}}_age" class="scouting-field" required></div>
+                    <div class="field-group"><label>Place Name*</label><input type="text" name="lieu{{i}}_nom" class="scouting-field" required></div>
+                    <div class="field-group"><label>Description*</label><textarea name="lieu{{i}}_description" class="scouting-field" rows="5"></textarea></div>
                 </div>
             </div>
             {% endfor %}
             <div class="tab-content" id="f1">
                 <div class="fields-grid">
-                    <input type="text" name="fete_nom" class="scouting-field" placeholder="Festival Name*">
-                    <textarea name="fete_visuel" class="scouting-field" rows="5"></textarea>
+                    <div class="field-group"><label>Festival Name*</label><input type="text" name="fete_nom" class="scouting-field" required></div>
+                    <div class="field-group"><label>Visuals</label><textarea name="fete_visuel" class="scouting-field" rows="6"></textarea></div>
                 </div>
             </div>
         </div>
 
-        <div style="display: flex; gap: 20px; justify-content: flex-end; margin-top: 40px;">
-            <button id="btn-save" class="btn" style="background: var(--primary); color: white; padding: 20px 60px; border-radius: 12px; cursor: pointer;">💾 SAVE DRAFT</button>
-            <button id="btn-submit" class="btn" style="background: #27ae60; color: white; padding: 20px 60px; border-radius: 12px; cursor: pointer;">🚀 SUBMIT</button>
+        <div style="display: flex; gap: 20px; justify-content: flex-end; margin-top: 40px; margin-bottom: 100px;">
+            <button id="btn-save" style="background: var(--primary); color: white; padding: 20px 60px; border-radius: 12px; font-weight: 800; cursor: pointer; border: none;">💾 SAVE DRAFT</button>
+            <button id="btn-submit" style="background: #27ae60; color: white; padding: 20px 60px; border-radius: 12px; font-weight: 800; cursor: pointer; border: none;">🚀 SUBMIT</button>
         </div>
     </div>
 
-    <button id="chat-toggle-btn" style="position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer;"><i data-lucide="message-circle"></i></button>
-    <div id="chat-panel" style="position: fixed; right: -400px; top: 0; width: 400px; height: 100vh; background: white; transition: 0.5s; box-shadow: -10px 0 30px rgba(0,0,0,0.1);"><div id="chat-messages" style="height: 80%; overflow-y: auto; padding: 20px;"></div></div>
+    <button id="chat-toggle-btn" style="position: fixed; bottom: 30px; right: 30px; width: 75px; height: 75px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,0.1);"><i data-lucide="message-circle"></i></button>
+    <div id="chat-panel" style="position: fixed; right: -500px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(15px); transition: 0.5s; box-shadow: -10px 0 30px rgba(0,0,0,0.1);"><div id="chat-messages" style="height: 80%; overflow-y: auto; padding: 20px;"></div></div>
 
     <script>window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}}; lucide.createIcons();</script>
     <script src="/static/js/app.js"></script>
