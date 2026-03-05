@@ -1,5 +1,6 @@
-# DOC-OS VERSION : V.73.7 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - BRIDGE TO APP 2 RESTORED & FULL DATA SYNC
+# DOC-OS VERSION : V.73.8 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - PROTOCOLE DE MUTATION DES FLUX (APP1 -> APP2 NEXUS)
+# ACTION : MAPPING schema_id & title ACTIVATED
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -56,44 +57,52 @@ def admin_dashboard():
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
 # =================================================================
-# 2. BRIDGE VERS APP 2 (FUSÉE - SOUDURE RÉTABLIE)
+# 2. BRIDGE VERS APP 2 (MUTATION schema_id)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def api_submit_to_prod(id):
-    """Rétablit l'envoi physique du JSON vers l'App 2 via le Bridge."""
+    """Exécute la mutation des flux vers le Hub de l'App 2."""
     session = get_db()
     rep = session.get(Reperage, id)
     if not rep: abort(404)
     
-    # 1. Mise à jour interne
+    # 1. Mise à jour statut local
     rep.statut = 'soumis'
     session.commit()
     
-    # 2. Expédition vers App 2 (Bridge IA)
+    # 2. Préparation du Payload avec mutation schema_id
     if DOCUGEN_URL:
         try:
-            # On envoie l'intégralité du dictionnaire (les 100 champs)
+            # Récupération de la structure des 5 réservoirs (Soudure de Fer)
             payload = rep.to_dict()
+            
+            # MUTATION IMPÉRATIVE : id -> schema_id
+            payload['schema_id'] = payload.pop('id')
+            
+            # ENRICHISSEMENT SÉMANTIQUE : Ajout du title pour le Studio App 2
+            payload['title'] = f"{rep.region} ({rep.pays})"
+            
             headers = {
                 "X-Bridge-Token": BRIDGE_TOKEN,
                 "Content-Type": "application/json"
             }
-            # Appel asynchrone vers l'étage supérieur
-            response = requests.post(DOCUGEN_URL, json=payload, headers=headers, timeout=20)
+            
+            # Expédition vers le Kernel Nexus
+            response = requests.post(DOCUGEN_URL, json=payload, headers=headers, timeout=25)
             
             if response.status_code == 200:
-                return jsonify({'status': 'success', 'bridge': 'delivered'})
+                return jsonify({'status': 'success', 'bridge': 'delivered', 'target': 'nexus'})
             else:
-                return jsonify({'status': 'partial_success', 'bridge': 'failed_at_destination', 'code': response.status_code})
+                return jsonify({'status': 'error', 'bridge': 'rejected', 'code': response.status_code}), 502
+                
         except Exception as e:
-            print(f"⚠️ BRIDGE ERROR: {str(e)}")
-            return jsonify({'status': 'partial_success', 'bridge': 'unreachable'}), 200 # On renvoie 200 pour ne pas bloquer l'UI
+            return jsonify({'status': 'error', 'message': str(e)}), 500
             
-    return jsonify({'status': 'success', 'bridge': 'no_target_configured'})
+    return jsonify({'status': 'success', 'bridge': 'offline'})
 
 # =================================================================
-# 3. MOTEUR DE SOUDURE DÉTERMINISTE (100 CHAMPS)
+# 3. MOTEUR DE SOUDURE DÉTERMINISTE (100 RAILS)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
@@ -105,12 +114,10 @@ def api_sync_engine(id):
     if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
 
     data = request.json
-    # Rail Territoire & Fête (Explicite)
     fields = ['villes', 'population', 'langues', 'climat', 'histoire', 'traditions', 'acces', 'hebergement', 'contraintes', 'arc', 'moments', 'sensibles', 'budget', 'notes', 'fete_nom', 'fete_date', 'fete_gps_lat', 'fete_gps_long', 'fete_origines', 'fete_visuel', 'fete_deroulement', 'fete_responsable', 'image_region']
     for f in fields:
         if f in data: setattr(rep, f, str(data[f]).strip())
     
-    # Rail Paires (Relationnel)
     for i in [1, 2, 3]:
         g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first() or Gardien(reperage_id=rep.id, index=i)
         if g_obj not in session: session.add(g_obj)
@@ -164,12 +171,14 @@ def api_chat(id):
     session = get_db()
     if request.method == 'GET':
         msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
+        if request.args.get('role') == 'admin':
+            session.query(Message).filter_by(reperage_id=id, auteur_type='fixer').update({Message.lu: True}); session.commit()
         return jsonify([m.to_dict() for m in msgs])
     data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
 
 # =================================================================
-# 5. ADMINISTRATION (FIXERS & CREATE)
+# 5. ADMINISTRATION & IMPORT
 # =================================================================
 
 @app.route('/admin/fixers')
@@ -186,22 +195,11 @@ def admin_new_fixer():
         if hasattr(f, k): setattr(f, k, request.form[k] == '1' if k == 'actif' else request.form[k])
     session.add(f); session.commit(); return redirect('/admin/fixers')
 
-@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
-def admin_edit_fixer(id):
-    session = get_db(); fixer = session.get(Fixer, id)
-    if not fixer: abort(404)
-    if request.method == 'POST':
-        for k in request.form:
-            if hasattr(fixer, k): setattr(fixer, k, request.form[k] == '1' if k == 'actif' else request.form[k])
-        session.commit(); return redirect('/admin/fixers')
-    return render_template('admin_fixer_edit_v2.html', fixer=fixer)
-
 @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 def admin_update_status(id):
     session = get_db(); rep = session.get(Reperage, id); data = request.json
     if 'statut' in data: rep.statut = data['statut']
     if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
-    if 'image_region' in data: rep.image_region = data['image_region']
     if 'fixer_id' in data:
         f = session.get(Fixer, int(data['fixer_id']))
         if f: rep.fixer_id = f.id; rep.fixer_nom = f"{f.prenom} {f.nom}"
@@ -234,11 +232,22 @@ def route_form_fixer(token):
 
 @app.route('/admin/reperages/create', methods=['POST'])
 def admin_create_rep():
-    session = get_db(); data = request.json
-    f_id = int(data.get('fixer_id')) if data.get('fixer_id') else None
-    fixer = session.get(Fixer, f_id) if f_id else None
-    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=f_id, fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), notes_admin=data.get('notes_admin'), statut='brouillon')
+    session = get_db(); data = request.json; fixer = session.get(Fixer, data.get('fixer_id'))
+    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
     session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/admin/reperages/import', methods=['POST'])
+def admin_import_json():
+    session = get_db(); data = request.json
+    try:
+        new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), image_region=data.get('image_region'), statut='brouillon', villes=data.get('villes'))
+        session.add(new_rep); session.flush()
+        for i in [1, 2, 3]:
+            pair = data.get(f'pair_{i}', {})
+            if pair.get('gardien'): session.add(Gardien(reperage_id=new_rep.id, index=i, **pair['gardien']))
+            if pair.get('location'): session.add(Lieu(reperage_id=new_rep.id, index=i, **pair['location']))
+        session.commit(); return jsonify({'status': 'success', 'id': new_rep.id})
+    except Exception as e: return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
