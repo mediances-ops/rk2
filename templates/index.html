@@ -1,9 +1,8 @@
-<!-- DOC-OS VERSION : V.75.0 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.75.1 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOC-OS | Scouting Grid</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -24,19 +23,10 @@
         .field-group input, .field-group textarea { padding: 15px; border: 2px solid #eee; border-radius: 10px; font-weight: 600; }
         textarea { grid-column: 1 / -1; }
         .sub-section { border-left: 8px solid var(--secondary); padding: 40px; background: #fdfdfd; margin-bottom: 50px; border-radius: 0 20px 20px 0; }
-        .chat-panel { position: fixed; right: -500px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(15px); transition: 0.5s; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.3); }
-        .chat-panel.active { right: 0; }
-        .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
-        .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .msg-fixer .bubble { background: var(--secondary); color: white; align-self: flex-end; }
-        .msg-production .bubble { background: white; color: var(--primary); align-self: flex-start; }
     </style>
 </head>
 <body>
-    <div id="lock-banner">⚠️ DATA LOCKED - SUBMITTED TO PRODUCTION</div>
     <div id="toast">YOUR FORM HAS BEEN SAVED</div>
-
     <header class="header-banner" style="background-image: url('{{ FIXER_DATA.image_region }}');">
         <h1 style="color: white; font-size: 5rem; text-shadow: 0 5px 15px rgba(0,0,0,0.5); margin: 0;">{{ FIXER_DATA.region }}</h1>
         <p style="color: white; font-weight: 800; letter-spacing: 5px; text-transform: uppercase;">{{ FIXER_DATA.fixer_nom }}</p>
@@ -57,105 +47,51 @@
         </nav>
 
         <div class="tabs-container">
-            <!-- R1 : TERRITORY -->
             <div class="tab-content active" id="tab-territory">
                 <div class="fields-grid">
                     <div class="field-group"><label>Country</label><input type="text" name="pays" class="scouting-field" readonly></div>
                     <div class="field-group"><label>Region</label><input type="text" name="region" class="scouting-field" readonly></div>
                     <div class="field-group"><label>Target Cities*</label><input type="text" name="villes" class="scouting-field" required></div>
-                    <div class="field-group"><label>Population</label><input type="text" name="population" class="scouting-field"></div>
-                    <div class="field-group"><label>Languages</label><input type="text" name="langues" class="scouting-field"></div>
-                    <div class="field-group"><label>Planned Date / Climate</label><input type="text" name="climat" class="scouting-field"></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>History & Context</label><textarea name="histoire" class="scouting-field" rows="5"></textarea></div>
-                    <div class="field-group"><label>Traditions & Culture</label><textarea name="traditions" class="scouting-field" rows="5"></textarea></div>
-                    <div class="field-group"><label>Estimated Budget</label><input type="text" name="budget" class="scouting-field"></div>
-                    <div class="field-group"><label>Logistical Access*</label><textarea name="acces" class="scouting-field" rows="3" required></textarea></div>
-                    <div class="field-group"><label>Crew Accommodation*</label><textarea name="hebergement" class="scouting-field" rows="3" required></textarea></div>
-                    <div class="field-group"><label>Contraintes</label><textarea name="contraintes" class="scouting-field" rows="2"></textarea></div>
-                    <div class="field-group"><label>Narrative Arc</label><textarea name="arc" class="scouting-field" rows="2"></textarea></div>
-                    <div class="field-group"><label>Key Moments</label><textarea name="moments" class="scouting-field" rows="2"></textarea></div>
-                    <div class="field-group"><label>Sensitive Elements</label><textarea name="sensibles" class="scouting-field" rows="2"></textarea></div>
-                    <div class="field-group"><label>General Notes</label><textarea name="notes" class="scouting-field" rows="2"></textarea></div>
+                    <textarea name="traditions" class="scouting-field" rows="6" placeholder="Traditions & Culture"></textarea>
+                    <textarea name="histoire" class="scouting-field" rows="6" placeholder="History"></textarea>
+                    <textarea name="notes" class="scouting-field" rows="3" placeholder="General Production Notes"></textarea>
                 </div>
             </div>
-
             {% for i in [1, 2, 3] %}
             <div class="tab-content" id="tab-pair{{i}}">
                 <div class="sub-section">
                     <h3 style="font-weight:900; margin-bottom:25px;">The Guardian n°{{i}}</h3>
                     <div class="fields-grid">
-                        <div class="field-group"><label>Full Name*</label><input type="text" name="gardien{{i}}_nom_prenom" class="scouting-field" required></div>
-                        <div class="field-group"><label>Age*</label><input type="number" name="gardien{{i}}_age" class="scouting-field" required></div>
-                        <div class="field-group"><label>Role / Function*</label><input type="text" name="gardien{{i}}_fonction" class="scouting-field" required></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Personal Background*</label><textarea name="gardien{{i}}_histoire" class="scouting-field" rows="3" required></textarea></div>
-                        <div class="field-group"><label>Specific Knowledge</label><textarea name="gardien{{i}}_savoir" class="scouting-field" rows="3"></textarea></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Psychological Portrait*</label><textarea name="gardien{{i}}_psychologie" class="scouting-field" rows="3" required></textarea></div>
-                        <div class="field-group"><label>On-Camera Potential</label><textarea name="gardien{{i}}_evaluation" class="scouting-field" rows="2"></textarea></div>
-                        <div class="field-group"><label>Languages</label><input type="text" name="gardien{{i}}_langues" class="scouting-field"></div>
-                        <div class="field-group"><label>Direct Contact</label><input type="text" name="gardien{{i}}_contact" class="scouting-field"></div>
-                        <div class="field-group"><label>Local Intermediate*</label><input type="text" name="gardien{{i}}_intermediaire" class="scouting-field" required></div>
+                        <input type="text" name="gardien{{i}}_nom_prenom" class="scouting-field" placeholder="Full Name*">
+                        <input type="number" name="gardien{{i}}_age" class="scouting-field" placeholder="Age*">
+                        <textarea name="gardien{{i}}_histoire" class="scouting-field" rows="3" placeholder="Background*"></textarea>
                     </div>
                 </div>
                 <div class="sub-section" style="border-left-color: var(--primary);">
                     <h3 style="font-weight:900; margin-bottom:25px;">The Location n°{{i}}</h3>
                     <div class="fields-grid">
-                        <div class="field-group"><label>Place Name*</label><input type="text" name="lieu{{i}}_nom" class="scouting-field" required></div>
-                        <div class="field-group"><label>Environment Type*</label><input type="text" name="lieu{{i}}_type" class="scouting-field" required></div>
-                        <div class="field-group"><label>Lat*</label><input type="text" name="lieu{{i}}_gps_lat" class="scouting-field" required></div>
-                        <div class="field-group"><label>Long*</label><input type="text" name="lieu{{i}}_gps_long" class="scouting-field" required></div>
-                        <div class="field-group" style="grid-column: span 2;"><label>Visual Description*</label><textarea name="lieu{{i}}_description" class="scouting-field" rows="4" required></textarea></div>
-                        <div class="field-group"><label>Weather Backup</label><input type="text" name="lieu{{i}}_meteo" class="scouting-field"></div>
-                        <div class="field-group"><label>Accessibility</label><input type="text" name="lieu{{i}}_acces" class="scouting-field"></div>
-                        <div class="field-group"><label>Security / Risks</label><input type="text" name="lieu{{i}}_securite" class="scouting-field"></div>
-                        <div class="field-group"><label>Permits Required</label><input type="text" name="lieu{{i}}_permis" class="scouting-field"></div>
-                        <div class="field-group"><label>Cinematic Potential</label><textarea name="lieu{{i}}_cinegenie" class="scouting-field" rows="2"></textarea></div>
-                        <div class="field-group"><label>Camera Angles</label><textarea name="lieu{{i}}_axes" class="scouting-field" rows="2"></textarea></div>
-                        <div class="field-group"><label>Remarkable Viewpoints</label><textarea name="lieu{{i}}_points_vue" class="scouting-field" rows="2"></textarea></div>
-                        <div class="field-group"><label>Sound Atmosphere</label><input type="text" name="lieu{{i}}_son" class="scouting-field"></div>
-                        <div class="field-group"><label>Electricity</label><input type="text" name="lieu{{i}}_elec" class="scouting-field"></div>
-                        <div class="field-group"><label>Crew Space</label><input type="text" name="lieu{{i}}_espace" class="scouting-field"></div>
-                        <div class="field-group"><label>Best Light</label><input type="text" name="lieu{{i}}_moments" class="scouting-field"></div>
+                        <input type="text" name="lieu{{i}}_nom" class="scouting-field" placeholder="Place Name*">
+                        <textarea name="lieu{{i}}_description" class="scouting-field" rows="4" placeholder="Visual Description*"></textarea>
                     </div>
                 </div>
             </div>
             {% endfor %}
-
             <div class="tab-content" id="tab-festivity">
                 <div class="fields-grid">
-                    <div class="field-group"><label>Festival Name*</label><input type="text" name="fete_nom" class="scouting-field" required></div>
-                    <div class="field-group"><label>Exact Date*</label><input type="text" name="fete_date" class="scouting-field" required></div>
-                    <div class="field-group"><label>Lat*</label><input type="text" name="fete_gps_lat" class="scouting-field" required></div>
-                    <div class="field-group"><label>Long*</label><input type="text" name="fete_gps_long" class="scouting-field" required></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Cultural Origins</label><textarea name="fete_origines" class="scouting-field" rows="5"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Visual Substance</label><textarea name="fete_visuel" class="scouting-field" rows="5"></textarea></div>
-                    <div class="field-group" style="grid-column: span 2;"><label>Event Sequence</label><textarea name="fete_deroulement" class="scouting-field" rows="4"></textarea></div>
-                    <div class="field-group"><label>Main Organizer Contact*</label><input type="text" name="fete_responsable" class="scouting-field" required></div>
+                    <input type="text" name="fete_nom" class="scouting-field" placeholder="Festival Name*">
+                    <textarea name="fete_visuel" class="scouting-field" rows="5" placeholder="Visual Substance"></textarea>
                 </div>
             </div>
         </div>
 
-        <section style="background:white; padding:50px; border-radius:25px; margin:60px 0; box-shadow:0 15px 40px rgba(0,0,0,0.05);">
-            <h3 style="font-weight:900;"><i data-lucide="camera" style="color:var(--secondary);"></i> FIELD MEDIA VAULT</h3>
-            <div id="drop-area" style="padding:80px; border:4px dashed #e2e8f0; border-radius:20px; text-align:center; cursor:pointer; background:#f9fbff;"><p style="font-weight:900; color:#64748b; font-size:1.2rem;">DRAG & DROP MEDIA HERE OR CLICK TO UPLOAD</p></div>
-            <input type="file" id="file-input" multiple accept="image/*,.pdf" style="display:none;">
-            <div id="files-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:25px; margin-top:40px;"></div>
-        </section>
-
-        <div style="display:flex; gap:25px; justify-content:flex-end; margin-bottom:100px;">
-            <button id="btn-save" style="background:var(--primary); color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; box-shadow:0 10px 20px rgba(44,62,80,0.2);">💾 SAVE DRAFT</button>
-            <button id="btn-submit" style="background:#27ae60; color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer; font-size:1.1rem; box-shadow:0 10px 20px rgba(39,174,96,0.2);">🚀 SUBMIT TO PRODUCTION</button>
+        <div style="display:flex; gap:25px; justify-content:flex-end; margin-top:40px; margin-bottom:100px;">
+            <button id="btn-save" style="background:var(--primary); color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer;">💾 SAVE DRAFT</button>
+            <button id="btn-submit" style="background:#27ae60; color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer;">🚀 SUBMIT TO PRODUCTION</button>
         </div>
     </div>
 
-    <button id="chat-toggle-btn" class="chat-toggle-btn"><i data-lucide="message-circle" style="width:38px; height:38px;"></i></button>
-    <div id="chat-panel" class="chat-panel">
-        <div class="chat-header">
-            <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%; box-shadow:0 0 10px #2ecc71;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
-            <button id="chat-close-btn" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
-        </div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-zone"><textarea id="chat-input" placeholder="Type your message here..."></textarea><button id="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
-    </div>
+    <button id="chat-toggle-btn" style="position: fixed; bottom: 30px; right: 30px; width: 75px; height: 75px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer;"><i data-lucide="message-circle"></i></button>
+    <div id="chat-panel" style="position: fixed; right: -500px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(15px); transition: 0.5s;"><div id="chat-messages" style="height: 80%; overflow-y: auto; padding: 25px;"></div></div>
     <script>window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}};</script>
     <script src="/static/js/app.js"></script>
     <script>lucide.createIcons();</script>
