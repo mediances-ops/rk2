@@ -1,6 +1,4 @@
-# DOC-OS VERSION : V.74.1 SUPRÊME MISSION CONTROL
-# ARCHITECTURE : 5 RÉSERVOIRS IMBRIQUÉS (NEXUS COMPATIBLE)
-
+# DOC-OS VERSION : V.74.2 FINALE
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -36,26 +34,16 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
-        """EMBALLAGE IMBRIQUÉ : Les paires sont des objets, pas des listes plates."""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None)
             l = next((x for x in self.lieux if x.index == i), None)
             pair_data = {}
-            if g: pair_data.update(g.to_dict())
-            if l: pair_data.update(l.to_dict())
-            pairs[f"pair_{i}"] = clean(pair_data)
-        
-        return {
-            "id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays,
-            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "notes_admin": self.notes_admin,
-            "villes": self.villes, "progression_pourcent": self.progression_pourcent,
-            "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
-            "pair_1": pairs.get("pair_1", {}), "pair_2": pairs.get("pair_2", {}), "pair_3": pairs.get("pair_3", {}),
-            "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable}),
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
+            if g: pair_data.update({f"gardien{i}_{k}": v for k, v in g.to_dict().items()})
+            if l: pair_data.update({f"lieu{i}_{k}": v for k, v in l.to_dict().items()})
+            pairs.update(pair_data)
+        return {**{c.name: getattr(self, c.name) for c in self.__table__.columns}, **pairs}
 
 class Gardien(Base):
     __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
