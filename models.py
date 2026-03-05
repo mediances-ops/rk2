@@ -1,6 +1,6 @@
-# DOC-OS VERSION : V.71.1 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.71.2 SUPRÊME MISSION CONTROL
 # ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
-# STATUS : VITAL KEYS SANCTUARIZED (FIX 404 TOKEN)
+# STATUS : CRITICAL PATH PROTECTION (FIX IMAGE & JSON ERRORS)
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -19,25 +19,17 @@ class Fixer(Base):
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
     notes_internes = Column(Text); photo_profil_url = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
-    
-    def to_dict(self):
-        # On protège l'id et l'email contre le nettoyage
-        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-        return d
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 class Reperage(Base):
     __tablename__ = 'reperages'
     id = Column(Integer, primary_key=True); token = Column(String(32), unique=True)
     statut = Column(String(20), default='brouillon'); progression_pourcent = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow); updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
     fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255))
     pays = Column(String(100)); region = Column(String(255)); image_region = Column(Text); notes_admin = Column(Text)
-    
     villes = Column(Text); population = Column(String(255)); langues = Column(String(255)); climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text); acces = Column(Text); hebergement = Column(Text); contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text); budget = Column(String(255)); notes = Column(Text)
-    
     fete_nom = Column(String(255)); fete_date = Column(String(255)); fete_gps_lat = Column(String(100)); fete_gps_long = Column(String(100)); fete_origines = Column(Text); fete_deroulement = Column(Text); fete_visuel = Column(Text); fete_responsable = Column(Text)
-    
     fixer_rel = relationship("Fixer", back_populates="reperages")
     gardiens = relationship("Gardien", back_populates="reperage", cascade="all, delete-orphan")
     lieux = relationship("Lieu", back_populates="reperage", cascade="all, delete-orphan")
@@ -45,42 +37,27 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
-        """SOUDURE V.71.1 : Protection des clés vitales contre le filtre clean()"""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
-        
         pairs = {}
         for i in [1, 2, 3]:
-            g = next((x for x in self.gardiens if x.index == i), None)
-            l = next((x for x in self.lieux if x.index == i), None)
+            g = next((x for x in self.gardiens if x.index == i), None); l = next((x for x in self.lieux if x.index == i), None)
             pair_data = {}
             if g: pair_data.update(g.to_dict())
             if l: pair_data.update(l.to_dict())
             if pair_data: pairs[f"pair_{i}"] = clean(pair_data)
         
-        # 1. On prépare les données facultatives nettoyables
-        optional_data = clean({
-            "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
-            "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement, "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable}),
-            **pairs
-        })
-
-        # 2. On injecte les clés VITALES (jamais nettoyées pour éviter les 404 HTML)
-        result = {
-            "id": self.id,
-            "token": self.token or "TOKEN_NOT_GENERATED", # Sécurité anti-lien vide
-            "statut": self.statut,
-            "region": self.region or "",
-            "pays": self.pays or "",
-            "fixer_nom": self.fixer_nom or "Inconnu",
-            "image_region": self.image_region or "",
-            "notes_admin": self.notes_admin or "",
-            "villes": self.villes or "",
+        # TRACABILITÉ : On protège image_region de toute suppression pour le CSS
+        res = {
+            "id": self.id, "token": self.token or "NO_TOKEN", "statut": self.statut,
+            "region": self.region or "Sans Région", "pays": self.pays or "",
+            "image_region": self.image_region or "https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg",
+            "fixer_nom": self.fixer_nom or "Non assigné", "villes": self.villes or "",
             "progression_pourcent": self.progression_pourcent,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
+            **pairs,
+            "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable})
         }
-        
-        result.update(optional_data)
-        return result
+        return res
 
 class Gardien(Base):
     __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
