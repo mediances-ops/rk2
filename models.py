@@ -1,5 +1,6 @@
-# DOC-OS VERSION : V.71.0 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.71.1 SUPRÊME MISSION CONTROL
 # ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
+# STATUS : VITAL KEYS SANCTUARIZED (FIX 404 TOKEN)
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -18,8 +19,11 @@ class Fixer(Base):
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
     notes_internes = Column(Text); photo_profil_url = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
+    
     def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
+        # On protège l'id et l'email contre le nettoyage
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        return d
 
 class Reperage(Base):
     __tablename__ = 'reperages'
@@ -41,25 +45,42 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
+        """SOUDURE V.71.1 : Protection des clés vitales contre le filtre clean()"""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
+        
         pairs = {}
         for i in [1, 2, 3]:
-            g = next((x for x in self.gardiens if x.index == i), None); l = next((x for x in self.lieux if x.index == i), None)
+            g = next((x for x in self.gardiens if x.index == i), None)
+            l = next((x for x in self.lieux if x.index == i), None)
             pair_data = {}
             if g: pair_data.update(g.to_dict())
             if l: pair_data.update(l.to_dict())
             if pair_data: pairs[f"pair_{i}"] = clean(pair_data)
         
-        return {
-            "id": self.id, "token": self.token, "statut": self.statut, "region": self.region or "",
-            "pays": self.pays or "", "fixer_nom": self.fixer_nom or "Inconnu",
-            "image_region": self.image_region or "", "notes_admin": self.notes_admin or "",
-            "villes": self.villes or "", "progression_pourcent": self.progression_pourcent,
+        # 1. On prépare les données facultatives nettoyables
+        optional_data = clean({
             "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
-            **pairs,
             "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement, "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable}),
+            **pairs
+        })
+
+        # 2. On injecte les clés VITALES (jamais nettoyées pour éviter les 404 HTML)
+        result = {
+            "id": self.id,
+            "token": self.token or "TOKEN_NOT_GENERATED", # Sécurité anti-lien vide
+            "statut": self.statut,
+            "region": self.region or "",
+            "pays": self.pays or "",
+            "fixer_nom": self.fixer_nom or "Inconnu",
+            "image_region": self.image_region or "",
+            "notes_admin": self.notes_admin or "",
+            "villes": self.villes or "",
+            "progression_pourcent": self.progression_pourcent,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
+        
+        result.update(optional_data)
+        return result
 
 class Gardien(Base):
     __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
