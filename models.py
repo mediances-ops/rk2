@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.74.0 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - FIX NESTED STRUCTURE FOR APP 2 INGESTION
+# DOC-OS VERSION : V.74.1 SUPRÊME MISSION CONTROL
+# ARCHITECTURE : 5 RÉSERVOIRS IMBRIQUÉS (NEXUS COMPATIBLE)
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -36,10 +36,8 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
-        """SOUDURE V.74.0 : Emballage strict des réservoirs pour le Kernel Nexus."""
+        """EMBALLAGE IMBRIQUÉ : Les paires sont des objets, pas des listes plates."""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
-        
-        # 1. Construction des paires COMME DES DICTIONNAIRES IMBRIQUÉS
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None)
@@ -47,32 +45,16 @@ class Reperage(Base):
             pair_data = {}
             if g: pair_data.update(g.to_dict())
             if l: pair_data.update(l.to_dict())
-            if pair_data:
-                pairs[f"pair_{i}"] = clean(pair_data) # LA CLÉ pair_i CONTIENT LE DICT
+            pairs[f"pair_{i}"] = clean(pair_data)
         
-        # 2. Retour structuré (Non-aplati)
         return {
-            "id": self.id,
-            "region": self.region,
-            "pays": self.pays,
-            "image_region": self.image_region,
-            "villes": self.villes,
-            "statut": self.statut,
-            "territory": clean({
-                "population": self.population, "langues": self.langues, "climat": self.climat,
-                "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces,
-                "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc,
-                "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes
-            }),
-            "pair_1": pairs.get("pair_1", {}),
-            "pair_2": pairs.get("pair_2", {}),
-            "pair_3": pairs.get("pair_3", {}),
-            "festivity": clean({
-                "fete_nom": self.fete_nom, "fete_date": self.fete_date, 
-                "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long,
-                "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement,
-                "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable
-            })
+            "id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays,
+            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "notes_admin": self.notes_admin,
+            "villes": self.villes, "progression_pourcent": self.progression_pourcent,
+            "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
+            "pair_1": pairs.get("pair_1", {}), "pair_2": pairs.get("pair_2", {}), "pair_3": pairs.get("pair_3", {}),
+            "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable}),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
 
 class Gardien(Base):
