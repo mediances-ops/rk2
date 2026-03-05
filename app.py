@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.71.0 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - FIXED FILENAME FOR SUBSTANCE VIEW
+# DOC-OS VERSION : V.71.1 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - FIXED 404 ROUTING & FULL DATA BRIDGE
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -33,10 +33,11 @@ def linkify_filter(text):
     url_pattern = r'(https?://[^\s]+)'
     return re.sub(url_pattern, r'<a href="\1" target="_blank">\1</a>', text)
 
-# --- NAVIGATION ---
+# --- REDIRECTION RACINE ---
 @app.route('/')
 def index_root(): return redirect('/admin')
 
+# --- DASHBOARD ---
 @app.route('/admin')
 def admin_dashboard():
     session = get_db(); query = session.query(Reperage)
@@ -44,50 +45,52 @@ def admin_dashboard():
     for r in reps:
         f = session.get(Fixer, r.fixer_id)
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
+        # SOUDURE : Utilisation de to_dict() qui protège désormais le token
         serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-# --- FICHE DE SUBSTANCE (SOUDURE V.71.0) ---
+# --- FICHE DE SUBSTANCE (SOUDURE V.71.1) ---
 @app.route('/admin/reperage/<int:id>')
 def admin_view_reperage(id):
-    """SOUDURE V.71.0 : Utilisation du nom de fichier exact et des réservoirs."""
-    session = get_db()
-    rep = session.get(Reperage, id)
+    session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     fixer = session.get(Fixer, rep.fixer_id)
     
-    # Pack Reservoir 1 : Territoire
+    # Distribution dans les 4 réservoirs sémantiques attendus par admin_reperage_detail.html
     territoire = {
         "villes": rep.villes, "population": rep.population, "langues": rep.langues,
         "climat": rep.climat, "histoire": rep.histoire, "acces": rep.acces, "hebergement": rep.hebergement
     }
-    
-    # Pack Reservoir 2 : Particularités
     particularites = { "contraintes": rep.contraintes, "notes_production": rep.notes }
-    
-    # Pack Reservoir 3 : Épisode
     episode = { "arc_narratif": rep.arc, "moments_cles": rep.moments, "sensibles": rep.sensibles, "budget_local": rep.budget }
-    
-    # Pack Reservoir 4 : Fête
     fete = {
         "nom": rep.fete_nom, "date": rep.fete_date, "gps_lat": rep.fete_gps_lat, "gps_long": rep.fete_gps_long,
         "origines": rep.fete_origines, "visuel": rep.fete_visuel, "deroulement": rep.fete_deroulement, "responsable": rep.fete_responsable
     }
 
-    return render_template('admin_reperage_detail.html', # NOM CORRIGÉ ICI
+    return render_template('admin_reperage_detail.html', 
                            reperage=rep, fixer=fixer, 
                            territoire=territoire, particularites=particularites, 
                            episode=episode, fete=fete)
 
-# --- BRIDGE IA (FUSÉE) ---
+# --- FORMULAIRE FIXER (SOUDURE V.71.1) ---
+@app.route('/formulaire/<token>')
+def route_form_fixer(token):
+    """Route sécurisée : Redirige vers admin si le token est invalide (Fix 404)."""
+    if not token or token == "TOKEN_NOT_GENERATED": return redirect('/admin')
+    session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
+    if not rep: abort(404)
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=rep.to_dict())
+
+# --- BRIDGE IA (FULL DATA) ---
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def submit_reperage(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     rep.statut = 'soumis'; session.commit()
-    if os.environ.get('DOCUGEN_API_URL'):
-        try: requests.post(os.environ.get('DOCUGEN_API_URL'), json=rep.to_dict(), headers={"X-Bridge-Token": os.environ.get('BRIDGE_SECRET_TOKEN')}, timeout=30)
+    if DOCUGEN_URL:
+        try: requests.post(DOCUGEN_URL, json=rep.to_dict(), headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=30)
         except: pass
     return jsonify({'status': 'success'})
 
@@ -113,8 +116,10 @@ def api_sync_engine(id):
     if request.method == 'GET': return jsonify(rep.to_dict())
     if rep.statut != 'brouillon': abort(403)
     data = request.json
+    # On protège les identifiants contre l'écrasement
+    PROTECTED = ['id', 'token', 'fixer_id']
     for k, v in data.items():
-        if hasattr(rep, k) and k not in ['id', 'token']:
+        if hasattr(rep, k) and k not in PROTECTED:
             if k == 'age': setattr(rep, k, int(v) if (v and str(v).isdigit()) else None)
             else: setattr(rep, k, v)
     session.commit(); return jsonify({'status': 'success'})
