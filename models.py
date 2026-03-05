@@ -38,15 +38,14 @@ class Reperage(Base):
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None)
             l = next((x for x in self.lieux if x.index == i), None)
-            pair_data = {}
-            if g: pair_data.update(g.get_data())
-            if l: pair_data.update(l.get_data())
-            pairs[f"pair_{i}"] = clean(pair_data)
+            p_data = {}
+            if g: p_data.update(g.get_data())
+            if l: p_data.update(l.get_data())
+            pairs[f"pair_{i}"] = clean(p_data)
         return {
             "id": self.id, "schema_id": self.id, "token": self.token, "statut": self.statut, 
             "title": f"{self.region} ({self.pays})", "region": self.region, "pays": self.pays,
-            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "notes_admin": self.notes_admin,
-            "villes": self.villes, "progression_pourcent": self.progression_pourcent,
+            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "villes": self.villes,
             "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
             "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable}),
             **pairs
