@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.70.9 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - FULL SYNC WITH SUBSTANCE ANALYSIS TEMPLATE
+# DOC-OS VERSION : V.71.0 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - FIXED FILENAME FOR SUBSTANCE VIEW
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -26,7 +26,7 @@ def get_db():
     if 'db_session' not in g: g.db_session = get_session(engine)
     return g.db_session
 
-# --- FILTRE LINKIFY (POUR LES FICHES DE SUBSTANCE) ---
+# --- FILTRE LINKIFY ---
 @app.template_filter('linkify')
 def linkify_filter(text):
     if not text: return ""
@@ -48,34 +48,34 @@ def admin_dashboard():
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-# --- FICHE DE SUBSTANCE (SOUDURE RÉSERVOIRS) ---
+# --- FICHE DE SUBSTANCE (SOUDURE V.71.0) ---
 @app.route('/admin/reperage/<int:id>')
 def admin_view_reperage(id):
-    """SOUDURE V.70.9 : Prépare les 4 dictionnaires pour le template de substance."""
+    """SOUDURE V.71.0 : Utilisation du nom de fichier exact et des réservoirs."""
     session = get_db()
     rep = session.get(Reperage, id)
     if not rep: abort(404)
     fixer = session.get(Fixer, rep.fixer_id)
     
-    # 1. Réservoir Territoire
+    # Pack Reservoir 1 : Territoire
     territoire = {
         "villes": rep.villes, "population": rep.population, "langues": rep.langues,
         "climat": rep.climat, "histoire": rep.histoire, "acces": rep.acces, "hebergement": rep.hebergement
     }
     
-    # 2. Réservoir Particularités
+    # Pack Reservoir 2 : Particularités
     particularites = { "contraintes": rep.contraintes, "notes_production": rep.notes }
     
-    # 3. Réservoir Épisode (Substance narrative)
+    # Pack Reservoir 3 : Épisode
     episode = { "arc_narratif": rep.arc, "moments_cles": rep.moments, "sensibles": rep.sensibles, "budget_local": rep.budget }
     
-    # 4. Réservoir Fête
+    # Pack Reservoir 4 : Fête
     fete = {
         "nom": rep.fete_nom, "date": rep.fete_date, "gps_lat": rep.fete_gps_lat, "gps_long": rep.fete_gps_long,
         "origines": rep.fete_origines, "visuel": rep.fete_visuel, "deroulement": rep.fete_deroulement, "responsable": rep.fete_responsable
     }
 
-    return render_template('admin_details.html', # Nom de votre nouveau fichier
+    return render_template('admin_reperage_detail.html', # NOM CORRIGÉ ICI
                            reperage=rep, fixer=fixer, 
                            territoire=territoire, particularites=particularites, 
                            episode=episode, fete=fete)
@@ -86,9 +86,8 @@ def submit_reperage(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
     rep.statut = 'soumis'; session.commit()
-    # Appel du Bridge App 2
-    if DOCUGEN_URL:
-        try: requests.post(DOCUGEN_URL, json=rep.to_dict(), headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=30)
+    if os.environ.get('DOCUGEN_API_URL'):
+        try: requests.post(os.environ.get('DOCUGEN_API_URL'), json=rep.to_dict(), headers={"X-Bridge-Token": os.environ.get('BRIDGE_SECRET_TOKEN')}, timeout=30)
         except: pass
     return jsonify({'status': 'success'})
 
@@ -133,6 +132,18 @@ def api_chat(id):
         return jsonify([m.to_dict() for m in msgs])
     data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
+
+# --- CRÉATION MANUELLE ---
+@app.route('/admin/reperages/create', methods=['POST'])
+def admin_create_rep():
+    session = get_db(); data = request.json
+    try:
+        f_id = int(data.get('fixer_id')) if data.get('fixer_id') else None
+        fixer = session.get(Fixer, f_id) if f_id else None
+        new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=f_id, fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), notes_admin=data.get('notes_admin'), statut='brouillon')
+        session.add(new_rep); session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e: return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
