@@ -1,5 +1,5 @@
-# DOC-OS VERSION : V.71.2 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - FIX GET MEDIAS & ABSOLUTE IMAGE PATHS
+# DOC-OS VERSION : V.71.3 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - FIX SAWARNING & BANNER DATA FLOW
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -40,7 +40,8 @@ def admin_dashboard():
     session = get_db(); query = session.query(Reperage)
     reps = query.order_by(Reperage.id.desc()).all(); serialized = []
     for r in reps:
-        f = session.get(Fixer, r.fixer_id)
+        # SOUDURE V.71.3 : Correction du SAWarning si fixer_id est NULL
+        f = session.get(Fixer, r.fixer_id) if r.fixer_id else None
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
         serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
@@ -50,7 +51,7 @@ def admin_dashboard():
 def admin_view_reperage(id):
     session = get_db(); rep = session.get(Reperage, id)
     if not rep: abort(404)
-    fixer = session.get(Fixer, rep.fixer_id)
+    fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
     territoire = {"villes": rep.villes, "population": rep.population, "langues": rep.langues, "climat": rep.climat, "histoire": rep.histoire, "acces": rep.acces, "hebergement": rep.hebergement}
     particularites = { "contraintes": rep.contraintes, "notes_production": rep.notes }
     episode = { "arc_narratif": rep.arc, "moments_cles": rep.moments, "sensibles": rep.sensibles, "budget_local": rep.budget }
@@ -70,15 +71,12 @@ def api_sync_engine(id):
             else: setattr(rep, k, v)
     session.commit(); return jsonify({'status': 'success'})
 
-# --- SOUDURE MÉDIAS (FIX GET METHOD) ---
 @app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
 def api_medias(id):
-    """SOUDURE V.71.2 : Rétablissement du GET pour éviter le crash SyntaxError du JS."""
     session = get_db()
     if request.method == 'GET':
         ms = session.query(Media).filter_by(reperage_id=id).all()
         return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier, 'type': m.type} for m in ms])
-    
     file = request.files['file']; ext = os.path.splitext(file.filename)[1].lower()
     filename = secrets.token_hex(8) + "_" + file.filename
     path = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(path, exist_ok=True)
@@ -94,6 +92,7 @@ def serve_uploads(rep_id, filename):
 def route_form_fixer(token):
     session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
     if not rep: abort(404)
+    # SOUDURE V.71.3 : On garantit l'envoi de l'image de bannière via to_dict recalibré
     return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=rep.to_dict())
 
 @app.route('/admin/fixer/new', methods=['POST'])
