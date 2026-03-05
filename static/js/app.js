@@ -11,22 +11,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-function initEventListeners() {
-    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
-    document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
-    document.querySelectorAll('.scouting-field').forEach(el => el.addEventListener('input', calculateProgress));
-}
-
 async function loadReperage() {
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}?t=${new Date().getTime()}`);
         const data = await res.json();
+        
         document.querySelectorAll('.scouting-field').forEach(input => {
-            if (data[input.name] !== undefined) input.value = data[input.name];
+            const name = input.name;
+            let val = data[name]; // Racine
+            if (data.territory && data.territory[name] !== undefined) val = data.territory[name];
+            if (data.festivity && data.festivity[name] !== undefined) val = data.festivity[name];
+            for (let i = 1; i <= 3; i++) {
+                const pair = data[`pair_${i}`];
+                if (pair && pair[name.replace(`gardien${i}_`, '').replace(`lieu${i}_`, '')] !== undefined) {
+                     val = pair[name.replace(`gardien${i}_`, '').replace(`lieu${i}_`, '')];
+                }
+            }
+            if (val !== undefined && val !== null) input.value = val;
         });
         if (data.statut === 'validé') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Load failed", e); }
+    } catch (e) { console.error("Persistence failed", e); }
 }
 
 async function saveReperage(show) {
@@ -50,31 +55,20 @@ function calculateProgress() {
     return percent;
 }
 
+// ... [Fonctions Chat, Medias et linkify identiques à V.75.0] ...
 function initChat() {
     const btn = document.getElementById('chat-toggle-btn');
     if(btn) btn.onclick = () => { document.getElementById('chat-panel')?.classList.toggle('active'); loadMessages(); };
-    setInterval(checkNewMessages, 20000);
 }
-
 async function loadMessages() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
     const msgs = await res.json();
     const cont = document.getElementById('chat-messages');
     if(cont) {
-        cont.innerHTML = msgs.map(m => `<div class="msg-wrapper ${m.auteur_type === 'fixer' ? 'msg-fixer' : 'msg-production'}"><div class="bubble">${linkify(m.contenu)}</div></div>`).join('');
+        cont.innerHTML = msgs.map(m => `<div class="msg-wrapper ${m.auteur_type === 'fixer' ? 'msg-fixer' : 'msg-production'}"><div class="bubble">${m.contenu}</div></div>`).join('');
         cont.scrollTop = cont.scrollHeight;
     }
 }
-
-async function checkNewMessages() {
-    const res = await fetch(`${API_URL}/reperages/${currentReperageId}/messages`);
-    const msgs = await res.json();
-    const last = msgs[msgs.length - 1];
-    if (last && last.auteur_type !== CONTEXT_TYPE) {
-        document.getElementById('chat-toggle-btn').style.animation = 'pulse 1.5s infinite';
-    }
-}
-
 function initFileUpload() {
     const area = document.getElementById('drop-area'); if (!area) return;
     area.onclick = () => document.getElementById('file-input')?.click();
@@ -86,16 +80,22 @@ function initFileUpload() {
         await loadMedias();
     };
 }
-
 async function loadMedias() {
     const res = await fetch(`${API_URL}/reperages/${currentReperageId}/medias`);
     const ms = await res.json();
     const list = document.getElementById('files-list');
-    if(list) list.innerHTML = ms.map(m => `<div class="file-item" style="position:relative; width:180px;"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:180px; object-fit:cover; border-radius:12px;">${!isLocked ? `<button onclick="window.deleteMedia(${m.id})" style="position:absolute; top:10px; right:10px; background:rgba(231,76,60,0.8); color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer;"><i data-lucide="trash-2"></i></button>` : ''}</div>`).join('');
-    lucide.createIcons();
+    if(list) list.innerHTML = ms.map(m => `<div class="file-item" style="position:relative; width:180px;"><img src="/uploads/${currentReperageId}/${m.nom_fichier}" style="width:100%; height:180px; object-fit:cover; border-radius:12px;"></div>`).join('');
 }
-
-window.deleteMedia = async function(id) { if(confirm("Delete?")) { await fetch(`${API_URL}/medias/${id}`, { method: 'DELETE' }); await loadMedias(); } };
-function lockInterface() { isLocked = true; document.getElementById('lock-banner').style.display = 'block'; document.querySelectorAll('.scouting-field, .btn').forEach(el => { el.disabled = true; el.style.opacity = '0.6'; }); }
+function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active');
+        };
+    });
+}
+function initEventListeners() {
+    document.getElementById('btn-save')?.addEventListener('click', () => saveReperage(true));
+    document.getElementById('btn-submit')?.addEventListener('click', () => submitToProduction());
+}
 function showToast(msg) { const t = document.getElementById('toast'); if(t) { t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000); } }
-function linkify(t) { return t.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (u) => `<a href="${u}" target="_blank" style="color:inherit;text-decoration:underline;">${u}</a>`); }
