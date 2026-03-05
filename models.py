@@ -1,6 +1,5 @@
-# DOC-OS VERSION : V.73.9 SUPRÊME MISSION CONTROL
-# ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
-# STATUS : DETERMINISTIC TO_DICT FOR HIGH SUBSTANCE EXPORT
+# DOC-OS VERSION : V.74.0 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - FIX NESTED STRUCTURE FOR APP 2 INGESTION
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -37,36 +36,56 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
+        """SOUDURE V.74.0 : Emballage strict des réservoirs pour le Kernel Nexus."""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
+        
+        # 1. Construction des paires COMME DES DICTIONNAIRES IMBRIQUÉS
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None)
             l = next((x for x in self.lieux if x.index == i), None)
             pair_data = {}
-            if g: pair_data.update(g.to_dict(prefix=f"gardien{i}_"))
-            if l: pair_data.update(l.to_dict(prefix=f"lieu{i}_"))
-            pairs.update(pair_data)
+            if g: pair_data.update(g.to_dict())
+            if l: pair_data.update(l.to_dict())
+            if pair_data:
+                pairs[f"pair_{i}"] = clean(pair_data) # LA CLÉ pair_i CONTIENT LE DICT
+        
+        # 2. Retour structuré (Non-aplati)
         return {
-            "id": self.id, "token": self.token, "statut": self.statut, "region": self.region, "pays": self.pays,
-            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "notes_admin": self.notes_admin,
-            "villes": self.villes, "progression_pourcent": self.progression_pourcent,
-            "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
-            **pairs,
-            "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable}),
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+            "id": self.id,
+            "region": self.region,
+            "pays": self.pays,
+            "image_region": self.image_region,
+            "villes": self.villes,
+            "statut": self.statut,
+            "territory": clean({
+                "population": self.population, "langues": self.langues, "climat": self.climat,
+                "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces,
+                "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc,
+                "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes
+            }),
+            "pair_1": pairs.get("pair_1", {}),
+            "pair_2": pairs.get("pair_2", {}),
+            "pair_3": pairs.get("pair_3", {}),
+            "festivity": clean({
+                "fete_nom": self.fete_nom, "fete_date": self.fete_date, 
+                "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long,
+                "fete_origines": self.fete_origines, "fete_deroulement": self.fete_deroulement,
+                "fete_visuel": self.fete_visuel, "fete_responsable": self.fete_responsable
+            })
         }
 
 class Gardien(Base):
     __tablename__ = 'gardiens'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
     nom_prenom = Column(String(255)); age = Column(Integer); fonction = Column(String(255)); savoir = Column(Text); histoire = Column(Text); psychologie = Column(Text); evaluation = Column(Text); langues = Column(String(255)); contact = Column(Text); intermediaire = Column(Text)
     reperage = relationship("Reperage", back_populates="gardiens")
-    def to_dict(self, prefix=""): return {f"{prefix}{c.name}": getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
 
 class Lieu(Base):
     __tablename__ = 'lieux'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); index = Column(Integer)
     nom = Column(String(255)); type = Column(String(255)); description = Column(Text); cinegenie = Column(Text); axes = Column(Text); points_vue = Column(Text); moments = Column(Text); son = Column(Text); gps_lat = Column(String(100)); gps_long = Column(String(100)); acces = Column(Text); securite = Column(Text); elec = Column(Text); espace = Column(Text); meteo = Column(Text); permis = Column(Text)
     reperage = relationship("Reperage", back_populates="lieux")
-    def to_dict(self, prefix=""): return {f"{prefix}{c.name}": getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
+    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if c.name not in ['id', 'reperage_id', 'index']}
 
 class Media(Base):
     __tablename__ = 'medias'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); type = Column(String(50)); nom_fichier = Column(String(255)); nom_original = Column(String(255)); chemin_fichier = Column(String(500)); uploaded_at = Column(DateTime, default=datetime.utcnow)
