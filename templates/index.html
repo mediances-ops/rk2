@@ -1,4 +1,4 @@
-<!-- DOC-OS VERSION : V.75.1 SUPRÊME MISSION CONTROL -->
+<!-- DOC-OS VERSION : V.75.2 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,13 +20,22 @@
         .fields-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 45px; }
         .field-group { display: flex; flex-direction: column; margin-bottom: 15px; }
         .field-group label { font-weight: 800; font-size: 0.85rem; color: #95a5a6; text-transform: uppercase; margin-bottom: 10px; }
-        .field-group input, .field-group textarea { padding: 15px; border: 2px solid #eee; border-radius: 10px; font-weight: 600; }
+        .field-group input, .field-group textarea { padding: 15px; border: 2px solid #eee; border-radius: 10px; font-weight: 600; outline: none; }
         textarea { grid-column: 1 / -1; }
         .sub-section { border-left: 8px solid var(--secondary); padding: 40px; background: #fdfdfd; margin-bottom: 50px; border-radius: 0 20px 20px 0; }
+        .chat-panel { position: fixed; right: -500px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(15px); transition: 0.5s; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.3); }
+        .chat-panel.active { right: 0; }
+        .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+        .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .msg-me { align-self: flex-end; } .msg-them { align-self: flex-start; }
+        .chat-toggle-btn { position: fixed; right: 30px; bottom: 30px; width: 75px; height: 75px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer; z-index: 9998; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
+    <div id="lock-banner">⚠️ DATA LOCKED - SUBMITTED TO PRODUCTION</div>
     <div id="toast">YOUR FORM HAS BEEN SAVED</div>
+
     <header class="header-banner" style="background-image: url('{{ FIXER_DATA.image_region }}');">
         <h1 style="color: white; font-size: 5rem; text-shadow: 0 5px 15px rgba(0,0,0,0.5); margin: 0;">{{ FIXER_DATA.region }}</h1>
         <p style="color: white; font-weight: 800; letter-spacing: 5px; text-transform: uppercase;">{{ FIXER_DATA.fixer_nom }}</p>
@@ -35,10 +44,10 @@
     <div class="container">
         <div style="background: white; padding: 30px; border-radius: 20px; margin-top: -60px; position: relative; z-index: 10; box-shadow: 0 15px 35px rgba(0,0,0,0.1);">
             <div style="display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:900; font-size:1.5rem;">PROGRESS</span><span id="progress-percentage" style="font-weight:900; color:var(--secondary);">0%</span></div>
-            <div style="background: #edf2f7; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 15px;"><div id="progress-bar" style="height: 100%; background: var(--secondary); width: 0%; transition: 0.6s;"></div></div>
+            <div style="background: #edf2f7; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 15px;"><div id="progress-bar" class="progress-bar"></div></div>
         </div>
 
-        <nav class="tabs-nav" style="display: flex; gap: 10px; margin-bottom: -1px;">
+        <nav class="tabs-nav">
             <button class="tab-btn active" data-tab="tab-territory">1. TERRITORY</button>
             <button class="tab-btn" data-tab="tab-pair1">2. GUARDIAN / LOCATION N°1</button>
             <button class="tab-btn" data-tab="tab-pair2">3. GUARDIAN / LOCATION N°2</button>
@@ -52,11 +61,22 @@
                     <div class="field-group"><label>Country</label><input type="text" name="pays" class="scouting-field" readonly></div>
                     <div class="field-group"><label>Region</label><input type="text" name="region" class="scouting-field" readonly></div>
                     <div class="field-group"><label>Target Cities*</label><input type="text" name="villes" class="scouting-field" required></div>
-                    <textarea name="traditions" class="scouting-field" rows="6" placeholder="Traditions & Culture"></textarea>
-                    <textarea name="histoire" class="scouting-field" rows="6" placeholder="History"></textarea>
-                    <textarea name="notes" class="scouting-field" rows="3" placeholder="General Production Notes"></textarea>
+                    <div class="field-group"><label>Population</label><input type="text" name="population" class="scouting-field"></div>
+                    <div class="field-group"><label>Languages</label><input type="text" name="langues" class="scouting-field"></div>
+                    <div class="field-group"><label>Planned Date / Climate</label><input type="text" name="climat" class="scouting-field"></div>
+                    <textarea name="histoire" class="scouting-field" rows="5" placeholder="History & Regional Context"></textarea>
+                    <textarea name="traditions" class="scouting-field" rows="5" placeholder="Traditions & Culture"></textarea>
+                    <div class="field-group"><label>Budget</label><input type="text" name="budget" class="scouting-field"></div>
+                    <textarea name="acces" class="scouting-field" rows="3" placeholder="Logistical Access*"></textarea>
+                    <textarea name="hebergement" class="scouting-field" rows="3" placeholder="Crew Accommodation*"></textarea>
+                    <textarea name="contraintes" class="scouting-field" rows="2" placeholder="Constraints"></textarea>
+                    <textarea name="arc" class="scouting-field" rows="2" placeholder="Narrative Arc"></textarea>
+                    <textarea name="moments" class="scouting-field" rows="2" placeholder="Key Moments"></textarea>
+                    <textarea name="sensibles" class="scouting-field" rows="2" placeholder="Sensitive Elements"></textarea>
+                    <textarea name="notes" class="scouting-field" rows="2" placeholder="General Notes"></textarea>
                 </div>
             </div>
+
             {% for i in [1, 2, 3] %}
             <div class="tab-content" id="tab-pair{{i}}">
                 <div class="sub-section">
@@ -64,36 +84,77 @@
                     <div class="fields-grid">
                         <input type="text" name="gardien{{i}}_nom_prenom" class="scouting-field" placeholder="Full Name*">
                         <input type="number" name="gardien{{i}}_age" class="scouting-field" placeholder="Age*">
+                        <input type="text" name="gardien{{i}}_fonction" class="scouting-field" placeholder="Role*">
+                        <textarea name="gardien{{i}}_savoir" class="scouting-field" rows="3" placeholder="Knowledge*"></textarea>
                         <textarea name="gardien{{i}}_histoire" class="scouting-field" rows="3" placeholder="Background*"></textarea>
+                        <textarea name="gardien{{i}}_psychologie" class="scouting-field" rows="3" placeholder="Psychology*"></textarea>
+                        <textarea name="gardien{{i}}_evaluation" class="scouting-field" rows="2" placeholder="On-Camera Potential"></textarea>
+                        <input type="text" name="gardien{{i}}_langues" class="scouting-field" placeholder="Languages">
+                        <input type="text" name="gardien{{i}}_contact" class="scouting-field" placeholder="Contact">
+                        <input type="text" name="gardien{{i}}_intermediaire" class="scouting-field" placeholder="Intermediate*">
                     </div>
                 </div>
                 <div class="sub-section" style="border-left-color: var(--primary);">
                     <h3 style="font-weight:900; margin-bottom:25px;">The Location n°{{i}}</h3>
                     <div class="fields-grid">
                         <input type="text" name="lieu{{i}}_nom" class="scouting-field" placeholder="Place Name*">
+                        <input type="text" name="lieu{{i}}_type" class="scouting-field" placeholder="Environment*">
+                        <input type="text" name="lieu{{i}}_gps_lat" class="scouting-field" placeholder="Lat*">
+                        <input type="text" name="lieu{{i}}_gps_long" class="scouting-field" placeholder="Long*">
                         <textarea name="lieu{{i}}_description" class="scouting-field" rows="4" placeholder="Visual Description*"></textarea>
+                        <textarea name="lieu{{i}}_cinegenie" class="scouting-field" rows="2" placeholder="Cinégenie"></textarea>
+                        <textarea name="lieu{{i}}_axes" class="scouting-field" rows="2" placeholder="Axes"></textarea>
+                        <textarea name="lieu{{i}}_points_vue" class="scouting-field" rows="2" placeholder="Points de vue"></textarea>
+                        <input type="text" name="lieu{{i}}_meteo" class="scouting-field" placeholder="Weather">
+                        <input type="text" name="lieu{{i}}_acces" class="scouting-field" placeholder="Access">
+                        <input type="text" name="lieu{{i}}_securite" class="scouting-field" placeholder="Security">
+                        <input type="text" name="lieu{{i}}_permis" class="scouting-field" placeholder="Permits">
+                        <input type="text" name="lieu{{i}}_elec" class="scouting-field" placeholder="Electricity">
+                        <input type="text" name="lieu{{i}}_espace" class="scouting-field" placeholder="Space">
+                        <input type="text" name="lieu{{i}}_son" class="scouting-field" placeholder="Sound">
+                        <input type="text" name="lieu{{i}}_moments" class="scouting-field" placeholder="Best Light">
                     </div>
                 </div>
             </div>
             {% endfor %}
+
             <div class="tab-content" id="tab-festivity">
                 <div class="fields-grid">
                     <input type="text" name="fete_nom" class="scouting-field" placeholder="Festival Name*">
-                    <textarea name="fete_visuel" class="scouting-field" rows="5" placeholder="Visual Substance"></textarea>
+                    <input type="text" name="fete_date" class="scouting-field" placeholder="Exact Date*">
+                    <input type="text" name="fete_gps_lat" class="scouting-field" placeholder="Lat*">
+                    <input type="text" name="fete_gps_long" class="scouting-field" placeholder="Long*">
+                    <textarea name="fete_origines" class="scouting-field" rows="5" placeholder="Origins"></textarea>
+                    <textarea name="fete_visuel" class="scouting-field" rows="5" placeholder="Visuals"></textarea>
+                    <textarea name="fete_deroulement" class="scouting-field" rows="4" placeholder="Sequence"></textarea>
+                    <input type="text" name="fete_responsable" class="scouting-field" placeholder="Organizer*">
                 </div>
             </div>
         </div>
 
-        <div style="display:flex; gap:25px; justify-content:flex-end; margin-top:40px; margin-bottom:100px;">
+        <section style="background:white; padding:50px; border-radius:25px; margin:60px 0; box-shadow:0 15px 40px rgba(0,0,0,0.05);">
+            <h3 style="font-weight:900;"><i data-lucide="camera" style="color:var(--secondary);"></i> FIELD MEDIA VAULT</h3>
+            <div id="drop-area" style="padding:80px; border:4px dashed #e2e8f0; border-radius:20px; text-align:center; cursor:pointer; background:#f9fbff;"><p style="font-weight:900; color:#64748b; font-size:1.2rem;">DRAG & DROP MEDIA HERE OR CLICK TO UPLOAD</p></div>
+            <input type="file" id="file-input" multiple accept="image/*,.pdf" style="display:none;">
+            <div id="files-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:25px; margin-top:40px;"></div>
+        </section>
+
+        <div style="display:flex; gap:25px; justify-content:flex-end; margin-bottom:100px;">
             <button id="btn-save" style="background:var(--primary); color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer;">💾 SAVE DRAFT</button>
             <button id="btn-submit" style="background:#27ae60; color:white; padding:25px 70px; border-radius:18px; font-weight:900; border:none; cursor:pointer;">🚀 SUBMIT TO PRODUCTION</button>
         </div>
     </div>
 
-    <button id="chat-toggle-btn" style="position: fixed; bottom: 30px; right: 30px; width: 75px; height: 75px; border-radius: 50%; background: var(--secondary); color: white; border: none; cursor: pointer;"><i data-lucide="message-circle"></i></button>
-    <div id="chat-panel" style="position: fixed; right: -500px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(15px); transition: 0.5s;"><div id="chat-messages" style="height: 80%; overflow-y: auto; padding: 25px;"></div></div>
-    <script>window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}};</script>
+    <button id="chat-toggle-btn" class="chat-toggle-btn"><i data-lucide="message-circle" style="width:38px; height:38px;"></i></button>
+    <div id="chat-panel" class="chat-panel">
+        <div class="chat-header">
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%; box-shadow:0 0 10px #2ecc71;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
+            <button id="chat-close-btn" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-zone"><textarea id="chat-input" placeholder="Type your message here..."></textarea><button id="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
+    </div>
+    <script>window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}}; lucide.createIcons();</script>
     <script src="/static/js/app.js"></script>
-    <script>lucide.createIcons();</script>
 </body>
 </html>
