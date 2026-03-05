@@ -1,3 +1,6 @@
+# DOC-OS VERSION : V.75.2 SUPRÊME MISSION CONTROL
+# ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -15,17 +18,28 @@ class Fixer(Base):
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
     photo_profil_url = Column(Text); notes_internes = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
-    def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
 
 class Reperage(Base):
     __tablename__ = 'reperages'
     id = Column(Integer, primary_key=True); token = Column(String(32), unique=True)
     statut = Column(String(20), default='brouillon'); progression_pourcent = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow); updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
     fixer_id = Column(Integer, ForeignKey('fixers.id')); fixer_nom = Column(String(255))
     pays = Column(String(100)); region = Column(String(255)); image_region = Column(Text); notes_admin = Column(Text)
-    villes = Column(Text); population = Column(String(255)); langues = Column(String(255)); climat = Column(String(255)); histoire = Column(Text); traditions = Column(Text); acces = Column(Text); hebergement = Column(Text); contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text); budget = Column(String(255)); notes = Column(Text)
-    fete_nom = Column(String(255)); fete_date = Column(String(255)); fete_gps_lat = Column(String(100)); fete_gps_long = Column(String(100)); fete_origines = Column(Text); fete_visuel = Column(Text); fete_deroulement = Column(Text); fete_responsable = Column(Text)
+    
+    # RESERVOIR 1 : TERRITORY (14 CHAMPS)
+    villes = Column(Text); population = Column(String(255)); langues = Column(String(255)); climat = Column(String(255))
+    histoire = Column(Text); traditions = Column(Text); acces = Column(Text); hebergement = Column(Text)
+    contraintes = Column(Text); arc = Column(Text); moments = Column(Text); sensibles = Column(Text)
+    budget = Column(String(255)); notes = Column(Text)
+    
+    # RESERVOIR 5 : FESTIVITY (8 CHAMPS)
+    fete_nom = Column(String(255)); fete_date = Column(String(255)); fete_gps_lat = Column(String(100)); fete_gps_long = Column(String(100))
+    fete_origines = Column(Text); fete_visuel = Column(Text); fete_deroulement = Column(Text); fete_responsable = Column(Text)
+    
     fixer_rel = relationship("Fixer", back_populates="reperages")
     gardiens = relationship("Gardien", back_populates="reperage", cascade="all, delete-orphan")
     lieux = relationship("Lieu", back_populates="reperage", cascade="all, delete-orphan")
@@ -33,19 +47,22 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
+        """SOUDURE DE FER : Extraction imbriquée pour App 2 & App 1 JS."""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
         pairs = {}
         for i in [1, 2, 3]:
             g = next((x for x in self.gardiens if x.index == i), None)
             l = next((x for x in self.lieux if x.index == i), None)
-            p_data = {}
-            if g: p_data.update(g.get_data())
-            if l: p_data.update(l.get_data())
-            pairs[f"pair_{i}"] = clean(p_data)
+            pair_data = {}
+            if g: pair_data.update(g.get_data())
+            if l: pair_data.update(l.get_data())
+            pairs[f"pair_{i}"] = clean(pair_data)
+        
         return {
             "id": self.id, "schema_id": self.id, "token": self.token, "statut": self.statut, 
             "title": f"{self.region} ({self.pays})", "region": self.region, "pays": self.pays,
-            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "villes": self.villes,
+            "fixer_nom": self.fixer_nom, "image_region": self.image_region, "notes_admin": self.notes_admin,
+            "villes": self.villes, "progression_pourcent": self.progression_pourcent,
             "territory": clean({"population": self.population, "langues": self.langues, "climat": self.climat, "histoire": self.histoire, "traditions": self.traditions, "acces": self.acces, "hebergement": self.hebergement, "contraintes": self.contraintes, "arc": self.arc, "moments": self.moments, "sensibles": self.sensibles, "budget": self.budget, "notes": self.notes}),
             "festivity": clean({"fete_nom": self.fete_nom, "fete_date": self.fete_date, "fete_gps_lat": self.fete_gps_lat, "fete_gps_long": self.fete_gps_long, "fete_origines": self.fete_origines, "fete_visuel": self.fete_visuel, "fete_deroulement": self.fete_deroulement, "fete_responsable": self.fete_responsable}),
             **pairs
