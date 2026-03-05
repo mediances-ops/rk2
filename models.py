@@ -1,4 +1,3 @@
-# DOC-OS VERSION : V.74.3 SUPRÊME MISSION CONTROL
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -14,7 +13,7 @@ class Fixer(Base):
     pays = Column(String(100)); region = Column(String(100)); bio = Column(Text); specialites = Column(Text)
     langues_parlees = Column(Text); langue_preferee = Column(String(10), default='FR')
     token_unique = Column(String(12), unique=True); actif = Column(Boolean, default=True)
-    notes_internes = Column(Text); photo_profil_url = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
+    photo_profil_url = Column(Text); notes_internes = Column(Text); created_at = Column(DateTime, default=datetime.utcnow)
     reperages = relationship("Reperage", back_populates="fixer_rel")
     def to_dict(self): return {c.name: getattr(self, c.name) for c in self.__table__.columns if getattr(self, c.name) is not None}
 
@@ -34,7 +33,6 @@ class Reperage(Base):
     messages = relationship("Message", back_populates="reperage", cascade="all, delete-orphan")
 
     def to_dict(self):
-        """SOUDURE V.74.3 : Structure imbriquée certifiée pour App 2 & App 1 JS."""
         def clean(d): return {k: v for k, v in d.items() if v not in [None, "", []]}
         pairs = {}
         for i in [1, 2, 3]:
@@ -44,7 +42,6 @@ class Reperage(Base):
             if g: pair_data.update(g.get_data())
             if l: pair_data.update(l.get_data())
             pairs[f"pair_{i}"] = clean(pair_data)
-        
         return {
             "id": self.id, "schema_id": self.id, "token": self.token, "statut": self.statut, 
             "title": f"{self.region} ({self.pays})", "region": self.region, "pays": self.pays,
@@ -72,4 +69,12 @@ class Media(Base):
     reperage = relationship("Reperage", back_populates="medias")
     def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
 
-class Message(Base
+class Message(Base):
+    __tablename__ = 'messages'; id = Column(Integer, primary_key=True); reperage_id = Column(Integer, ForeignKey('reperages.id')); auteur_type = Column(String(20)); auteur_nom = Column(String(255)); contenu = Column(Text); lu = Column(Boolean, default=False); created_at = Column(DateTime, default=datetime.utcnow)
+    reperage = relationship("Reperage", back_populates="messages")
+    def to_dict(self): return {c.name: getattr(self, c.name).isoformat() if isinstance(getattr(self, c.name), datetime) else getattr(self, c.name) for c in self.__table__.columns}
+
+def init_db(url):
+    engine = create_engine(url, pool_pre_ping=True, pool_size=10, max_overflow=20)
+    Base.metadata.create_all(engine); return engine
+def get_session(engine): return sessionmaker(bind=engine)()
