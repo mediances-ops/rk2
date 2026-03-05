@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.70.9 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.71.0 SUPRÊME MISSION CONTROL
 # ARCHITECTURE : RELATIONNELLE NORMALISÉE (5 RÉSERVOIRS)
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, create_engine
