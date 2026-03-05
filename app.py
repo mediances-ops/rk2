@@ -1,6 +1,6 @@
-# DOC-OS VERSION : V.73.8 SUPRÊME MISSION CONTROL
-# ÉTAT : STABLE - PROTOCOLE DE MUTATION DES FLUX (APP1 -> APP2 NEXUS)
-# ACTION : MAPPING schema_id & title ACTIVATED
+# DOC-OS VERSION : V.73.9 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - BLINDAGE BRIDGE (schema_id & title)
+# PROTOCOLE : FLASH RECEPTION COMPATIBLE
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -12,7 +12,6 @@ from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardie
 app = Flask(__name__)
 CORS(app)
 
-# --- CONFIGURATION ENVIRONNEMENT ---
 DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
@@ -57,12 +56,12 @@ def admin_dashboard():
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
 # =================================================================
-# 2. BRIDGE VERS APP 2 (MUTATION schema_id)
+# 2. BRIDGE BLINDÉ VERS APP 2 (MUTATION schema_id)
 # =================================================================
 
 @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 def api_submit_to_prod(id):
-    """Exécute la mutation des flux vers le Hub de l'App 2."""
+    """Exécute la Suture vers l'App 2 avec mutation d'étiquette."""
     session = get_db()
     rep = session.get(Reperage, id)
     if not rep: abort(404)
@@ -71,16 +70,16 @@ def api_submit_to_prod(id):
     rep.statut = 'soumis'
     session.commit()
     
-    # 2. Préparation du Payload avec mutation schema_id
+    # 2. Préparation du Bridge
     if DOCUGEN_URL:
         try:
-            # Récupération de la structure des 5 réservoirs (Soudure de Fer)
+            # Récupération de la substance complète (100 champs)
             payload = rep.to_dict()
             
-            # MUTATION IMPÉRATIVE : id -> schema_id
-            payload['schema_id'] = payload.pop('id')
+            # SUTURE : Mutation id -> schema_id (Anti-KeyError)
+            payload['schema_id'] = payload.get('id')
             
-            # ENRICHISSEMENT SÉMANTIQUE : Ajout du title pour le Studio App 2
+            # ENRICHISSEMENT : Génération du titre pour le Hub
             payload['title'] = f"{rep.region} ({rep.pays})"
             
             headers = {
@@ -88,16 +87,17 @@ def api_submit_to_prod(id):
                 "Content-Type": "application/json"
             }
             
-            # Expédition vers le Kernel Nexus
-            response = requests.post(DOCUGEN_URL, json=payload, headers=headers, timeout=25)
+            # Expédition FLASH (Timeout 10s)
+            response = requests.post(DOCUGEN_URL, json=payload, headers=headers, timeout=10)
             
-            if response.status_code == 200:
-                return jsonify({'status': 'success', 'bridge': 'delivered', 'target': 'nexus'})
+            if response.status_code in [200, 201, 202]:
+                return jsonify({'status': 'success', 'bridge': 'delivered'})
             else:
-                return jsonify({'status': 'error', 'bridge': 'rejected', 'code': response.status_code}), 502
+                return jsonify({'status': 'partial_success', 'bridge': 'hub_rejected', 'code': response.status_code})
                 
         except Exception as e:
-            return jsonify({'status': 'error', 'message': str(e)}), 500
+            # Anti-502 : Le repérage est soumis localement même si le Hub est injoignable
+            return jsonify({'status': 'partial_success', 'bridge': 'hub_timeout'}), 200
             
     return jsonify({'status': 'success', 'bridge': 'offline'})
 
@@ -136,10 +136,7 @@ def api_sync_engine(id):
     if 'progression_pourcent' in data: rep.progression_pourcent = int(data['progression_pourcent'])
     session.commit(); return jsonify({'status': 'success'})
 
-# =================================================================
-# 4. GESTION MÉDIAS & CHAT
-# =================================================================
-
+# --- MÉDIAS & CHAT (V.69+) ---
 @app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
 @nocache
 def api_medias(id):
@@ -177,10 +174,7 @@ def api_chat(id):
     data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
 
-# =================================================================
-# 5. ADMINISTRATION & IMPORT
-# =================================================================
-
+# --- ADMINISTRATION ---
 @app.route('/admin/fixers')
 def admin_fixers_list():
     session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
@@ -200,6 +194,7 @@ def admin_update_status(id):
     session = get_db(); rep = session.get(Reperage, id); data = request.json
     if 'statut' in data: rep.statut = data['statut']
     if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
+    if 'image_region' in data: rep.image_region = data['image_region']
     if 'fixer_id' in data:
         f = session.get(Fixer, int(data['fixer_id']))
         if f: rep.fixer_id = f.id; rep.fixer_nom = f"{f.prenom} {f.nom}"
@@ -216,7 +211,7 @@ def admin_delete_rep(id):
 
 @app.route('/admin/reperage/<int:id>/print')
 def admin_print(id):
-    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
+    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
     pairs = []
     for i in [1, 2, 3]:
         g = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
@@ -232,22 +227,9 @@ def route_form_fixer(token):
 
 @app.route('/admin/reperages/create', methods=['POST'])
 def admin_create_rep():
-    session = get_db(); data = request.json; fixer = session.get(Fixer, data.get('fixer_id'))
-    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=data.get('fixer_id'), fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
+    session = get_db(); data = request.json; fixer = session.get(Fixer, int(data.get('fixer_id'))) if data.get('fixer_id') else None
+    new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), fixer_id=fixer.id if fixer else None, fixer_nom=f"{fixer.prenom} {fixer.nom}" if fixer else "Inconnu", image_region=data.get('image_region'), statut='brouillon')
     session.add(new_rep); session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/admin/reperages/import', methods=['POST'])
-def admin_import_json():
-    session = get_db(); data = request.json
-    try:
-        new_rep = Reperage(token=secrets.token_urlsafe(16), region=data.get('region'), pays=data.get('pays'), image_region=data.get('image_region'), statut='brouillon', villes=data.get('villes'))
-        session.add(new_rep); session.flush()
-        for i in [1, 2, 3]:
-            pair = data.get(f'pair_{i}', {})
-            if pair.get('gardien'): session.add(Gardien(reperage_id=new_rep.id, index=i, **pair['gardien']))
-            if pair.get('location'): session.add(Lieu(reperage_id=new_rep.id, index=i, **pair['location']))
-        session.commit(); return jsonify({'status': 'success', 'id': new_rep.id})
-    except Exception as e: return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
