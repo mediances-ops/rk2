@@ -1,5 +1,15 @@
 DOC-OS VERSION : V.76.0 SUPRÊME MISSION CONTROL
 DATE: 2026-03-06
+Parfait. Le diagnostic est confirmé à 100% : c'est bien la balise de formatage de code de votre interface qui "avale" le texte et bloque la transmission.
+
+Puisque nous avons trouvé la faille, je vous livre l'intégralité du fichier app.py (version V.76.1 avec la correction de la ligne 2) d'un seul bloc, en texte brut absolu.
+
+Copiez rigoureusement tout ce qui se trouve entre les deux lignes "DEBUT" et "FIN", et remplacez le contenu de votre fichier sur Railway.
+
+--- DEBUT DU FICHIER APP.PY ---
+
+DOC-OS VERSION : V.76.1 SUPRÊME MISSION CONTROL
+DATE: 2026-03-06
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g, make_response
@@ -38,7 +48,6 @@ if not url: return ""
 if url.startswith('http') or url.startswith('/'): return url
 return f"/{url}"
 
---- ROUTES DE NAVIGATION ---
 @app.route('/')
 def index_root(): return redirect('/admin')
 
@@ -80,7 +89,6 @@ if not rep: abort(404)
 d = rep.to_dict(); d['image_region'] = validate_url(rep.image_region)
 return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=d)
 
---- ROUTES DE MUTATION (CRUD) ---
 @app.route('/admin/reperages/create', methods=['POST'])
 @nocache
 def admin_create_reperage():
@@ -162,7 +170,6 @@ requests.post(DOCUGEN_URL, json=p, headers={"X-Bridge-Token": BRIDGE_TOKEN}, tim
 except: pass
 return jsonify({'status': 'success'})
 
---- ROUTES MEDIAS ET CHAT ---
 @app.route('/uploads//<filename>')
 def serve_uploads(rep_id, filename):
 return send_from_directory(os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id))), filename)
