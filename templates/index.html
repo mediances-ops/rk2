@@ -356,9 +356,10 @@ window.deleteMedia = async (id) => {
 
 // N'OUBLIE PAS d'appeler ces fonctions dans window.onload :
 window.onload = () => {
-    populateForm();
-    initFileUpload();
-    loadMedias();
+    populateForm();    // Affiche tes données (Territoire, etc.)
+    initChat();        // Active le bouton Envoyer
+    loadMessages();    // Affiche les messages existants
+    loadMedias();      // Affiche les photos
 };
 
 // 1. INITIALISATION DU CHAT
