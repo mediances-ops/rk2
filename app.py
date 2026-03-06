@@ -64,7 +64,7 @@ def admin_fixers_list():
     if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
     if pays: query = query.filter(Fixer.pays == pays)
     return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=[p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]])
-
+    
 @app.route('/admin/reperage/<int:id>/print')
 @nocache
 def admin_print(id):
