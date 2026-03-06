@@ -221,6 +221,16 @@ def route_form_fixer(token):
     if not rep: abort(404)
     return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=rep.to_dict())
 
+# ROUTE : MARQUER COMME LU (Dashboard Admin)
+@app.route('/api/reperages/<int:id>/read', methods=['POST'])
+@nocache
+def api_mark_as_read(id):
+    session = get_db()
+    # On passe tous les messages non-lus du fixer à "True" pour ce repérage
+    session.query(Message).filter_by(reperage_id=id, auteur_type='fixer', lu=False).update({Message.lu: True})
+    session.commit()
+    return jsonify({'status': 'success'})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
