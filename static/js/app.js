@@ -20,26 +20,42 @@ async function loadReperage() {
     try {
         const res = await fetch(`${API_URL}/reperages/${currentReperageId}?t=${new Date().getTime()}`);
         const data = await res.json();
-        document.querySelectorAll('.scouting-field').forEach(input => {
-            const name = input.name;
-            let val = data[name]; 
-            if (val === undefined || val === null) {
-                // Recherche dans les tiroirs (Territory, Festivity, Pairs)
-                if (data.territory && data.territory[name] !== undefined) val = data.territory[name];
-                else if (data.festivity && data.festivity[name] !== undefined) val = data.festivity[name];
-                else {
-                    for (let i = 1; i <= 3; i++) {
-                        const pair = data[`pair_${i}`];
-                        const key = name.replace(`gardien${i}_`, '').replace(`lieu${i}_`, '');
-                        if (pair && pair[key] !== undefined) val = pair[key];
-                    }
-                }
+        
+        // 1. CRÉATION D'UNE COPIE "PLATE" DES DONNÉES
+        // On extrait tout des tiroirs (territory, festivity, pairs) pour tout mettre au même niveau
+        let flatData = { ...data };
+        
+        if (data.territory) Object.assign(flatData, data.territory);
+        if (data.festivity) Object.assign(flatData, data.festivity);
+        
+        for (let i = 1; i <= 3; i++) {
+            const pair = data[`pair_${i}`];
+            if (pair) {
+                Object.keys(pair).forEach(key => {
+                    // On recrée les clés complètes attendues par le formulaire
+                    flatData[`gardien${i}_${key}`] = pair[key];
+                    flatData[`lieu${i}_${key}`] = pair[key];
+                });
             }
-            if (val !== undefined && val !== null) input.value = val;
+        }
+
+        // 2. DISTRIBUTION DANS LE FORMULAIRE
+        document.querySelectorAll('.scouting-field').forEach(field => {
+            const val = flatData[field.name];
+            
+            if (val !== undefined && val !== null) {
+                // Pour les textarea (histoire) et les inputs classiques
+                field.value = val;
+            }
         });
+
         if (data.statut === 'soumis' || data.statut === 'validé') lockInterface();
         calculateProgress();
-    } catch (e) { console.error("Sync error", e); }
+        
+        console.log("✅ FLUX RÉTABLI : Affichage synchronisé avec Railway");
+    } catch (e) { 
+        console.error("❌ ERREUR DE CHARGEMENT :", e); 
+    }
 }
 
 // --- SAUVEGARDE & PROGRESSION ---
