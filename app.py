@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardien, Lieu
 
 app = Flask(__name__)
-@app.roote('/ping')
+@app.route('/ping')
 def ping(): return "MOTEUR ACTIF"
 CORS(app)
 
