@@ -177,20 +177,4 @@ def api_medias(id):
 @nocache
 def api_delete_media(media_id):
     session = get_db(); m = session.get(Media, media_id); file_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier))
-    try: os.remove(file_path)
-    except: pass
-    session.delete(m); session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-@nocache
-def api_chat(id):
-    session = get_db()
-    if request.method == 'GET':
-        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
-        return jsonify([m.to_dict() for m in msgs])
-    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
-    session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    try: os.
