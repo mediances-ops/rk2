@@ -46,7 +46,9 @@ def index_root():
     return redirect('/admin')
 
 @app.route('/admin')
+
 @nocache
+
 def admin_dashboard():
     session = get_db(); query = session.query(Reperage)
     reps = query.order_by(Reperage.id.desc()).all(); serialized = []
