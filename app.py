@@ -138,6 +138,80 @@ def api_medias(id):
     session.commit()
     return jsonify({'status': 'success'})
 
+# --- ROUTE MANQUANTE 1 : MISE À JOUR DEPUIS LE DASHBOARD (BOUTON BLEU) ---
+@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
+@nocache
+def admin_update_status(id):
+    session = get_db()
+    rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    data = request.json
+    
+    # Mise à jour des champs éditables dans le modal bleu
+    if 'statut' in data: rep.statut = data['statut']
+    if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
+    if 'region' in data: rep.region = data['region']
+    if 'pays' in data: rep.pays = data['pays']
+    if 'image_region' in data: rep.image_region = data['image_region']
+    
+    # Gestion de l'assignation du Fixer
+    if 'fixer_id' in data:
+        f_id = data['fixer_id']
+        if f_id and str(f_id).isdigit():
+            fixer = session.get(Fixer, int(f_id))
+            if fixer:
+                rep.fixer_id = fixer.id
+                rep.fixer_nom = f"{fixer.prenom} {fixer.nom}"
+    
+    session.commit()
+    return jsonify({'status': 'success'})
+
+# --- ROUTE MANQUANTE 2 : SOUMISSION FINALE DU FIXER ---
+@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+@nocache
+def api_submit(id):
+    session = get_db()
+    rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    rep.statut = 'soumis'
+    session.commit()
+    
+    # Envoi vers QuillOS (Bridge) si configuré
+    if DOCUGEN_URL:
+        try:
+            p = rep.to_dict()
+            p['schema_id'] = rep.id
+            p['title'] = f"{rep.region} ({rep.pays})"
+            requests.post(DOCUGEN_URL, json=p, headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=5)
+        except: pass
+        
+    return jsonify({'status': 'success'})
+
+# --- ROUTE MANQUANTE 3 : CRÉATION DE DOSSIER ---
+@app.route('/admin/reperages/create', methods=['POST'])
+@nocache
+def admin_create_reperage():
+    session = get_db()
+    data = request.json
+    f_id = data.get('fixer_id')
+    f_nom = None
+    if f_id and str(f_id).isdigit():
+        f = session.get(Fixer, int(f_id))
+        if f: f_nom = f"{f.prenom} {f.nom}"
+    
+    rep = Reperage(
+        token=secrets.token_hex(16),
+        region=str(data.get('region', '')).strip(),
+        pays=str(data.get('pays', '')).strip(),
+        fixer_id=int(f_id) if f_id else None,
+        fixer_nom=f_nom,
+        statut='brouillon'
+    )
+    session.add(rep)
+    session.commit()
+    return jsonify({'status': 'success', 'id': rep.id})
+
+
 # --- AUTRES ROUTES ---
 
 @app.route('/formulaire/<token>')
