@@ -177,7 +177,26 @@
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
-        function openAdminChat(id) { currentChatId = id; document.getElementById('adminChatPanel').classList.add('active'); loadAdminMessages(); }
+      async function openAdminChat(id) {
+    currentChatId = id;
+    document.getElementById('adminChatPanel').classList.add('active');
+
+    // --- SOUDURE CHIRURGICALE : DISPARITION DU BADGE ---
+    try {
+        // 1. On informe Railway que les messages sont lus
+        await fetch(`/api/reperages/${id}/read`, { method: 'POST' });
+        
+        // 2. On cherche le badge rouge "1 NEW" dans le tableau
+        const badge = document.querySelector(`span.chat-notif[onclick*="openAdminChat(${id})"]`);
+        if (badge) {
+            // 3. On le remplace immédiatement par l'icône bleue standard
+            badge.outerHTML = `<button onclick="openAdminChat(${id})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>`;
+            lucide.createIcons(); 
+        }
+    } catch (e) { console.error("Erreur Sync Notification:", e); }
+
+    loadAdminMessages();
+}
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
 
         async function executeImport() {
