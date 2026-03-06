@@ -28,43 +28,43 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 async function loadReperage() {
     try {
-        const res = await fetch(`${API_URL}/reperages/${REPERAGE_ID}?t=${Date.now()}`);
+        const res = await fetch(`${API_URL}/reperages/${currentReperageId}?t=${Date.now()}`);
         const data = await res.json();
         
-        // On scanne tous les champs du formulaire
-        document.querySelectorAll('.scouting-field').forEach(field => {
-            const name = field.name;
-            let value = null;
-
-            // STRATÉGIE DE RECHERCHE DANS LES TIROIRS (MODELS.PY)
-            if (data[name] !== undefined) {
-                value = data[name]; // Racine (ex: villes)
-            } else if (data.territory && data.territory[name] !== undefined) {
-                value = data.territory[name]; // Tiroir Territory (ex: histoire)
-            } else if (data.festivity && data.festivity[name] !== undefined) {
-                value = data.festivity[name]; // Tiroir Festivity
-            } else {
-                // Recherche dans les paires 1, 2, 3
-                for (let i = 1; i <= 3; i++) {
-                    const pair = data[`pair_${i}`];
-                    if (pair) {
-                        const cleanKey = name.replace(`gardien${i}_`, '').replace(`lieu${i}_`, '');
-                        if (pair[cleanKey] !== undefined) value = pair[cleanKey];
-                    }
-                }
+        // 1. ON VIDE LES TIROIRS : On met tout dans un seul dictionnaire à plat
+        let flatData = { ...data }; 
+        
+        if (data.territory) Object.assign(flatData, data.territory);
+        if (data.festivity) Object.assign(flatData, data.festivity);
+        
+        for (let i = 1; i <= 3; i++) {
+            const pair = data[`pair_${i}`];
+            if (pair) {
+                Object.keys(pair).forEach(key => {
+                    // On crée les noms exacts attendus par tes inputs HTML
+                    flatData[`gardien${i}_${key}`] = pair[key];
+                    flatData[`lieu${i}_${key}`] = pair[key];
+                });
             }
+        }
 
-            // Attribution de la valeur
-            if (value !== null && value !== undefined) {
-                field.value = value;
+        // 2. ON REMPLIT DE FORCE : On parcourt chaque champ du formulaire
+        document.querySelectorAll('.scouting-field').forEach(field => {
+            const savedValue = flatData[field.name];
+            
+            // Si on a une valeur en base pour ce nom de champ, on l'affiche
+            if (savedValue !== undefined && savedValue !== null) {
+                field.value = savedValue;
             }
         });
 
-        if (data.statut === 'soumis' || data.statut === 'validé') lockInterface();
-        calculateProgress();
-    } catch (e) { console.error("Sync Error:", e); }
-}
+        console.log("✅ AFFICHAGE FORCÉ : Les données sont maintenant visibles.");
+        if (typeof calculateProgress === 'function') calculateProgress();
 
+    } catch (e) { 
+        console.error("❌ ERREUR CRITIQUE CHARGEMENT :", e); 
+    }
+}
 /**
  * 2. SAUVEGARDE UNITAIRE
  */
