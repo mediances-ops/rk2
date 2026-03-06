@@ -270,6 +270,39 @@ def api_chat(id):
     session.commit()
     return jsonify({'status': 'success'}), 201
 
+@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
+@nocache
+def admin_edit_fixer(id):
+    session = get_db()
+    fixer = session.get(Fixer, id)
+    if not fixer: 
+        abort(404)
+    
+    if request.method == 'POST':
+        # 1. Traçabilité des Types & Mise à jour
+        fixer.nom = request.form.get('nom')
+        fixer.prenom = request.form.get('prenom')
+        fixer.fonction = request.form.get('fonction')
+        fixer.societe = request.form.get('societe')
+        fixer.bio = request.form.get('bio')
+        fixer.photo_profil_url = request.form.get('photo_profil_url')
+        fixer.email = request.form.get('email')
+        fixer.telephone = request.form.get('telephone')
+        fixer.pays = request.form.get('pays')
+        fixer.region = request.form.get('region')
+        fixer.notes_internes = request.form.get('notes_internes')
+        fixer.specialites = request.form.get('specialites')
+        fixer.langues_parlees = request.form.get('langues_parlees')
+        fixer.langue_preferee = request.form.get('langue_preferee')
+        # Conversion du statut (select 0/1 vers Booléen)
+        fixer.actif = request.form.get('actif') == '1'
+        
+        session.commit()
+        return redirect(url_for('admin_fixers_list'))
+    
+    # 2. Affichage du template (Assurez-vous du nom du fichier ci-dessous)
+    return render_template('admin_fixer_edit_v2.html', fixer=fixer, readonly=False)
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
