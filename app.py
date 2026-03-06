@@ -1,19 +1,17 @@
-# DOC-OS VERSION : V.76.2.4 SUPRÊME
-# DATE : 2026-03-06
-# MODIFICATIONS : Alignement forcé à la marge zéro pour Gunicorn.
+# DOC-OS VERSION : V.69.5 SUPRÊME MISSION CONTROL
+# ÉTAT : STABLE - ENHANCED MEDIA TYPE DETECTION (PHOTO/PDF)
 
-import os, json, secrets, requests, io, zipfile, shutil, re
+import os, json, secrets, requests, io, zipfile, shutil
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g, make_response
+from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g
 from flask_cors import CORS
 from sqlalchemy import text, or_
-from werkzeug.utils import secure_filename
 from models import init_db, get_session, Reperage, Fixer, Media, Message, Gardien, Lieu
 
 app = Flask(__name__)
 CORS(app)
 
-DB_URL = os.environ.get('DATABASE_URL', 'postgresql://localhost/postgres').replace('postgres://', 'postgresql://', 1)
+DB_URL = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://', 1)
 app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_PATH', '/data/uploads')
 BRIDGE_TOKEN = os.environ.get('BRIDGE_SECRET_TOKEN', 'DocuGenPass2026')
 DOCUGEN_URL = os.environ.get('DOCUGEN_API_URL')
@@ -22,64 +20,79 @@ engine = init_db(DB_URL)
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     session = g.pop('db_session', None)
-    if session is not None:
-        session.close()
+    if session is not None: session.close()
 
 def get_db():
-    if 'db_session' not in g:
-        g.db_session = get_session(engine)
+    if 'db_session' not in g: g.db_session = get_session(engine)
     return g.db_session
 
-def nocache(view):
-    def no_cache_view(*args, **kwargs):
-        response = make_response(view(*args, **kwargs))
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        return response
-    no_cache_view.__name__ = view.__name__
-    return no_cache_view
-
-def validate_url(url):
-    if not url: return "https://destinationsetcuisines.com/doc/multilingue/bannerreperage.jpg"
-    if url.startswith('http') or url.startswith('/'): return url
-    return f"/{url}"
-
 @app.route('/')
-def index_root():
-    return redirect('/admin')
+def index_root(): return redirect('/admin')
 
 @app.route('/admin')
-@nocache
 def admin_dashboard():
-    session = get_db()
-    query = session.query(Reperage)
-    reps = query.order_by(Reperage.id.desc()).all()
-    serialized = []
+    session = get_db(); query = session.query(Reperage)
+    p_f = request.args.get('pays'); s_f = request.args.get('statut')
+    if p_f: query = query.filter(Reperage.pays == p_f)
+    if s_f: query = query.filter(Reperage.statut == s_f)
+    reps = query.order_by(Reperage.id.desc()).all(); serialized = []
     for r in reps:
-        f = session.get(Fixer, r.fixer_id) if r.fixer_id else None
+        f = session.get(Fixer, r.fixer_id)
         unread = session.query(Message).filter_by(reperage_id=r.id, auteur_type='fixer', lu=False).count()
         serialized.append({'reperage': r.to_dict(), 'fixer': f.to_dict() if f else None, 'unread_count': unread})
-    stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
-    pays_list = [p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]]
-    return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=pays_list)
+    stats = {'total': session.query(Reperage).count(), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
+    return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-@app.route('/admin/fixers')
-@nocache
-def admin_fixers_list():
-    session = get_db()
-    query = session.query(Fixer)
-    search, pays = request.args.get('search'), request.args.get('pays')
-    if search: query = query.filter(or_(Fixer.nom.ilike(f'%{search}%'), Fixer.prenom.ilike(f'%{search}%')))
-    if pays: query = query.filter(Fixer.pays == pays)
-    p_list = [p[0] for p in session.query(Fixer.pays).distinct().all() if p[0]]
-    return render_template('admin_fixers.html', fixers=query.order_by(Fixer.nom.asc()).all(), pays_list=p_list)
+@app.route('/admin/fixer/new', methods=['POST'])
+def admin_new_fixer():
+    session = get_db(); f = Fixer(token_unique=secrets.token_hex(6), created_at=datetime.utcnow())
+    for k in request.form:
+        if hasattr(f, k):
+            if k == 'actif': setattr(f, k, request.form[k] == '1')
+            else: setattr(f, k, request.form[k])
+    session.add(f); session.commit(); return redirect('/admin/fixers')
+
+@app.route('/admin/fixer/<int:id>/edit', methods=['GET', 'POST'])
+def admin_edit_fixer(id):
+    session = get_db(); fixer = session.get(Fixer, id)
+    if request.method == 'POST':
+        for k in request.form:
+            if hasattr(fixer, k):
+                if k == 'actif': setattr(fixer, k, request.form[k] == '1')
+                else: setattr(fixer, k, request.form[k])
+        session.commit(); return redirect('/admin/fixers')
+    return render_template('admin_fixer_edit_v2.html', fixer=fixer)
+
+@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
+def api_sync_engine(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    if request.method == 'GET': return jsonify(rep.to_dict())
+    if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
+    data = request.json
+    PROTECTED = ['region', 'pays', 'token', 'id', 'statut', 'fixer_id']
+    for k, v in data.items():
+        if hasattr(rep, k) and k not in PROTECTED and not isinstance(v, (list, dict)): setattr(rep, k, v)
+    for i in [1, 2, 3]:
+        g_data = {key.replace(f'gardien{i}_', ''): val for key, val in data.items() if key.startswith(f'gardien{i}_')}
+        if g_data:
+            g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first()
+            if not g_obj: g_obj = Gardien(reperage_id=rep.id, index=i); session.add(g_obj)
+            for k, v in g_data.items():
+                if hasattr(g_obj, k):
+                    if k == 'age': setattr(g_obj, k, int(v) if (v and str(v).isdigit()) else None)
+                    else: setattr(g_obj, k, v)
+        l_data = {key.replace(f'lieu{i}_', ''): val for key, val in data.items() if key.startswith(f'lieu{i}_')}
+        if l_data:
+            l_obj = session.query(Lieu).filter_by(reperage_id=rep.id, index=i).first()
+            if not l_obj: l_obj = Lieu(reperage_id=rep.id, index=i); session.add(l_obj)
+            for k, v in l_data.items():
+                if hasattr(l_obj, k): setattr(l_obj, k, v)
+    session.commit(); return jsonify({'status': 'success', 'progression': rep.progression_pourcent})
 
 @app.route('/admin/reperage/<int:id>/print')
-@nocache
 def admin_print(id):
-    session = get_db()
-    rep = session.get(Reperage, id)
-    if not rep: abort(404)
-    fixer = session.get(Fixer, rep.fixer_id) if rep.fixer_id else None
+    session = get_db(); rep = session.get(Reperage, id); fixer = session.get(Fixer, rep.fixer_id)
     pairs = []
     for i in [1, 2, 3]:
         g_obj = session.query(Gardien).filter_by(reperage_id=id, index=i).first()
@@ -87,115 +100,7 @@ def admin_print(id):
         if g_obj or l_obj: pairs.append({'index': i, 'gardien': g_obj, 'lieu': l_obj})
     return render_template('print_reperage.html', rep=rep, fixer=fixer, pairs=pairs)
 
-@app.route('/admin/reperages/create', methods=['POST'])
-@nocache
-def admin_create_reperage():
-    session, data = get_db(), request.json
-    f_id, f_nom = data.get('fixer_id'), None
-    if f_id and str(f_id).isdigit():
-        f = session.get(Fixer, int(f_id))
-        if f: f_nom = f"{f.prenom} {f.nom}"
-    rep = Reperage(token=secrets.token_hex(16), region=str(data.get('region', '')).strip(), pays=str(data.get('pays', '')).strip(), fixer_id=int(f_id) if f_id and str(f_id).isdigit() else None, fixer_nom=f_nom, image_region=str(data.get('image_region', '')).strip(), notes_admin=str(data.get('notes_admin', '')).strip(), statut='brouillon')
-    session.add(rep); session.commit()
-    return jsonify({'status': 'success', 'id': rep.id})
-
-@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
-@nocache
-def admin_update_status(id):
-    session, rep, data = get_db(), get_db().get(Reperage, id), request.json
-    if not rep: abort(404)
-    if 'statut' in data: rep.statut = data['statut']
-    if 'notes_admin' in data: rep.notes_admin = data['notes_admin']
-    if 'region' in data: rep.region = data['region']
-    if 'pays' in data: rep.pays = data['pays']
-    if 'image_region' in data: rep.image_region = data['image_region']
-    if 'fixer_id' in data and str(data['fixer_id']).isdigit():
-        f = session.get(Fixer, int(data['fixer_id']))
-        if f: rep.fixer_id = f.id; rep.fixer_nom = f"{f.prenom} {f.nom}"
-    session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
-@nocache
-def admin_delete_reperage(id):
-    session = get_db(); rep = session.get(Reperage, id)
-    if rep: session.delete(rep); session.commit()
-    return jsonify({'status': 'success'})
-
-@app.route('/formulaire/<token>')
-def route_form_fixer(token):
-    session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
-    if not rep: abort(404)
-    d = rep.to_dict(); d['image_region'] = validate_url(rep.image_region)
-    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=d)
-
-@app.route('/api/reperages/<int:id>', methods=['GET', 'PUT'])
-@nocache
-def api_sync_engine(id):
-    session = get_db(); rep = session.get(Reperage, id)
-    if not rep: abort(404)
-    if request.method == 'GET': return jsonify(rep.to_dict())
-    data = request.json
-    fields = ['villes', 'population', 'langues', 'climat', 'histoire', 'traditions', 'acces', 'hebergement', 'contraintes', 'arc', 'moments', 'sensibles', 'budget', 'notes', 'fete_nom', 'fete_date', 'fete_gps_lat', 'fete_gps_long', 'fete_origines', 'fete_visuel', 'fete_deroulement', 'fete_responsable', 'image_region', 'progression_pourcent']
-    for f in fields:
-        if f in data:
-            if f == 'progression_pourcent': setattr(rep, f, int(data[f]) if str(data[f]).isdigit() else 0)
-            else: setattr(rep, f, str(data[f]).strip())
-    for i in [1, 2, 3]:
-        g_obj = session.query(Gardien).filter_by(reperage_id=rep.id, index=i).first() or Gardien(reperage_id=rep.id, index=i)
-        if g_obj not in session: session.add(g_obj)
-        for f in ['nom_prenom', 'age', 'fonction', 'savoir', 'histoire', 'psychologie', 'evaluation', 'langues', 'contact', 'intermediaire']:
-            val = data.get(f"gardien{i}_{f}")
-            if val is not None:
-                if f == 'age': setattr(g_obj, f, int(val) if str(val).isdigit() else None)
-                else: setattr(g_obj, f, str(val).strip())
-        l_obj = session.query(Lieu).filter_by(reperage_id=rep.id, index=i).first() or Lieu(reperage_id=rep.id, index=i)
-        if l_obj not in session: session.add(l_obj)
-        for f in ['nom', 'type', 'gps_lat', 'gps_long', 'description', 'cinegenie', 'axes', 'points_vue', 'moments', 'son', 'acces', 'securite', 'elec', 'espace', 'meteo', 'permis']:
-            val = data.get(f"lieu{i}_{f}")
-            if val is not None: setattr(l_obj, f, str(val).strip())
-    session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
-@nocache
-def api_submit(id):
-    session = get_db(); rep = session.get(Reperage, id); if not rep: abort(404)
-    rep.statut = 'soumis'; session.commit()
-    if DOCUGEN_URL:
-        try:
-            p = rep.to_dict(); p['schema_id'] = p.get('id'); p['title'] = f"{rep.region} ({rep.pays})"
-            requests.post(DOCUGEN_URL, json=p, headers={"X-Bridge-Token": BRIDGE_TOKEN}, timeout=10)
-        except: pass
-    return jsonify({'status': 'success'})
-
-@app.route('/uploads/<int:rep_id>/<filename>')
-def serve_uploads(rep_id, filename):
-    safe_fn = secure_filename(filename); d = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
-    return send_from_directory(d, safe_fn)
-
-@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
-@nocache
-def api_medias(id):
-    session = get_db()
-    if request.method == 'GET':
-        ms = session.query(Media).filter_by(reperage_id=id).all()
-        return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier, 'type': m.type} for m in ms])
-    f = request.files['file']; ext = os.path.splitext(f.filename)[1].lower(); fn = secrets.token_hex(8) + "_" + secure_filename(f.filename)
-    p = os.path.join(app.config['UPLOAD_FOLDER'], str(id)); os.makedirs(p, exist_ok=True); f.save(os.path.join(p, fn))
-    session.add(Media(reperage_id=id, nom_original=f.filename, nom_fichier=fn, chemin_fichier=f"{id}/{fn}", type='pdf' if ext == '.pdf' else 'photo'))
-    session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/api/medias/<int:media_id>', methods=['DELETE'])
-@nocache
-def api_delete_media(media_id):
-    session = get_db(); m = session.get(Media, media_id); if not m: abort(404)
-    fp = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier))
-    try:
-        if os.path.exists(fp): os.remove(fp)
-    except: pass
-    session.delete(m); session.commit(); return jsonify({'status': 'success'})
-
 @app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
-@nocache
 def api_chat(id):
     session = get_db()
     if request.method == 'GET':
@@ -204,6 +109,54 @@ def api_chat(id):
     data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
     session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
 
+@app.route('/api/reperages/<int:id>/medias', methods=['GET', 'POST'])
+def api_medias(id):
+    session = get_db()
+    if request.method == 'GET':
+        ms = session.query(Media).filter_by(reperage_id=id).all()
+        return jsonify([{'id': m.id, 'nom_fichier': m.nom_fichier, 'type': m.type} for m in ms])
+    
+    file = request.files['file']
+    # TRACABILITÉ : Détection intelligente du type (Photo vs PDF)
+    ext = os.path.splitext(file.filename)[1].lower()
+    media_type = 'pdf' if ext == '.pdf' else 'photo'
+    
+    filename = secrets.token_hex(8) + "_" + file.filename
+    path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+    os.makedirs(path, exist_ok=True)
+    file.save(os.path.join(path, filename))
+    
+    m = Media(reperage_id=id, nom_original=file.filename, nom_fichier=filename, chemin_fichier=f"{id}/{filename}", type=media_type)
+    session.add(m); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/api/medias/<int:media_id>', methods=['DELETE'])
+def api_delete_media(media_id):
+    session = get_db(); m = session.get(Media, media_id)
+    if not m: abort(404)
+    rep = session.get(Reperage, m.reperage_id)
+    if rep.statut != 'brouillon': return jsonify({'error': 'Locked'}), 403
+    try:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier)
+        if os.path.exists(file_path): os.remove(file_path)
+    except: pass
+    session.delete(m); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/admin/reperage/<int:id>/delete', methods=['DELETE'])
+def admin_delete_rep(id):
+    session = get_db(); rep = session.get(Reperage, id)
+    if not rep: abort(404)
+    try:
+        folder_path = os.path.join(app.config['UPLOAD_FOLDER'], str(id))
+        if os.path.exists(folder_path): shutil.rmtree(folder_path)
+    except: pass
+    session.delete(rep); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/formulaire/<token>')
+def route_form_fixer(token):
+    session = get_db(); rep = session.query(Reperage).filter_by(token=token).first()
+    if not rep: abort(404)
+    d = rep.to_dict(); d['image_region'] = rep.image_region 
+    return render_template('index.html', REPERAGE_ID=rep.id, FIXER_DATA=d)
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5000)); app.run(host='0.0.0.0', port=port)
