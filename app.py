@@ -1,4 +1,4 @@
-# DOC-OS VERSION : V.76.1 SUPRÊME MISSION CONTROL
+# DOC-OS VERSION : V.76.2 SUPRÊME
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, abort, send_file, send_from_directory, g, make_response
@@ -39,8 +39,7 @@ def validate_url(url):
 
 @app.route('/')
 def index_root(): return redirect('/admin')
-
-@app.route('/admin')
+    @app.route('/admin')
 @nocache
 def admin_dashboard():
     session = get_db(); query = session.query(Reperage)
@@ -87,19 +86,14 @@ def admin_create_reperage():
         f = session.get(Fixer, int(fixer_id))
         if f: fixer_nom = f"{f.prenom} {f.nom}"
     rep = Reperage(
-        token=secrets.token_hex(16),
-        region=str(data.get('region', '')).strip(),
-        pays=str(data.get('pays', '')).strip(),
-        fixer_id=int(fixer_id) if fixer_id and str(fixer_id).isdigit() else None,
-        fixer_nom=fixer_nom,
-        image_region=str(data.get('image_region', '')).strip(),
-        notes_admin=str(data.get('notes_admin', '')).strip(),
-        statut='brouillon'
+        token=secrets.token_hex(16), region=str(data.get('region', '')).strip(),
+        pays=str(data.get('pays', '')).strip(), fixer_id=int(fixer_id) if fixer_id and str(fixer_id).isdigit() else None,
+        fixer_nom=fixer_nom, image_region=str(data.get('image_region', '')).strip(),
+        notes_admin=str(data.get('notes_admin', '')).strip(), statut='brouillon'
     )
     session.add(rep); session.commit()
     return jsonify({'status': 'success', 'id': rep.id})
-
-@app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
+    @app.route('/admin/reperage/<int:id>/update', methods=['PUT'])
 @nocache
 def admin_update_status(id):
     session = get_db(); rep = session.get(Reperage, id); data = request.json
@@ -147,8 +141,7 @@ def api_sync_engine(id):
             val = data.get(f"lieu{i}_{f}")
             if val is not None: setattr(l_obj, f, str(val).strip())
     session.commit(); return jsonify({'status': 'success'})
-
-@app.route('/api/reperages/<int:id>/submit', methods=['POST'])
+    @app.route('/api/reperages/<int:id>/submit', methods=['POST'])
 @nocache
 def api_submit(id):
     session = get_db(); rep = session.get(Reperage, id); rep.statut = 'soumis'; session.commit()
@@ -177,4 +170,20 @@ def api_medias(id):
 @nocache
 def api_delete_media(media_id):
     session = get_db(); m = session.get(Media, media_id); file_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], m.chemin_fichier))
-    try: os.
+    try: os.remove(file_path)
+    except: pass
+    session.delete(m); session.commit(); return jsonify({'status': 'success'})
+
+@app.route('/api/reperages/<int:id>/messages', methods=['GET', 'POST'])
+@nocache
+def api_chat(id):
+    session = get_db()
+    if request.method == 'GET':
+        msgs = session.query(Message).filter_by(reperage_id=id).order_by(Message.id.asc()).all()
+        return jsonify([m.to_dict() for m in msgs])
+    data = request.json; m = Message(reperage_id=id, auteur_type=data.get('auteur_type'), auteur_nom=data.get('auteur_nom'), contenu=data.get('contenu'))
+    session.add(m); session.commit(); return jsonify({'status': 'success'}), 201
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
