@@ -361,7 +361,85 @@ window.onload = () => {
     loadMedias();
 };
 
+// 1. INITIALISATION DU CHAT
+function initChat() {
+    const sendBtn = document.getElementById('chat-send-btn');
+    const input = document.getElementById('chat-input');
 
+    if (!sendBtn || !input) return;
+
+    // Envoi au clic
+    sendBtn.onclick = () => sendMessage();
+
+    // Envoi avec la touche "Entrée"
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    };
+
+    // Rafraîchissement automatique toutes les 10 secondes
+    setInterval(loadMessages, 10000);
+}
+
+// 2. ENVOI DU MESSAGE À RAILWAY
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const contenu = input.value.trim();
+
+    if (!contenu) return;
+
+    const payload = {
+        auteur_type: 'fixer', // Ou 'production' selon le contexte
+        auteur_nom: window.FIXER_DATA.fixer_nom || 'Fixer',
+        contenu: contenu
+    };
+
+    try {
+        const res = await fetch(`/api/reperages/${window.REPERAGE_ID}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            input.value = ''; // On vide le champ
+            await loadMessages(); // On recharge immédiatement la liste
+        }
+    } catch (e) { console.error("Chat send error", e); }
+}
+
+// 3. AFFICHAGE DES MESSAGES (RESTAURATION VISUELLE)
+async function loadMessages() {
+    try {
+        const res = await fetch(`/api/reperages/${window.REPERAGE_ID}/messages`);
+        const msgs = await res.json();
+        const container = document.getElementById('chat-messages');
+
+        if (!container) return;
+
+        container.innerHTML = msgs.map(m => `
+            <div style="display: flex; flex-direction: column; align-items: ${m.auteur_type === 'fixer' ? 'flex-end' : 'flex-start'}; margin-bottom: 15px;">
+                <div style="font-size: 0.7rem; font-weight: 800; color: #95a5a6; margin-bottom: 5px; text-transform: uppercase;">
+                    ${m.auteur_nom}
+                </div>
+                <div style="background: ${m.auteur_type === 'fixer' ? 'var(--secondary)' : '#ecf0f1'}; 
+                            color: ${m.auteur_type === 'fixer' ? 'white' : 'var(--primary)'}; 
+                            padding: 12px 18px; 
+                            border-radius: 15px; 
+                            font-weight: 600; 
+                            max-width: 80%; 
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                    ${m.contenu}
+                </div>
+            </div>
+        `).join('');
+
+        // Scroll automatique vers le bas
+        container.scrollTop = container.scrollHeight;
+    } catch (e) { console.error("Chat load error", e); }
+}
        
 </script>
 </body>
