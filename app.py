@@ -1,6 +1,6 @@
-# DOC-OS VERSION : V.76.2.1 SUPRÊME
+# DOC-OS VERSION : V.76.2.2 SUPRÊME
 # DATE : 2026-03-06
-# MODIFICATIONS : Correction indentations, sécurisation des chemins, optimisation des imports.
+# MODIFICATIONS : Correction critique des indentations et alignement Gunicorn.
 
 import os, json, secrets, requests, io, zipfile, shutil, re
 from datetime import datetime
@@ -257,7 +257,6 @@ def api_submit(id):
 
 @app.route('/uploads/<int:rep_id>/<filename>')
 def serve_uploads(rep_id, filename):
-    # Sécurisation du nom de fichier
     safe_filename = secure_filename(filename)
     directory = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], str(rep_id)))
     return send_from_directory(directory, safe_filename)
