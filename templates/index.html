@@ -186,42 +186,81 @@
         </div>
     </div>
 
-    <script>
-        window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
-        window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
-        lucide.createIcons();
+   <script>
+    window.FIXER_DATA = {{ FIXER_DATA|tojson|safe }};
+    window.REPERAGE_ID = {{ REPERAGE_ID|tojson|safe }};
+    lucide.createIcons();
 
-        // 1. CHAT LOGIC
-        const chatPanel = document.getElementById('chat-panel');
-        document.getElementById('chat-toggle-btn').onclick = () => chatPanel.classList.add('active');
-        document.getElementById('chat-close-btn').onclick = () => chatPanel.classList.remove('active');
+    // 1. FONCTION DE REMPLISSAGE (LE MAILLON MANQUANT)
+    function populateForm() {
+        const data = window.FIXER_DATA;
+        if (!data) return;
 
-        // 2. PROGRESS LOGIC
-        function updateProgress() {
-            const all = document.querySelectorAll('.scouting-field:not([readonly])');
-            const filled = Array.from(all).filter(f => f.value.trim() !== "");
-            const pct = Math.round((filled.length / all.length) * 100);
-            document.getElementById('progress-bar').style.width = pct + "%";
-            document.getElementById('progress-percentage').innerText = pct + "%";
-            document.getElementById('progress-filled').innerText = filled.length;
-            document.getElementById('progress-total').innerText = all.length;
+        // On crée une version "plate" des données pour le mapping
+        let flatData = { ...data };
+        if (data.territory) Object.assign(flatData, data.territory);
+        if (data.festivity) Object.assign(flatData, data.festivity);
+        
+        for (let i = 1; i <= 3; i++) {
+            const pair = data[`pair_${i}`];
+            if (pair) {
+                Object.keys(pair).forEach(key => {
+                    flatData[`gardien${i}_${key}`] = pair[key];
+                    flatData[`lieu${i}_${key}`] = pair[key];
+                });
+            }
         }
-        document.querySelectorAll('.scouting-field').forEach(f => f.addEventListener('input', updateProgress));
-        window.onload = updateProgress;
 
-        // 3. TABS
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.onclick = () => {
-                document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
-                btn.classList.add('active');
-                document.getElementById(btn.dataset.tab).classList.add('active');
-            };
+        // On remplit chaque champ scouting-field
+        document.querySelectorAll('.scouting-field').forEach(field => {
+            const val = flatData[field.name];
+            if (val !== undefined && val !== null) {
+                field.value = val;
+            }
         });
+        updateProgress();
+    }
 
-        // 4. SAVE & SUBMIT
-        async function saveData(silent = false) {
-            const data = {};
-            document.querySelectorAll('.scouting-field').forEach(f => data[f.name] = f.value);
+    // 2. CHAT LOGIC
+    const chatPanel = document.getElementById('chat-panel');
+    document.getElementById('chat-toggle-btn').onclick = () => chatPanel.classList.add('active');
+    document.getElementById('chat-close-btn').onclick = () => chatPanel.classList.remove('active');
+
+    // 3. PROGRESS LOGIC
+    function updateProgress() {
+        const all = document.querySelectorAll('.scouting-field:not([readonly])');
+        const filled = Array.from(all).filter(f => f.value.trim() !== "");
+        const pct = Math.round((filled.length / all.length) * 100);
+        
+        const bar = document.getElementById('progress-bar');
+        const percentage = document.getElementById('progress-percentage');
+        const counter = document.getElementById('progress-filled');
+        const total = document.getElementById('progress-total');
+
+        if(bar) bar.style.width = pct + "%";
+        if(percentage) percentage.innerText = pct + "%";
+        if(counter) counter.innerText = filled.length;
+        if(total) total.innerText = all.length;
+    }
+
+    // Écouteur pour la progression en temps réel
+    document.querySelectorAll('.scouting-field').forEach(f => f.addEventListener('input', updateProgress));
+
+    // 4. TABS
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.add('active');
+        };
+    });
+
+    // 5. SAVE & SUBMIT
+    async function saveData(silent = false) {
+        const data = {};
+        document.querySelectorAll('.scouting-field').forEach(f => data[f.name] = f.value);
+        
+        try {
             const res = await fetch(`/api/reperages/${window.REPERAGE_ID}`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
@@ -232,15 +271,20 @@
                 t.style.display = 'block';
                 setTimeout(() => t.style.display = 'none', 3000);
             }
+        } catch(e) { console.error("Save failed", e); }
+    }
+
+    document.getElementById('btn-save').onclick = () => saveData();
+    document.getElementById('btn-submit').onclick = async () => {
+        if(confirm("Submit to production?")) {
+            await saveData(true);
+            const res = await fetch(`/api/reperages/${window.REPERAGE_ID}/submit`, {method: 'POST'});
+            if(res.ok) { window.location.reload(); }
         }
-        document.getElementById('btn-save').onclick = () => saveData();
-        document.getElementById('btn-submit').onclick = async () => {
-            if(confirm("Submit to production?")) {
-                await saveData(true);
-                const res = await fetch(`/api/reperages/${window.REPERAGE_ID}/submit`, {method: 'POST'});
-                if(res.ok) { window.location.reload(); }
-            }
-        };
-    </script>
+    };
+
+    // LANCEMENT INITIAL
+    window.onload = populateForm;
+</script>
 </body>
 </html>
