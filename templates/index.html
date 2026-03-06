@@ -8,84 +8,68 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 <style>
     :root { 
-        --primary: #2C3E50; 
-        --secondary: #E67E22; 
-        --lock: #e74c3c; 
-        --glass: rgba(255, 255, 255, 0.95); 
-        --border: #e2e8f0;
+        --primary: #2C3E50; --secondary: #E67E22; --lock: #e74c3c; 
+        --border: #e2e8f0; --bg: #f3f4f6;
     }
     
-    body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; overflow-x: hidden; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 40px; position: relative; }
+    * { box-sizing: border-box; } /* Évite que les champs ne se touchent */
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; overflow-x: hidden; }
 
-    /* 1. RÉPARATION DE LA GRILLE (ANTI-COLLISION) */
+    /* GRILLE DE CHAMPS (FIX POUR IMAGE 8B7906) */
     .fields-grid { 
-        display: grid; 
-        grid-template-columns: repeat(3, 1fr); 
-        gap: 35px 25px; /* Écart vertical (35px) et horizontal (25px) */
-        margin-top: 20px;
+        display: grid !important; 
+        grid-template-columns: repeat(3, 1fr) !important; 
+        gap: 25px 30px !important; /* Espacement horizontal et vertical garanti */
+        margin-bottom: 25px;
     }
 
     .field-group { display: flex; flex-direction: column; }
-    
-    .scouting-field {
-        width: 100%;
-        padding: 16px;
-        border: 2px solid var(--border);
-        border-radius: 12px;
-        font-family: inherit;
-        font-weight: 600;
-        font-size: 0.95rem;
-        outline: none;
-        transition: 0.2s;
-        background: white;
-    }
+    .field-group label { font-weight: 800; font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; margin-bottom: 10px; }
 
+    .scouting-field {
+        width: 100% !important;
+        padding: 16px !important;
+        border: 2px solid var(--border) !important;
+        border-radius: 12px !important;
+        font-family: inherit; font-weight: 600; font-size: 0.95rem;
+        background: white !important;
+        outline: none; transition: 0.2s;
+    }
     .scouting-field:focus { border-color: var(--secondary); box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1); }
 
-    textarea.scouting-field {
-        grid-column: 1 / -1; /* Prend toute la largeur */
-        min-height: 120px;
-        margin-top: 10px; /* Force l'espace avec le champ du dessus */
+    textarea.scouting-field { 
+        grid-column: 1 / -1 !important; /* Prend toute la largeur */
+        min-height: 120px !important; 
     }
 
-    /* 2. MODULE CHAT (POSITIONNEMENT ABSOLU) */
+    /* CHAT SANCTUARISÉ (FIX POUR IMAGE 8B71A3) */
     .chat-panel { 
-        position: fixed; 
-        right: -450px; 
-        top: 0; 
-        width: 400px; 
-        height: 100vh; 
-        background: white; 
-        box-shadow: -10px 0 30px rgba(0,0,0,0.1);
-        transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
-        display: flex; 
-        flex-direction: column; 
-        z-index: 100000; /* Passe au-dessus de tout */
+        position: fixed !important; 
+        right: -450px; top: 0; 
+        width: 400px !important; height: 100vh !important; 
+        background: white !important; 
+        box-shadow: -10px 0 30px rgba(0,0,0,0.2) !important;
+        display: flex !important; flex-direction: column !important; 
+        z-index: 999999 !important; /* Passe au-dessus de tout */
+        transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
+    .chat-panel.active { right: 0 !important; }
 
-    .chat-panel.active { right: 0; }
-
-    .chat-header { background: var(--primary); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc; display: flex; flex-direction: column; gap: 10px; }
+    .chat-header { background: var(--primary); color: white; padding: 25px; display: flex; justify-content: space-between; align-items: center; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
     
-    .chat-input-zone { padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; }
-    .chat-input-zone textarea { flex: 1; height: 50px; border-radius: 10px; border: 1px solid #ddd; padding: 10px; resize: none; }
+    .chat-input-zone { padding: 20px; border-top: 1px solid #eee; display: flex; gap: 10px; background: white; }
+    .chat-input-zone textarea { flex: 1; height: 50px; border-radius: 10px; border: 2px solid var(--border); padding: 10px; resize: none; font-family: inherit; }
 
     .chat-toggle-btn { 
-        position: fixed; right: 30px; bottom: 30px; 
-        width: 65px; height: 65px; border-radius: 50%; 
+        position: fixed !important; right: 30px; bottom: 30px; 
+        width: 70px; height: 70px; border-radius: 50%; 
         background: var(--secondary); color: white; border: none; 
-        cursor: pointer; z-index: 99999; box-shadow: 0 10px 20px rgba(230,126,34,0.3);
+        cursor: pointer; z-index: 999998; box-shadow: 0 10px 25px rgba(230,126,34,0.4);
     }
 
-    /* 3. TABS UI */
-    .tab-content { display: none; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-    .tab-content.active { display: block; }
-    .tab-btn { padding: 15px 25px; cursor: pointer; border: none; background: none; font-weight: 800; color: #94a3b8; }
-    .tab-btn.active { color: var(--secondary); border-bottom: 4px solid var(--secondary); }
-    
-    .sub-section { border-left: 6px solid var(--secondary); padding: 25px; background: #f8fafc; margin: 30px 0; border-radius: 0 15px 15px 0; }
+    /* BARRE DE PROGRESSION */
+    .progress-bar { height: 100%; background: var(--secondary); width: 0%; transition: width 0.5s ease; }
 </style>
 </head>
 <body>
