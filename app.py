@@ -60,7 +60,7 @@ def admin_dashboard():
     stats = {'total': len(reps), 'brouillons': session.query(Reperage).filter_by(statut='brouillon').count(), 'soumis': session.query(Reperage).filter_by(statut='soumis').count(), 'valides': session.query(Reperage).filter_by(statut='validé').count()}
     return render_template('admin_dashboard.html', reperages=serialized, stats=stats, fixers=session.query(Fixer).all(), pays_list=[p[0] for p in session.query(Reperage.pays).distinct().all() if p[0]])
 
-@app.route('admin/fixers')
+@app.route('/admin/fixers')
 @nocache
 def admin_fixers_list():
     session = get_db(); query = session.query(Fixer); search = request.args.get('search'); pays = request.args.get('pays')
