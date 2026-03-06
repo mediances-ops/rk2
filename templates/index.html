@@ -210,7 +210,36 @@
         <div id="chat-messages" class="chat-messages"></div>
         <div class="chat-input-zone"><textarea id="chat-input" placeholder="Type your message here..."></textarea><button id="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
     </div>
-    <script>window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}}; lucide.createIcons();</script>
-    <script src="/static/js/app.js"></script>
+    <script>
+        window.FIXER_DATA={{FIXER_DATA|tojson|safe}}; window.REPERAGE_ID={{REPERAGE_ID|tojson|safe}}; lucide.createIcons();</script>
+    <script src="/static/js/app.js">
+
+
+// LOGIQUE D'OUVERTURE DU CHAT
+const chatToggle = document.getElementById('chat-toggle-btn');
+const chatClose = document.getElementById('chat-close-btn');
+const chatPanel = document.getElementById('chat-panel');
+
+if (chatToggle && chatPanel) {
+    chatToggle.onclick = () => chatPanel.classList.add('active');
+}
+
+if (chatClose && chatPanel) {
+    chatClose.onclick = () => chatPanel.classList.remove('active');
+}
+
+// GESTION DES ONGLETS (TABS)
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    };
+});
+
+
+
+        
+    </script>  
 </body>
 </html>
