@@ -201,17 +201,38 @@
 
 // LOGIQUE D'OUVERTURE DU CHAT
 const chatToggle = document.getElementById('chat-toggle-btn');
-const chatClose = document.getElementById('chat-close-btn');
 const chatPanel = document.getElementById('chat-panel');
+const chatClose = document.getElementById('chat-close-btn');
 
-if (chatToggle && chatPanel) {
-    chatToggle.onclick = () => chatPanel.classList.add('active');
+if (chatToggle) chatToggle.onclick = () => chatPanel.classList.toggle('active');
+if (chatClose) chatClose.onclick = () => chatPanel.classList.remove('active');
+
+// --- CALCUL DE PROGRESSION ---
+function updateProgress() {
+    const allFields = document.querySelectorAll('.scouting-field:not([readonly])');
+    const filledFields = Array.from(allFields).filter(f => f.value.trim() !== "");
+    
+    // Calcul mathématique du pourcentage
+    const percentage = Math.round((filledFields.length / allFields.length) * 100);
+    
+    const bar = document.getElementById('progress-bar');
+    const text = document.getElementById('progress-percentage');
+    
+    if (bar) bar.style.width = percentage + "%";
+    if (text) text.innerText = percentage + "%";
 }
 
-if (chatClose && chatPanel) {
-    chatClose.onclick = () => chatPanel.classList.remove('active');
-}
+// Écouteurs sur chaque frappe de clavier
+document.querySelectorAll('.scouting-field').forEach(field => {
+    field.addEventListener('input', updateProgress);
+});
 
+// Initialisation immédiate
+window.onload = updateProgress;
+
+
+
+        
 // GESTION DES ONGLETS (TABS)
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = () => {
