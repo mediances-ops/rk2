@@ -1,4 +1,3 @@
-<!-- DOC-OS VERSION : V.70.7 SUPRÊME MISSION CONTROL -->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -38,16 +37,45 @@
         .form-group label { display: block; font-weight: 800; font-size: 0.85rem; color: #7f8c8d; text-transform: uppercase; margin-bottom: 10px; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 15px; border-radius: 12px; border: 2px solid #eef2f7; font-family: inherit; font-weight: 600; outline: none; background: #fafafa; }
         #editor-container { height: 400px; background: white; border-radius: 0 0 12px 12px; font-size: 1rem; }
-        #adminChatPanel { position: fixed; right: -520px; top: 0; width: 500px; height: 100vh; background: var(--glass); backdrop-filter: blur(25px); transition: 0.5s cubic-bezier(0.77, 0, 0.175, 1); z-index: 20000; display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,0.4); }
+
+        /* --- CHAT ADMIN SUPRÊME V.70.9 (FIXED) --- */
+        #adminChatPanel { 
+            position: fixed; right: -520px; top: 0; width: 480px; height: 100vh; 
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); 
+            transition: 0.5s cubic-bezier(0.7, 0, 0.3, 1); z-index: 20000; 
+            display: flex; flex-direction: column; box-shadow: -15px 0 45px rgba(0,0,0,0.15); 
+            border-left: 1px solid #e2e8f0; 
+        }
         #adminChatPanel.active { right: 0; }
-        .chat-header { background: var(--primary); color: white; padding: 30px; display: flex; justify-content: space-between; align-items: center; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+        .chat-header { 
+            background: #2C3E50; color: white; padding: 25px 30px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 4px solid var(--secondary);
+        }
+        .chat-messages { 
+            flex: 1; overflow-y: auto; padding: 30px; background: #f8fafc;
+            display: flex; flex-direction: column; gap: 18px; 
+        }
         .msg-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .msg-me { align-self: flex-end; align-items: flex-end; }
         .msg-them { align-self: flex-start; align-items: flex-start; }
-        .bubble { padding: 15px 20px; border-radius: 20px; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
-        .msg-me .bubble { background: #EBF5FB; color: #2C3E50; border-bottom-right-radius: 4px; }
-        .msg-them .bubble { background: #FDF2E9; color: #2C3E50; border-bottom-left-radius: 4px; }
+        .bubble { padding: 12px 18px; border-radius: 18px; font-weight: 600; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,0,0,0.04); line-height: 1.5; }
+        .msg-me .bubble { background: #E67E22; color: white; border-bottom-right-radius: 4px; }
+        .msg-them .bubble { background: white; color: #2C3E50; border-bottom-left-radius: 4px; border: 1px solid #e2e8f0; }
+        .chat-input-zone { padding: 25px; background: white; border-top: 1px solid #f1f5f9; display: flex; gap: 12px; align-items: flex-end; }
+        #adminChatInput { 
+            flex: 1; border: 2px solid #eef2f7; border-radius: 12px; padding: 12px 15px;
+            height: 80px; resize: none; font-family: inherit; font-size: 0.95rem;
+            transition: 0.3s; background: #fafafa;
+        }
+        #adminChatInput:focus { border-color: var(--secondary); background: white; outline: none; }
+        .chat-send-btn { 
+            background: #2C3E50; color: white; border: none; border-radius: 12px;
+            width: 55px; height: 55px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .chat-send-btn:hover { background: var(--secondary); transform: translateY(-2px); }
+
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .version-tag { position: fixed; bottom: 10px; right: 10px; font-size: 0.6rem; font-weight: 800; color: #bdc3c7; }
     </style>
@@ -96,7 +124,6 @@
         </div>
     </div>
 
-    <!-- MODAL NOUVEAU (FIXED ID: new_notes) -->
     <div class="modal-overlay" id="modalNouveau">
         <div class="modal-box" style="width: 750px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>LANCER UN REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
@@ -111,14 +138,12 @@
                     </select>
                 </div>
                 <div class="form-group"><label>Bannière Image (URL)</label><input type="url" id="new_image"></div>
-                <!-- CORRECTIF SOUDURE : Ajout du champ manquant -->
                 <div class="form-group"><label>Notes Initiales</label><textarea id="new_notes" rows="3"></textarea></div>
                 <button type="submit" style="width:100%; background:var(--primary); color:white; padding:18px; border-radius:12px; font-weight:800; border:none; cursor:pointer;">CRÉER LE DOSSIER</button>
             </form>
         </div>
     </div>
 
-    <!-- MODAL PARAMÈTRES (QUILL) -->
     <div class="modal-overlay" id="modalEdit">
         <div class="modal-box">
             <div style="display:flex; justify-content:space-between; margin-bottom:35px;"><h2 style="font-weight:900; letter-spacing:-1px;">PARAMÈTRES DU REPÉRAGE</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2.5rem; cursor:pointer; color:#94a3b8;">&times;</button></div>
@@ -149,7 +174,6 @@
         </div>
     </div>
 
-    <!-- MODAL IMPORT -->
     <div class="modal-overlay" id="modalImport">
         <div class="modal-box" style="width: 800px;">
             <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>IMPORTER UNE SIMULATION JSON</h2><button onclick="closeModal()" style="background:none; border:none; font-size:2rem; cursor:pointer;">&times;</button></div>
@@ -159,15 +183,19 @@
         </div>
     </div>
 
-    <!-- CHAT -->
     <div id="adminChatPanel">
         <div class="chat-header">
             <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:12px; background:#2ecc71; border-radius:50%;"></div><h3 style="font-weight:900; margin:0; font-size:1.3rem;">INSTANT MESSAGING</h3></div>
             <button onclick="closeAdminChat()" style="background:none; border:none; color:white; font-size:2.5rem; cursor:pointer;">&times;</button>
         </div>
         <div id="adminChatMessages" class="chat-messages"></div>
-        <div class="chat-input-zone"><textarea id="adminChatInput" placeholder="Répondre..."></textarea><button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button></div>
+        <div class="chat-input-zone">
+            <textarea id="adminChatInput" placeholder="Répondre..."></textarea>
+            <button onclick="sendAdminMessage()" class="chat-send-btn"><i data-lucide="send" style="width:25px;"></i></button>
+        </div>
     </div>
+
+    <div class="version-tag">V.70.9 - MISSION CONTROL READY</div>
 
     <script>
         lucide.createIcons();
@@ -177,26 +205,24 @@
 
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
-      async function openAdminChat(id) {
-    currentChatId = id;
-    document.getElementById('adminChatPanel').classList.add('active');
-
-    // --- SOUDURE CHIRURGICALE : DISPARITION DU BADGE ---
-    try {
-        // 1. On informe Railway que les messages sont lus
-        await fetch(`/api/reperages/${id}/read`, { method: 'POST' });
         
-        // 2. On cherche le badge rouge "1 NEW" dans le tableau
-        const badge = document.querySelector(`span.chat-notif[onclick*="openAdminChat(${id})"]`);
-        if (badge) {
-            // 3. On le remplace immédiatement par l'icône bleue standard
-            badge.outerHTML = `<button onclick="openAdminChat(${id})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>`;
-            lucide.createIcons(); 
-        }
-    } catch (e) { console.error("Erreur Sync Notification:", e); }
+        async function openAdminChat(id) {
+            currentChatId = id;
+            document.getElementById('adminChatPanel').classList.add('active');
 
-    loadAdminMessages();
-}
+            // --- SOUDURE CHIRURGICALE : DISPARITION DU BADGE ---
+            try {
+                await fetch(`/api/reperages/${id}/read`, { method: 'POST' });
+                const badge = document.querySelector(`span.chat-notif[onclick*="openAdminChat(${id})"]`);
+                if (badge) {
+                    badge.outerHTML = `<button onclick="openAdminChat(${id})" style="background:none; border:none; color:#3498db; cursor:pointer; margin-left:10px;"><i data-lucide="message-square" style="width:16px;"></i></button>`;
+                    lucide.createIcons(); 
+                }
+            } catch (e) { console.error("Erreur Sync Notification:", e); }
+
+            loadAdminMessages();
+        }
+
         function closeAdminChat() { document.getElementById('adminChatPanel').classList.remove('active'); }
 
         async function executeImport() {
@@ -235,7 +261,7 @@
                 pays: document.getElementById('new_pays').value, 
                 fixer_id: f.value, 
                 image_region: document.getElementById('new_image').value,
-                notes_admin: document.getElementById('new_notes').value // CORRECTIF : Désormais lisible
+                notes_admin: document.getElementById('new_notes').value 
             };
             const res = await fetch('/admin/reperages/create', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) });
             if(res.ok) window.location.reload();
@@ -257,14 +283,16 @@
                 const isMe = m.auteur_type === 'production';
                 html += `<div class="msg-wrapper ${isMe ? 'msg-me' : 'msg-them'}"><div class="bubble">${m.contenu}</div></div>`;
             });
-            container.innerHTML = html; container.scrollTop = container.scrollHeight;
+            container.innerHTML = html; 
+            container.scrollTop = container.scrollHeight;
         }
 
         async function sendAdminMessage() {
             const input = document.getElementById('adminChatInput');
             if(!input.value.trim()) return;
             await fetch(`/api/reperages/${currentChatId}/messages`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ auteur_type: 'production', auteur_nom: 'Production', contenu: input.value }) });
-            input.value = ''; loadAdminMessages();
+            input.value = ''; 
+            loadAdminMessages();
         }
 
         async function deleteRep(id, reg) { if(confirm(`Supprimer ${reg} ?`)) { await fetch(`/admin/reperage/${id}/delete`, { method: 'DELETE' }); window.location.reload(); } }
